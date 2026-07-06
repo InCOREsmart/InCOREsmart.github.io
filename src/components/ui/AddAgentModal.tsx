@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, AlertCircle, User, Phone, Mail, Briefcase, Calendar, MessageSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AddAgentModalProps {
   onClose: () => void;
@@ -28,6 +29,7 @@ const initialFormData: FormData = {
 
 export function AddAgentModal({ onClose, onAdded }: AddAgentModalProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,20 +56,80 @@ export function AddAgentModal({ onClose, onAdded }: AddAgentModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[AddAgentModal] handleSubmit called', formData);
     setLoading(true);
     setError(null);
 
     try {
-      // For now, we'll just store the agent info
-      // In a real implementation, you would send an invitation email
-      // or create a pending agent record
+      if (!user) {
+        setError('Пользователь не найден');
+        return;
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Get company ID
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
+      console.log('[AddAgentModal] Company lookup:', { companyData, companyError });
+
+      if (companyError) {
+        setError(companyError.message);
+        return;
+      }
+
+      if (!companyData) {
+        setError('Сначала заполните данные компании в настройках');
+        return;
+      }
+
+      // Create agent record
+      const agentData = {
+        company_id: companyData.id,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        email: formData.email,
+        specialization: formData.specialization || null,
+        experience: formData.experience || null,
+        comment: formData.comment || null,
+        status: 'pending',
+        // Required fields from schema - set defaults
+        passport_series: '____',
+        passport_number: '______',
+        passport_issued_by: 'Не указан',
+        passport_issue_date: '2000-01-01',
+        passport_department_code: '000-000',
+        inn_personal: '000000000000',
+        snils: '000-000-000 00',
+        tax_status: 'self_employed',
+        bank_name: 'Не указан',
+        bank_bik: '000000000',
+        correspondent_account: '00000000000000000000',
+        settlement_account: '00000000000000000000',
+      };
+
+      console.log('[AddAgentModal] Inserting agent:', agentData);
+
+      const { data, error: insertError } = await supabase
+        .from('agents')
+        .insert(agentData)
+        .select()
+        .single();
+
+      console.log('[AddAgentModal] Insert result:', { data, insertError });
+
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+
+      console.log('[AddAgentModal] Agent created successfully:', data);
       onAdded();
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('[AddAgentModal] Error:', err);
+      setError('Произошла ошибка при сохранении');
     } finally {
       setLoading(false);
     }
@@ -203,6 +265,7 @@ export function AddAgentModal({ onClose, onAdded }: AddAgentModalProps) {
               type="submit"
               disabled={loading}
               className="btn-primary"
+              onClick={() => console.log('[AddAgentModal] Submit button clicked')}
             >
               {loading ? t('common.loading') : 'Добавить'}
             </button>

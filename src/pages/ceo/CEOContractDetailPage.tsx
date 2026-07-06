@@ -12,15 +12,15 @@ import {
   DollarSign,
   Users,
   TrendingUp,
-  Phone,
-  Mail,
   ChevronDown,
   X,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
 import { EscrowBadge } from '../../components/ui/EscrowBadge';
-import { supabase, Contract, Agent, Company } from '../../lib/supabase';
+import { supabase, Contract, Agent, Company, DEFAULT_PAYMENT_STREAMS, PaymentStream } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AgentWithUser extends Agent {
@@ -64,6 +64,7 @@ export function CEOContractDetailPage() {
     const fetchData = async () => {
       if (!user || !id) return;
 
+      console.log('[CEOContractDetailPage] fetchData called');
       setLoading(true);
       try {
         // Get company
@@ -82,6 +83,8 @@ export function CEOContractDetailPage() {
           .eq('id', id)
           .maybeSingle();
 
+        console.log('[CEOContractDetailPage] Contract data:', contractData);
+
         if (contractData) {
           setContract(contractData as Contract);
           setEditForm({
@@ -99,16 +102,20 @@ export function CEOContractDetailPage() {
           });
         }
 
-        // Get agents
-        const { data: agentsData } = await supabase
-          .from('agents')
-          .select('*');
+        // Get agents for this company
+        if (companyData) {
+          const { data: agentsData } = await supabase
+            .from('agents')
+            .select('*')
+            .eq('company_id', companyData.id);
 
-        if (agentsData) {
-          setAgents(agentsData as AgentWithUser[]);
+          console.log('[CEOContractDetailPage] Agents data:', agentsData);
+          if (agentsData) {
+            setAgents(agentsData as AgentWithUser[]);
+          }
         }
       } catch (err) {
-        console.error('Error fetching contract:', err);
+        console.error('[CEOContractDetailPage] Error fetching:', err);
         setError('Ошибка загрузки данных');
       } finally {
         setLoading(false);
@@ -116,7 +123,6 @@ export function CEOContractDetailPage() {
     };
 
     fetchData();
-    console.log('[CEOContractDetailPage] fetchData called');
   }, [user, id]);
 
   const handleEditContract = async (e: React.FormEvent) => {
@@ -205,6 +211,7 @@ export function CEOContractDetailPage() {
     try {
       const escrowAmount = Math.round((contract?.kpi_revenue || 0) * 0.12);
 
+      // Update contract status
       const { error: updateError } = await supabase
         .from('contracts')
         .update({
@@ -217,6 +224,21 @@ export function CEOContractDetailPage() {
       if (updateError) {
         setError(updateError.message);
         return;
+      }
+
+      // Create transaction record
+      const { error: txnError } = await supabase
+        .from('transactions')
+        .insert({
+          contract_id: id,
+          type: 'ESCROW_FUND',
+          amount: escrowAmount,
+          currency: 'USD',
+          status: 'SUCCESS',
+        });
+
+      if (txnError) {
+        console.error('[handleFundEscrow] Transaction error:', txnError);
       }
 
       setContract({
@@ -247,8 +269,17 @@ export function CEOContractDetailPage() {
     });
   };
 
+  const getStreamStatus = (stream: PaymentStream) => {
+    if (!contract?.escrow_status || contract.escrow_status === 'PENDING') return 'locked';
+    if (contract.escrow_status === 'FUNDED') return 'unlocked';
+    if (contract.escrow_status === 'RELEASED') return 'released';
+    if (contract.escrow_status === 'FROZEN') return 'frozen';
+    return 'locked';
+  };
+
   const selectedAgent = agents.find((a) => a.id === contract?.agent_id);
   const escrowAmount = Math.round((contract?.kpi_revenue || 0) * 0.12);
+  const paymentStreams = contract?.payment_streams || DEFAULT_PAYMENT_STREAMS;
 
   if (loading) {
     return (
@@ -387,6 +418,55 @@ export function CEOContractDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* 6 Payment Streams */}
+          <div className="card">
+            <h2 className="text-lg font-display font-semibold text-text-primary mb-4">
+              {t('paymentStreams.title')}
+            </h2>
+            <div className="space-y-3">
+              {paymentStreams.map((stream) => {
+                const status = getStreamStatus(stream);
+                const StatusIcon = status === 'locked' ? Lock : Unlock;
+                const statusColor = status === 'locked' ? 'text-text-muted' :
+                  status === 'released' ? 'text-gold' : 'text-success';
+
+                return (
+                  <div
+                    key={stream.id}
+                    className="flex items-center justify-between py-3 px-4 bg-primary-dark rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <StatusIcon className={`w-5 h-5 ${statusColor}`} />
+                      <span className="text-text-primary">{stream.name}</span>
+                      {stream.clawback && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-warning/20 text-warning">
+                          Clawback
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gold font-medium">
+                        {stream.percent ? `${stream.percent}%` :
+                         stream.amount ? `$${formatCurrency(stream.amount)}` :
+                         stream.release || '—'}
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        status === 'locked' ? 'bg-text-muted/20 text-text-muted' :
+                        status === 'released' ? 'bg-gold/20 text-gold' :
+                        status === 'frozen' ? 'bg-error/20 text-error' :
+                        'bg-success/20 text-success'
+                      }`}>
+                        {status === 'locked' ? 'Заблокировано' :
+                         status === 'released' ? 'Выплачено' :
+                         status === 'frozen' ? 'Заморожено' : 'Разблокировано'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -413,6 +493,9 @@ export function CEOContractDetailPage() {
                   <div>
                     <p className="font-medium text-text-primary">{selectedAgent.full_name}</p>
                     <p className="text-sm text-text-secondary">{selectedAgent.phone}</p>
+                    {selectedAgent.email && (
+                      <p className="text-sm text-text-secondary">{selectedAgent.email}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -426,7 +509,7 @@ export function CEOContractDetailPage() {
                       className="btn-outline text-sm"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
-                      Добавить агента
+                      Перейти к агентам
                     </button>
                   </div>
                 ) : (
@@ -514,6 +597,10 @@ export function CEOContractDetailPage() {
                 <button
                   onClick={() => {
                     console.log('[Escrow button] Clicked');
+                    if (!contract.agent_id) {
+                      setError('Сначала назначьте агента');
+                      return;
+                    }
                     setShowEscrowModal(true);
                   }}
                   className="btn-primary w-full flex items-center justify-center gap-2"
@@ -521,6 +608,11 @@ export function CEOContractDetailPage() {
                   <Wallet className="w-5 h-5" />
                   Оплатить эскроу
                 </button>
+              )}
+              {contract.status === 'DRAFT' && !contract.agent_id && (
+                <p className="text-xs text-text-muted text-center">
+                  Сначала назначьте агента для оплаты эскроу
+                </p>
               )}
             </div>
           </div>
@@ -700,7 +792,7 @@ export function CEOContractDetailPage() {
               <div className="text-center mb-6">
                 <p className="text-text-secondary mb-2">Сумма к оплате:</p>
                 <p className="text-4xl font-bold text-gold">${formatCurrency(escrowAmount)}</p>
-                <p className="text-text-muted text-sm mt-2">12% от выручки {formatCurrency(contract.kpi_revenue)}</p>
+                <p className="text-text-muted text-sm mt-2">12% от выручки ${formatCurrency(contract.kpi_revenue)}</p>
               </div>
 
               <div className="card bg-primary-light text-sm">

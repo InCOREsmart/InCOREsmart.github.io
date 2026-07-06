@@ -48,9 +48,15 @@ export interface Company {
 
 export interface Agent {
   id: string;
-  user_id: string;
+  user_id?: string;
+  company_id?: string;
   full_name: string;
   phone: string;
+  email?: string;
+  status?: string;
+  specialization?: string;
+  experience?: string;
+  comment?: string;
   passport_series: string;
   passport_number: string;
   passport_issued_by: string;

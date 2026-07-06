@@ -1,17 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Phone, DollarSign, FileText, AlertCircle, Plus } from 'lucide-react';
+import { Users, Phone, DollarSign, FileText, AlertCircle, Plus, Mail } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { AddAgentModal } from '../../components/ui/AddAgentModal';
-import { supabase } from '../../lib/supabase';
+import { supabase, Agent } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface AgentWithStats {
-  id: string;
-  user_id: string;
-  full_name: string;
-  phone: string;
-  created_at: string;
+interface AgentWithStats extends Agent {
   contract_count: number;
   total_payout: number;
 }
@@ -21,115 +16,115 @@ export function CEOAgentsPage() {
   const { user } = useAuth();
 
   const [agents, setAgents] = useState<AgentWithStats[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    const fetchAgents = async () => {
-      if (!user) return;
+  const fetchAgents = useCallback(async () => {
+    console.log('[CEOAgentsPage] fetchAgents called');
+    if (!user) return;
 
-      setLoading(true);
-      try {
-        // Get company ID first
-        const { data: companyData } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+    setLoading(true);
+    try {
+      // Get company ID first
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        if (!companyData) {
-          setLoading(false);
-          return;
-        }
+      console.log('[CEOAgentsPage] Company lookup:', { companyData, companyError });
 
-        // Get contracts for this company with agents
-        const { data: contractsData } = await supabase
-          .from('contracts')
-          .select('agent_id')
-          .eq('company_id', companyData.id)
-          .not('agent_id', 'is', null);
+      if (companyError) {
+        console.error('[CEOAgentsPage] Company error:', companyError);
+        setLoading(false);
+        return;
+      }
 
-        if (!contractsData || contractsData.length === 0) {
-          setAgents([]);
-          setLoading(false);
-          return;
-        }
+      if (!companyData) {
+        console.log('[CEOAgentsPage] No company found');
+        setAgents([]);
+        setLoading(false);
+        return;
+      }
 
-        // Get unique agent IDs
-        const agentIds = [...new Set(contractsData.map((c) => c.agent_id))];
+      setCompanyId(companyData.id);
 
-        // Get agent profiles
-        const { data: agentsData } = await supabase
-          .from('agents')
-          .select('*')
-          .in('id', agentIds);
+      // Get ALL agents for this company (not just those with contracts)
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('company_id', companyData.id)
+        .order('created_at', { ascending: false });
 
-        if (!agentsData) {
-          setAgents([]);
-          setLoading(false);
-          return;
-        }
+      console.log('[CEOAgentsPage] Agents lookup:', { agentsData, agentsError });
 
-        // Get contract counts and payouts for each agent
-        const agentsWithStats: AgentWithStats[] = await Promise.all(
-          agentsData.map(async (agent) => {
-            // Count contracts for this agent
-            const { count } = await supabase
-              .from('contracts')
-              .select('*', { count: 'exact', head: true })
-              .eq('agent_id', agent.id);
+      if (agentsError) {
+        console.error('[CEOAgentsPage] Agents error:', agentsError);
+        setLoading(false);
+        return;
+      }
 
-            // Get total payouts
-            const { data: transactionsData } = await supabase
+      if (!agentsData || agentsData.length === 0) {
+        console.log('[CEOAgentsPage] No agents found');
+        setAgents([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get contract counts for each agent
+      const agentsWithStats: AgentWithStats[] = await Promise.all(
+        agentsData.map(async (agent) => {
+          // Count contracts for this agent
+          const { count } = await supabase
+            .from('contracts')
+            .select('*', { count: 'exact', head: true })
+            .eq('agent_id', agent.id);
+
+          // Get contract IDs for this agent to calculate payouts
+          const { data: agentContracts } = await supabase
+            .from('contracts')
+            .select('id')
+            .eq('agent_id', agent.id);
+
+          let totalPayout = 0;
+          if (agentContracts && agentContracts.length > 0) {
+            const { data: payouts } = await supabase
               .from('transactions')
               .select('amount')
               .eq('type', 'SALARY_PAYOUT')
               .eq('status', 'SUCCESS')
-              .in('contract_id', contractsData.filter((c) => c.agent_id === agent.id).map(() => {
-                // We need to get contract IDs for this agent
-                return '';
-              }));
+              .in('contract_id', agentContracts.map((c) => c.id));
 
-            // Get contract IDs for this agent to calculate payouts
-            const { data: agentContracts } = await supabase
-              .from('contracts')
-              .select('id')
-              .eq('agent_id', agent.id);
+            totalPayout = payouts?.reduce((sum, p) => sum + p.amount, 0) || 0;
+          }
 
-            let totalPayout = 0;
-            if (agentContracts && agentContracts.length > 0) {
-              const { data: payouts } = await supabase
-                .from('transactions')
-                .select('amount')
-                .eq('type', 'SALARY_PAYOUT')
-                .eq('status', 'SUCCESS')
-                .in('contract_id', agentContracts.map((c) => c.id));
+          return {
+            ...agent,
+            contract_count: count || 0,
+            total_payout: totalPayout,
+          };
+        })
+      );
 
-              totalPayout = payouts?.reduce((sum, p) => sum + p.amount, 0) || 0;
-            }
-
-            return {
-              id: agent.id,
-              user_id: agent.user_id,
-              full_name: agent.full_name,
-              phone: agent.phone,
-              created_at: agent.created_at,
-              contract_count: count || 0,
-              total_payout: totalPayout,
-            };
-          })
-        );
-
-        setAgents(agentsWithStats);
-      } catch (err) {
-        console.error('Error fetching agents:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAgents();
+      console.log('[CEOAgentsPage] Agents with stats:', agentsWithStats);
+      setAgents(agentsWithStats);
+    } catch (err) {
+      console.error('[CEOAgentsPage] Error fetching agents:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
+  const handleAgentAdded = () => {
+    console.log('[CEOAgentsPage] handleAgentAdded called');
+    setShowAddModal(false);
+    fetchAgents(); // Refresh the list
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ru-RU').format(amount);
@@ -162,7 +157,10 @@ export function CEOAgentsPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            console.log('[CEOAgentsPage] Add agent button clicked');
+            setShowAddModal(true);
+          }}
           className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -212,9 +210,19 @@ export function CEOAgentsPage() {
         <div className="card text-center py-12">
           <AlertCircle className="w-12 h-12 text-text-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-text-primary mb-2">{t('agent.noAgents')}</h3>
-          <p className="text-text-secondary">
-            Агенты появятся, когда откликнутся на ваши контракты
+          <p className="text-text-secondary mb-6">
+            Добавьте агентов, чтобы назначать их на контракты
           </p>
+          <button
+            onClick={() => {
+              console.log('[CEOAgentsPage] Add first agent button clicked');
+              setShowAddModal(true);
+            }}
+            className="btn-primary"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Добавить агента
+          </button>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -227,6 +235,9 @@ export function CEOAgentsPage() {
                   </th>
                   <th className="text-left py-4 px-4 text-text-secondary text-sm font-medium">
                     {t('agent.phone')}
+                  </th>
+                  <th className="text-left py-4 px-4 text-text-secondary text-sm font-medium">
+                    Email
                   </th>
                   <th className="text-left py-4 px-4 text-text-secondary text-sm font-medium">
                     {t('dashboard.activeContracts')}
@@ -259,6 +270,12 @@ export function CEOAgentsPage() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
+                      <div className="flex items-center gap-2 text-text-secondary">
+                        <Mail className="w-4 h-4" />
+                        {agent.email || '—'}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light/20 text-primary-light">
                         {agent.contract_count}
                       </span>
@@ -278,12 +295,7 @@ export function CEOAgentsPage() {
       {showAddModal && (
         <AddAgentModal
           onClose={() => setShowAddModal(false)}
-          onAdded={() => {
-            setShowAddModal(false);
-            // Refresh agents list
-            setLoading(true);
-            // Re-fetch will happen on next render
-          }}
+          onAdded={handleAgentAdded}
         />
       )}
     </DashboardLayout>
