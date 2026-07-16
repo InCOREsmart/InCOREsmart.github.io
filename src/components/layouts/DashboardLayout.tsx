@@ -1,6 +1,3 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Settings,
@@ -12,6 +9,7 @@ import {
   X,
   Globe,
   Check,
+  DollarSign,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Notification, UserRole } from '../../lib/supabase';
@@ -28,10 +26,27 @@ const navItems: Record<UserRole, Array<{ path: string; label: string; icon: Reac
     { path: '/ceo/settings', label: 'nav.settings', icon: <Settings className="w-5 h-5" /> },
   ],
   AGENT: [
-    { path: '/agent/dashboard', label: 'nav.dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { path: '/agent/tasks', label: 'nav.tasks', icon: <FileText className="w-5 h-5" /> },
-    { path: '/agent/settings', label: 'nav.settings', icon: <Settings className="w-5 h-5" /> },
-  ],
+  {
+    path: '/agent/dashboard',
+    label: 'nav.dashboard',
+    icon: <LayoutDashboard className="w-5 h-5" />,
+  },
+  {
+    path: '/agent/contracts',
+    label: 'nav.contracts',
+    icon: <FileText className="w-5 h-5" />,
+  },
+  {
+    path: '/agent/payouts',
+    label: 'nav.payouts',
+    icon: <DollarSign className="w-5 h-5" />,
+  },
+  {
+    path: '/agent/settings',
+    label: 'nav.settings',
+    icon: <Settings className="w-5 h-5" />,
+  },
+],
   ADMIN: [
     { path: '/admin/dashboard', label: 'nav.dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
     { path: '/admin/users', label: 'nav.agents', icon: <Users className="w-5 h-5" /> },

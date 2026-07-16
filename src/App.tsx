@@ -91,13 +91,21 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        }
-      />
+  path="/agent/contracts"
+  element={
+    <ProtectedRoute allowedRoles={['AGENT']}>
+      <AgentDashboard />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/agent/payouts"
+  element={
+    <ProtectedRoute allowedRoles={['AGENT']}>
+      <AgentDashboard />
+    </ProtectedRoute>
+  }
+/>
 
       {/* CEO routes */}
       <Route

@@ -6,16 +6,15 @@ import {
   Clock,
   FileText,
   Target,
-  ArrowRight,
   CheckCircle,
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { ActiveContractCard } from '../../components/dashboard/ActiveContractCard';
+import { AgentKPIPanel } from '../../components/dashboard/AgentKPIPanel';
+import { DashboardStats } from '../../components/dashboard/DashboardStats';
 import {
   StatCard,
   KPIProgressBar,
-  EscrowBadge,
-  TaskTimer,
-  Agent4StepTracker,
   SixStreamsGrid,
 } from '../../components/ui';
 import { supabase, Contract, Agent, DEFAULT_PAYMENT_STREAMS } from '../../lib/supabase';
@@ -127,7 +126,9 @@ export function AgentDashboard() {
   const totalEarnings = contracts
     .filter((c) => c.status === 'COMPLETED')
     .reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-
+const pendingPayouts = contracts
+  .filter((c) => c.status === 'PENDING_APPROVAL')
+  .reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
   const activeTasks = contracts.filter((c) =>
     ['ACTIVE', 'IN_PROGRESS'].includes(c.status)
   ).length;
@@ -157,129 +158,30 @@ export function AgentDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          title="Active Tasks"
-          value={activeTasks}
-          icon={FileText}
-        />
-        <StatCard
-          title="Completed Tasks"
-          value={completedTasks}
-          icon={CheckCircle}
-        />
-        <StatCard
-          title="Total Earnings"
-          value={`$${totalEarnings.toLocaleString()}`}
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Pending Payouts"
-          value={`$${contracts
-            .filter((c) => c.status === 'PENDING_APPROVAL')
-            .reduce((sum, c) => sum + (c.escrow_amount || 0), 0)
-            .toLocaleString()}`}
-          icon={Clock}
-        />
-      </div>
+      <DashboardStats
+  activeTasks={activeTasks}
+  completedTasks={completedTasks}
+  totalEarnings={totalEarnings}
+  pendingPayouts={pendingPayouts}
+/>
 
       {/* Main Content */}
       {latestContract && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Current Task */}
-          <div className="lg:col-span-2">
-            <div className="card">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-display font-semibold text-text-primary">
-                  Current Task
-                </h2>
-                <EscrowBadge status={latestContract.escrow_status} />
-              </div>
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
-              <div className="bg-primary-dark rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-medium text-text-primary mb-2">
-                  {latestContract.title}
-                </h3>
-                <p className="text-text-secondary text-sm mb-4">
-                  {latestContract.description}
-                </p>
+    <div className="lg:col-span-2">
+      <ActiveContractCard
+        contract={latestContract}
+        activeStep={activeStep}
+      />
+    </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-text-muted text-sm">Time Remaining</span>
-                    <TaskTimer deadline={latestContract.deadline} />
-                  </div>
-                  <div className="text-right">
-                    <span className="text-text-muted text-sm">Escrow Amount</span>
-                    <p className="text-2xl font-display font-bold text-gold">
-                      ${latestContract.escrow_amount?.toLocaleString() || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
+    <div>
+      <AgentKPIPanel />
+    </div>
 
-              {/* 4-Step Tracker */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-text-secondary mb-4">
-                  Progress Tracker
-                </h3>
-                <Agent4StepTracker steps={activeStep} />
-              </div>
-
-              <button
-                onClick={() => navigate(`/agent/tasks/${latestContract.id}`)}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                View Details
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* KPI Metrics */}
-          <div>
-            <div className="card">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gold/20 rounded-lg">
-                  <Target className="w-5 h-5 text-gold" />
-                </div>
-                <h2 className="text-lg font-display font-semibold text-text-primary">
-                  {t('dashboard.kpis')}
-                </h2>
-              </div>
-
-              <div className="space-y-6">
-                <KPIProgressBar
-                  label={t('kpi.calls')}
-                  current={85}
-                  target={100}
-                  color="gold"
-                />
-                <KPIProgressBar
-                  label={t('kpi.meetings')}
-                  current={12}
-                  target={20}
-                  color="gold"
-                />
-                <KPIProgressBar
-                  label={t('kpi.proposals')}
-                  current={8}
-                  target={10}
-                  color="success"
-                />
-                <KPIProgressBar
-                  label={t('kpi.revenue')}
-                  current={25000}
-                  target={50000}
-                  unit="$"
-                  color="success"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+  </div>
+)}
       {/* Payment Streams */}
       {contracts.length > 0 && (
         <div className="card">
@@ -305,17 +207,17 @@ export function AgentDashboard() {
         <div className="card text-center py-12">
           <FileText className="w-16 h-16 text-text-muted mx-auto mb-4" />
           <h3 className="text-xl font-display font-semibold text-text-primary mb-2">
-            No active tasks
+            У вас пока нет активных контрактов
           </h3>
           <p className="text-text-secondary mb-6">
-            You don't have any active contracts yet. Complete your profile to start receiving tasks.
+            После назначения контракта он автоматически появится здесь
           </p>
           <button
-            onClick={() => navigate('/agent/settings')}
-            className="btn-primary"
-          >
-            Complete Profile
-          </button>
+  onClick={() => navigate('/agent/settings')}
+  className="btn-primary"
+>
+  Открыть профиль
+</button>
         </div>
       )}
     </DashboardLayout>
