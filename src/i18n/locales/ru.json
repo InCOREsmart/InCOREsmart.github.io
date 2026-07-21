@@ -1,5 +1,5 @@
 {
-    "agent": {
+  "agent": {
     "title": "Данные агента",
     "subtitle": "Настройте личные данные и банковскую информацию для выплат",
     "personalInformation": "Личные данные",
@@ -23,20 +23,28 @@
     "selfEmployed": "Самозанятый",
     "ip": "ИП",
     "noTasks": "Нет активных контрактов",
-    "waitingTasks": "Как только вам назначат контракт, он появится здесь"
+    "waitingTasks": "Как только вам назначат контракт, он появится здесь",
+    "completeProfile": "Заполнить профиль",
+    "completeProfileHint": "Заполните профиль, чтобы получать контракты",
+    "viewAvailableContracts": "Доступные контракты",
+    "raiseDispute": "Оспорить решение",
+    "disputePrompt": "Опишите причину спора:",
+    "disputeSuccess": "Спор передан CEO."
   },
   "agentKPI": {
-  "title": "KPI агента",
-  "newSales": "Новые продажи",
-  "renewal": "Продление договоров",
-  "crossSell": "Кросс-продажи",
-  "planCompletion": "Выполнение плана",
-  "retention90d": "Удержание 90 дней",
-  "annualBonus": "Годовой бонус",
-  "accrued": "Начислено",
-  "notPaidYet": "Не выплачен",
-  "annualBonusHint": "Бонус растёт на 1/12 каждый месяц. Выплата по окончании года при достижении KPI."
-},
+    "title": "KPI агента",
+    "newSales": "Новые продажи",
+    "renewal": "Продление договоров",
+    "crossSell": "Кросс-продажи",
+    "planCompletion": "Выполнение плана",
+    "retention90d": "Удержание 90 дней",
+    "annualBonus": "Годовой бонус",
+    "accrued": "Начислено",
+    "notPaidYet": "Не выплачен",
+    "annualBonusHint": "Бонус растёт на 1/12 каждый месяц. Выплата по окончании года при достижении KPI.",
+    "payoutCondition": "Условие выплаты",
+    "payoutTrigger": "бонус выплачивается автоматически"
+  },
   "auth": {
     "admin": "Администратор",
     "agent": "Агент",
@@ -57,6 +65,32 @@
     "register": "Зарегистрироваться",
     "registerTitle": "Создайте аккаунт InCore",
     "selectRole": "Выберите вашу роль"
+  },
+  "ceo": {
+    "disputesAndApprovals": "Контроль и Арбитраж",
+    "disputesSubtitle": "Ручные подтверждения сбоев Оракула и споры с агентами",
+    "manualApprovals": "Требуют ручного подтверждения",
+    "noManualApprovals": "Все системы Оракула работают штатно.",
+    "confirmPayment": "Подтвердить оплату",
+    "activeDisputes": "Активные споры",
+    "noDisputes": "Споров нет. Экономика доверия работает.",
+    "disputeReason": "Причина спора",
+    "payAgent": "Выплатить агенту",
+    "rejectPayment": "Отказать в выплате"
+  },
+  "ceoDashboard": {
+    "title": "Финансовая панель",
+    "subtitle": "Сводные показатели экономики компании в реальном времени",
+    "totalRevenue": "Общая выручка",
+    "frozenEscrow": "Заморожено в Escrow",
+    "paidToAgents": "Выплачено агентам",
+    "netProfit": "Чистая прибыль",
+    "avgRoi": "Средний ROI",
+    "portfolioDynamics": "Динамика портфеля",
+    "portfolioSummary": "Сводка по портфелю",
+    "activeDeals": "Активные сделки",
+    "completedDeals": "Завершенные сделки",
+    "hedgeNote": "Риски хеджированы смарт-контрактами. Выплаты производятся только после верификации результата Оракулом."
   },
   "common": {
     "all": "Все",
@@ -86,6 +120,8 @@
   "contract": {
     "applyForTask": "Откликнуться на задачу",
     "approveWork": "Принять работу",
+    "createContract": "Создать контракт",
+    "createFirst": "Создать первый контракт",
     "deadline": "Срок выполнения",
     "description": "Описание",
     "escrowAmount": "Сумма эскроу",
@@ -103,19 +139,29 @@
       "ACTIVE": "Активен",
       "COMPLETED": "Завершен",
       "DISPUTED": "Спор",
+      "DISPUTED_REJECTED": "Отклонено",
       "DRAFT": "Черновик",
       "IN_PROGRESS": "В работе",
       "PENDING_APPROVAL": "На проверке",
+      "PENDING_MANUAL_APPROVAL": "Требует подтверждения",
       "PENDING_PAYMENT": "Ожидание оплаты"
     },
     "submitWork": "Отправить работу",
     "title": "Название задачи"
   },
   "contracts": {
+    "createNew": "Создать контракт",
     "empty": "У вас пока нет контрактов",
-    "title": "Контракты"
+    "title": "Контракты",
+    "unitEconomics": "Unit-экономика контракта",
+    "agentPayouts": "Плановые выплаты агенту",
+    "companyProfit": "Прибыль компании",
+    "publish": "Опубликовать контракт",
+    "unprofitableWarning": "Сделка убыточна или не приносит прибыли. Измените параметры.",
+    "plannedRevenue": "Плановая выручка",
+    "rewardType": "Тип вознаграждения"
   },
-    "dashboard": {
+  "dashboard": {
     "welcome": "Добро пожаловать",
     "activeContracts": "Активные контракты",
     "completedContracts": "Завершенные контракты",
@@ -136,6 +182,10 @@
     "contractWillAppear": "После назначения контракта он появится здесь",
     "openProfile": "Заполнить профиль"
   },
+  "footer": {
+    "terms": "Условия использования",
+    "privacy": "Политика конфиденциальности"
+  },
   "kpi": {
     "avgCheck": "Средний чек",
     "calls": "Звонки",
@@ -150,6 +200,8 @@
   "nav": {
     "contracts": "Контракты",
     "dashboard": "Дашборд",
+    "disputes": "Арбитраж",
+    "language": "Язык",
     "payouts": "Выплаты",
     "settings": "Настройки",
     "tasks": "Задачи"
@@ -178,6 +230,14 @@
   "payouts": {
     "empty": "Выплаты пока отсутствуют",
     "title": "Выплаты"
+  },
+  "period": {
+    "month": "Месяц",
+    "quarter": "Квартал",
+    "year": "Год"
+  },
+  "settings": {
+    "fillCompanyFirst": "Сначала заполните данные компании в настройках"
   },
   "validation": {
     "invalidEmail": "Некорректный email",

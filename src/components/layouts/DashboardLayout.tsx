@@ -12,6 +12,7 @@ import {
   Globe,
   Check,
   DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Notification, UserRole } from '../../lib/supabase';
@@ -27,6 +28,7 @@ const navItems: Record<UserRole, Array<{ path: string; label: string; icon: Reac
     { path: '/ceo/contracts', label: 'nav.contracts', icon: <FileText className="w-5 h-5" /> },
     { path: '/ceo/agents', label: 'nav.agents', icon: <Users className="w-5 h-5" /> },
     { path: '/ceo/settings', label: 'nav.settings', icon: <Settings className="w-5 h-5" /> },
+    { path: '/ceo/disputes', label: 'nav.disputes', icon: <AlertTriangle className="w-5 h-5" /> },
   ],
   AGENT: [
     { path: '/agent/dashboard', label: 'nav.dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },

@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data, error } = await supabase
       .from('user_roles')
-      .select('*')
+      .select('user_id, role')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -57,11 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      const userProfile = await fetchProfile(user.id);
-      setProfile(userProfile);
-    }
-  }, [user, fetchProfile]);
+  if (!user) return;
+
+  try {
+    const userProfile = await fetchProfile(user.id);
+    setProfile(userProfile);
+  } catch (error) {
+    console.error('Failed to refresh profile:', error);
+  }
+}, [user, fetchProfile]);
 
   useEffect(() => {
     const {
@@ -82,29 +86,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-console.log("SESSION:", session);
-console.log("USER:", session?.user);
-      if (session?.user) {
-  const userProfile = await fetchProfile(session.user.id);
-  setProfile(userProfile);
-}
-
-console.log("AUTH LOADING FINISHED");
-setLoading(false);
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+  setLoading(false);
+});
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
 
   const signOut = async () => {
+  try {
     await supabase.auth.signOut();
+  } catch (error) {
+    console.error('Sign out failed:', error);
+  } finally {
     setUser(null);
     setSession(null);
     setProfile(null);
-  };
+    setLoading(false);
+  }
+};
 
   const value = {
     user,

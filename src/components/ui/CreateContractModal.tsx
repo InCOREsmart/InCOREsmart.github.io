@@ -1,368 +1,274 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, AlertCircle, Calculator } from 'lucide-react';
-import { supabase, Contract, DEFAULT_PAYMENT_STREAMS } from '../../lib/supabase';
+import { X, Calculator, TrendingUp, Shield, Users, AlertCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface CreateContractModalProps {
-  companyId: string;
+  isOpen: boolean;
   onClose: () => void;
-  onCreated: (contract: Contract) => void;
+  onCreated: () => void;
 }
 
-interface FormData {
-  title: string;
-  description: string;
-  deadline: string;
-  kpi_calls: number;
-  kpi_meetings: number;
-  kpi_proposals: number;
-  kpi_revenue: number;
-  min_check: number;
-  target_conversion: number;
-  avg_check: number;
-  target_clients: number;
-}
+type RewardType = 'standard_b2b' | 'renewal' | 'cross_sell';
 
-const initialFormData: FormData = {
-  title: '',
-  description: '',
-  deadline: '',
-  kpi_calls: 0,
-  kpi_meetings: 0,
-  kpi_proposals: 0,
-  kpi_revenue: 0,
-  min_check: 0,
-  target_conversion: 20,
-  avg_check: 0,
-  target_clients: 0,
-};
-
-export function CreateContractModal({ companyId, onClose, onCreated }: CreateContractModalProps) {
+export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContractModalProps) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const { user } = useAuth();
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [revenue, setRevenue] = useState<number | ''>('');
+  const [deadline, setDeadline] = useState('');
+  const [rewardType, setRewardType] = useState<RewardType>('standard_b2b');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (field: keyof FormData, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(null);
-  };
+  // --- УМНЫЙ КАЛЬКУЛЯТОР (Unit-экономика в реальном времени) ---
+  const [economics, setEconomics] = useState({
+    escrow: 0,
+    agentPayouts: 0,
+    companyProfit: 0,
+    roi: 0,
+  });
 
-  // Calculate bonuses in real-time
-  const newSalesBonus = Math.round(formData.kpi_revenue * 0.1);
-  const renewalBonus = Math.round(formData.kpi_revenue * 0.03);
-  const crossSellBonus = Math.round(formData.kpi_revenue * 0.05);
-  const planBonus100 = 50000;
-  const planBonus120 = 100000;
-  const totalBonus100 = newSalesBonus + renewalBonus + crossSellBonus + planBonus100;
-  const totalBonus120 = newSalesBonus + renewalBonus + crossSellBonus + planBonus120;
+  useEffect(() => {
+    const rev = typeof revenue === 'number' ? revenue : 0;
+    
+    // 1. Escrow: 30% от выручки (резерв безопасности)
+    const escrow = rev * 0.30;
+
+    // 2. Выплаты агенту (матрица 6 стримов, упрощенно по типу вознаграждения)
+    let payoutMultiplier = 0.15; // Стандартный B2B: ~15% от выручки на все стримы
+    if (rewardType === 'renewal') payoutMultiplier = 0.05; // Пролонгация: 5%
+    if (rewardType === 'cross_sell') payoutMultiplier = 0.10; // Кросс-сейл: 10%
+
+    const agentPayouts = rev * payoutMultiplier;
+
+    // 3. Прибыль компании (по формуле: Выручка - Escrow)
+    const companyProfit = rev - escrow; 
+
+    // 4. ROI = (Прибыль / Escrow) * 100
+    const roi = escrow > 0 ? (companyProfit / escrow) * 100 : 0;
+
+    setEconomics({ escrow, agentPayouts, companyProfit, roi });
+  }, [revenue, rewardType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || typeof revenue !== 'number') return;
+
     setLoading(true);
-    setError(null);
-
     try {
-      const contractData = {
-        company_id: companyId,
-        title: formData.title,
-        description: formData.description,
-        deadline: formData.deadline,
-        status: 'DRAFT' as const,
-        kpi_calls: formData.kpi_calls,
-        kpi_meetings: formData.kpi_meetings,
-        kpi_proposals: formData.kpi_proposals,
-        kpi_revenue: formData.kpi_revenue,
-        min_check: formData.min_check,
-        target_conversion: formData.target_conversion,
-        avg_check: formData.avg_check,
-        target_clients: formData.target_clients,
-        payment_streams: DEFAULT_PAYMENT_STREAMS,
-        escrow_amount: 0,
-        escrow_status: 'PENDING' as const,
-      };
+      // 1. Сначала получаем company_id текущего CEO
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      const { data, error: insertError } = await supabase
-        .from('contracts')
-        .insert(contractData)
-        .select()
-        .single();
-
-      if (insertError) {
-        setError(insertError.message);
+      if (companyError || !companyData) {
+        alert('Ошибка: Компания не найдена. Пожалуйста, заполните данные компании в настройках.');
+        setLoading(false);
         return;
       }
 
-      if (data) {
-        onCreated(data as Contract);
-      }
+      // 2. Создаем контракт с правильным company_id
+      const { error } = await supabase.from('contracts').insert({
+        company_id: companyData.id, // <-- КЛЮЧЕВОЕ ДОБАВЛЕНИЕ
+        ceo_id: user.id,
+        title,
+        description,
+        revenue: revenue,
+        escrow_amount: economics.escrow,
+        agent_payouts_total: economics.agentPayouts,
+        company_profit: economics.companyProfit,
+        roi_percentage: economics.roi,
+        reward_type: rewardType,
+        deadline,
+        status: 'PENDING_APPROVAL', 
+        created_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      onCreated();
+      onClose();
+      
+      // Сброс формы
+      setTitle(''); 
+      setDescription(''); 
+      setRevenue(''); 
+      setDeadline('');
+      setRewardType('standard_b2b');
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Ошибка создания контракта:', err);
+      alert(t('common.error') + ': ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ru-RU').format(amount);
-  };
+  if (!isOpen) return null;
+
+  const isProfitable = economics.roi > 0 && typeof revenue === 'number' && revenue > 0;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-      <div className="bg-primary border border-text-secondary/20 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-text-secondary/10">
         <div className="flex items-center justify-between p-6 border-b border-text-secondary/10">
-          <h2 className="text-xl font-display font-semibold text-text-primary">
-            {t('contract.createContract')}
+          <h2 className="text-2xl font-display font-bold text-text-primary">
+            {t('contracts.createNew') || 'Создать новый контракт'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 hover:bg-text-secondary/10 rounded-full transition-colors">
+            <X className="w-5 h-5 text-text-secondary" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {error && (
-            <div className="flex items-center gap-2 p-4 bg-error/20 border border-error/30 rounded-lg text-error">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
+        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* ЛЕВАЯ КОЛОНКА: Ввод данных */}
+          <div className="space-y-5">
+            <div>
+              <label className="label">{t('contract.title') || 'Название задачи'} *</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                placeholder="Например: Привлечение 5 корпоративных клиентов"
+                required
+              />
             </div>
-          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Form Fields */}
-            <div className="space-y-4">
-              {/* Task Info */}
+            <div>
+              <label className="label">{t('contract.description') || 'Описание'} *</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input min-h-[100px]"
+                placeholder="Опишите задачи и KPI агента..."
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">{t('contract.title')} *</label>
+                <label className="label">{t('contracts.plannedRevenue') || 'Плановая выручка'} *</label>
                 <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
+                  type="number"
+                  value={revenue}
+                  onChange={(e) => setRevenue(e.target.value === '' ? '' : Number(e.target.value))}
                   className="input"
-                  placeholder="Привлечение B2B-клиентов"
+                  placeholder="5000000"
+                  min="0"
                   required
                 />
               </div>
-
               <div>
-                <label className="label">{t('contract.description')} *</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  className="input min-h-[100px]"
-                  placeholder="Описание задачи"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="label">{t('contract.deadline')} *</label>
+                <label className="label">{t('contract.deadline') || 'Срок исполнения'} *</label>
                 <input
                   type="date"
-                  value={formData.deadline}
-                  onChange={(e) => handleChange('deadline', e.target.value)}
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
                   className="input"
                   required
-                  min={new Date().toISOString().split('T')[0]}
                 />
-              </div>
-
-              {/* KPI Goals */}
-              <div className="card bg-primary-light">
-                <h3 className="text-sm font-medium text-text-primary mb-4">{t('kpi.title')}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label text-xs">{t('kpi.calls')}</label>
-                    <input
-                      type="number"
-                      value={formData.kpi_calls || ''}
-                      onChange={(e) => handleChange('kpi_calls', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="1000"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.meetings')}</label>
-                    <input
-                      type="number"
-                      value={formData.kpi_meetings || ''}
-                      onChange={(e) => handleChange('kpi_meetings', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="50"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.proposals')}</label>
-                    <input
-                      type="number"
-                      value={formData.kpi_proposals || ''}
-                      onChange={(e) => handleChange('kpi_proposals', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="100"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.revenue')} ($)</label>
-                    <input
-                      type="number"
-                      value={formData.kpi_revenue || ''}
-                      onChange={(e) => handleChange('kpi_revenue', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="5000000"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.minCheck')} ($)</label>
-                    <input
-                      type="number"
-                      value={formData.min_check || ''}
-                      onChange={(e) => handleChange('min_check', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="10000"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.targetConversion')} (%)</label>
-                    <input
-                      type="number"
-                      value={formData.target_conversion}
-                      onChange={(e) => handleChange('target_conversion', parseInt(e.target.value) || 20)}
-                      className="input"
-                      placeholder="20"
-                      min={1}
-                      max={100}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.avgCheck')} ($)</label>
-                    <input
-                      type="number"
-                      value={formData.avg_check || ''}
-                      onChange={(e) => handleChange('avg_check', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="50000"
-                      min={0}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="label text-xs">{t('kpi.targetClients')}</label>
-                    <input
-                      type="number"
-                      value={formData.target_clients || ''}
-                      onChange={(e) => handleChange('target_clients', parseInt(e.target.value) || 0)}
-                      className="input"
-                      placeholder="20"
-                      min={0}
-                      required
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Right Column - Bonus Calculation */}
-            <div className="space-y-4">
-              <div className="card bg-gold/10 border-gold/30">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calculator className="w-5 h-5 text-gold" />
-                  <h3 className="text-lg font-display font-semibold text-gold">
-                    {t('bonus.title')}
-                  </h3>
-                </div>
-
-                <div className="space-y-3">
-                  {/* New Sales Bonus */}
-                  <div className="flex justify-between items-center py-2 border-b border-text-secondary/10">
-                    <span className="text-text-secondary">{t('bonus.newSales')}</span>
-                    <span className="font-semibold text-success">${formatCurrency(newSalesBonus)}</span>
-                  </div>
-
-                  {/* Renewal Bonus */}
-                  <div className="flex justify-between items-center py-2 border-b border-text-secondary/10">
-                    <span className="text-text-secondary">{t('bonus.renewal')}</span>
-                    <span className="font-semibold text-success">${formatCurrency(renewalBonus)}</span>
-                  </div>
-
-                  {/* Cross-sell Bonus */}
-                  <div className="flex justify-between items-center py-2 border-b border-text-secondary/10">
-                    <span className="text-text-secondary">{t('bonus.crossSell')}</span>
-                    <span className="font-semibold text-success">${formatCurrency(crossSellBonus)}</span>
-                  </div>
-
-                  {/* Plan Bonus 100% */}
-                  <div className="flex justify-between items-center py-2 border-b border-text-secondary/10">
-                    <span className="text-text-secondary">{t('bonus.planBonus')} (100%)</span>
-                    <span className="font-semibold text-success">${formatCurrency(planBonus100)}</span>
-                  </div>
-
-                  {/* Plan Bonus 120% */}
-                  <div className="flex justify-between items-center py-2 border-b border-text-secondary/10">
-                    <span className="text-text-secondary">{t('bonus.planBonus')} (120%)</span>
-                    <span className="font-semibold text-success">${formatCurrency(planBonus120)}</span>
-                  </div>
-
-                  {/* Total */}
-                  <div className="pt-4">
-                    <div className="flex justify-between items-center py-2 bg-gold/20 rounded-lg px-3 mb-2">
-                      <span className="font-medium text-gold">{t('bonus.planBonus100')}</span>
-                      <span className="font-bold text-gold text-xl">${formatCurrency(totalBonus100)}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 bg-success/20 rounded-lg px-3">
-                      <span className="font-medium text-success">{t('bonus.planBonus120')}</span>
-                      <span className="font-bold text-success text-xl">${formatCurrency(totalBonus120)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Streams Info */}
-              <div className="card bg-primary-light">
-                <h3 className="text-sm font-medium text-text-primary mb-3">{t('paymentStreams.title')}</h3>
-                <ul className="space-y-2 text-sm">
-                  {DEFAULT_PAYMENT_STREAMS.map((stream) => (
-                    <li key={stream.id} className="flex justify-between text-text-secondary">
-                      <span>{stream.name}</span>
-                      <span className="text-gold">
-                        {stream.percent ? `${stream.percent}%` : stream.amount ? `$${formatCurrency(stream.amount)}` : '—'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div>
+              <label className="label">{t('contracts.rewardType') || 'Тип вознаграждения'}</label>
+              <select
+                value={rewardType}
+                onChange={(e) => setRewardType(e.target.value as RewardType)}
+                className="input"
+              >
+                <option value="standard_b2b">Стандартный B2B (Фонд ~15%)</option>
+                <option value="renewal">Пролонгация (Фонд ~5%)</option>
+                <option value="cross_sell">Кросс-сейл (Фонд ~10%)</option>
+              </select>
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-text-secondary/10">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
-              {t('common.cancel')}
-            </button>
+          {/* ПРАВАЯ КОЛОНКА: Умный калькулятор (Unit-экономика) */}
+          <div className="bg-primary-light/50 rounded-xl p-6 border border-text-secondary/10">
+            <div className="flex items-center gap-2 mb-6">
+              <Calculator className="w-5 h-5 text-gold" />
+              <h3 className="text-lg font-semibold text-text-primary">
+                {t('contracts.unitEconomics') || 'Unit-экономика контракта'}
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              {/* Строка 1: Выплаты агенту */}
+              <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-text-secondary/10">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-text-secondary">
+                    {t('contracts.agentPayouts') || 'Плановые выплаты агенту'}
+                  </span>
+                </div>
+                <span className="font-semibold text-text-primary">
+                  {economics.agentPayouts.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+
+              {/* Строка 2: Escrow */}
+              <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-text-secondary/10">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-gold" />
+                  <span className="text-sm text-text-secondary">
+                    {t('contract.escrowAmount') || 'Escrow (резерв 30%)'}
+                  </span>
+                </div>
+                <span className="font-semibold text-gold">
+                  {economics.escrow.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+
+              {/* Строка 3: Прибыль компании */}
+              <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-text-secondary/10">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-text-secondary">
+                    {t('contracts.companyProfit') || 'Прибыль компании'}
+                  </span>
+                </div>
+                <span className="font-bold text-green-600 text-lg">
+                  {economics.companyProfit.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+
+              {/* Строка 4: ROI */}
+              <div className={`flex justify-between items-center p-4 rounded-lg border-2 transition-colors ${
+                isProfitable ? 'bg-green-50/50 border-green-500/30' : 'bg-red-50/50 border-red-500/30'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className={`w-5 h-5 ${isProfitable ? 'text-green-600' : 'text-red-600'}`} />
+                  <span className="font-semibold text-text-primary">ROI Контракта</span>
+                </div>
+                <span className={`font-bold text-2xl ${isProfitable ? 'text-green-600' : 'text-red-600'}`}>
+                  {economics.roi.toFixed(1)}%
+                </span>
+              </div>
+
+              {!isProfitable && typeof revenue === 'number' && revenue > 0 && (
+                <div className="flex items-start gap-2 p-3 bg-red-100/50 text-red-700 rounded-lg text-sm border border-red-200">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{t('contracts.unprofitableWarning') || 'Сделка убыточна. Измените параметры.'}</span>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
-              className="btn-primary"
+              disabled={!isProfitable || loading || !title || !deadline}
+              className={`w-full mt-6 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                isProfitable 
+                  ? 'bg-gold hover:bg-gold/90 text-white shadow-lg' 
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              }`}
             >
-              {loading ? t('common.loading') : t('contract.createContract')}
+              {loading ? (t('common.loading') || 'Загрузка...') : (t('contracts.publish') || 'Опубликовать контракт')}
             </button>
           </div>
         </form>

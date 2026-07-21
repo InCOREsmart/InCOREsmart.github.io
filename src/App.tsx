@@ -7,6 +7,7 @@ import { CEODashboard } from './pages/ceo/CEODashboard';
 import { CEOSettings } from './pages/ceo/CEOSettings';
 import { CEOContractsPage } from './pages/ceo/CEOContractsPage';
 import { CEOContractDetailPage } from './pages/ceo/CEOContractDetailPage';
+import { CEODisputesPage } from './pages/ceo/CEODisputesPage';
 import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/ceo/contracts" element={<ProtectedRoute allowedRoles={['CEO']}><CEOContractsPage /></ProtectedRoute>} />
       <Route path="/ceo/contracts/:id" element={<ProtectedRoute allowedRoles={['CEO']}><CEOContractDetailPage /></ProtectedRoute>} />
       <Route path="/ceo/agents" element={<ProtectedRoute allowedRoles={['CEO']}><CEOAgentsPage /></ProtectedRoute>} />
+      <Route path="/ceo/disputes" element={<CEODisputesPage />} />
 
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
 

@@ -12,7 +12,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export type UserRole = 'CEO' | 'AGENT' | 'ADMIN';
 export type CompanyType = 'ООО' | 'ИП';
 export type TaxStatus = 'self_employed' | 'ip';
-export type ContractStatus = 'DRAFT' | 'PENDING_PAYMENT' | 'ACTIVE' | 'IN_PROGRESS' | 'PENDING_APPROVAL' | 'COMPLETED' | 'DISPUTED';
+export type ContractStatus = 
+  | 'DRAFT' 
+  | 'PENDING_PAYMENT' 
+  | 'ACTIVE' 
+  | 'IN_PROGRESS' 
+  | 'PENDING_APPROVAL' 
+  | 'PENDING_MANUAL_APPROVAL' 
+  | 'COMPLETED' 
+  | 'DISPUTED' 
+  | 'DISPUTED_REJECTED';
 export type EscrowStatus = 'PENDING' | 'FUNDED' | 'RELEASED' | 'FROZEN';
 export type TransactionType = 'ESCROW_FUND' | 'SALARY_PAYOUT' | 'BONUS_PAYOUT' | 'CLAWBACK' | 'COMMISSION';
 export type TransactionStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
@@ -80,30 +89,37 @@ export interface PaymentStream {
   release?: string;
   clawback?: boolean;
 }
-
 export interface Contract {
   id: string;
   company_id: string;
   agent_id?: string;
+  ceo_id?: string;
   title: string;
   description: string;
-  deadline: string;
-  status: ContractStatus;
-  kpi_calls: number;
-  kpi_meetings: number;
-  kpi_proposals: number;
-  kpi_revenue: number;
-  min_check: number;
-  target_conversion: number;
-  avg_check: number;
-  target_clients: number;
-  payment_streams: PaymentStream[];
+  
+  // Обновленные статусы с поддержкой арбитража и ручного подтверждения
+  status: 'DRAFT' | 'PENDING_PAYMENT' | 'ACTIVE' | 'IN_PROGRESS' | 'PENDING_APPROVAL' | 'PENDING_MANUAL_APPROVAL' | 'COMPLETED' | 'DISPUTED' | 'DISPUTED_REJECTED';
+  
   escrow_amount: number;
-  escrow_status: EscrowStatus;
+  escrow_status: 'PENDING' | 'FUNDED' | 'FROZEN' | 'RELEASED';
+  deadline: string;
   created_at: string;
-  completed_at?: string;
+  updated_at?: string;
+  
+  // --- НОВЫЕ ПОЛЯ ДЛЯ UNIT-ЭКОНОМИКИ ---
+  revenue?: number;                // Плановая выручка
+  agent_payouts_total?: number;    // Плановые выплаты агенту
+  company_profit?: number;         // Прибыль компании
+  roi_percentage?: number;         // ROI контракта
+  reward_type?: 'standard_b2b' | 'renewal' | 'cross_sell'; // Тип вознаграждения
+  
+  // --- ПОЛЯ ДЛЯ АРБИТРАЖА И РУЧНОГО ПОДТВЕРЖДЕНИЯ ---
+  requires_manual_approval?: boolean;
+  dispute_id?: string;
+  
+  // Старое поле (оставляем для обратной совместимости, если оно где-то используется)
+  kpi_revenue?: number;
 }
-
 export interface DailyMetric {
   id: string;
   contract_id: string;
