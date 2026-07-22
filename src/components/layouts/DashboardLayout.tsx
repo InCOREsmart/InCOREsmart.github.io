@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, Settings, AlertTriangle, LogOut, Globe, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Settings, AlertTriangle, LogOut, Globe, Menu, X, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps { children: React.ReactNode; }
@@ -35,10 +35,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-gray-50 flex">
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center gap-2 bg-[#000052] px-3 py-2 rounded-lg w-fit">
-              <span className="text-white font-bold text-lg tracking-wider">In<span className="text-yellow-500">C</span>ORE</span>
-            </div>
+          
+          {/* ЛОГОТИП ИЗ ФАЙЛА */}
+          <div className="p-6 border-b border-gray-100 flex justify-center">
+            {/* ВАЖНО: Если ваш файл называется logo.svg или logo.jpg, измените /logo.png на /logo.svg или /logo.jpg */}
+            <img src="/logo.png" alt="InCORE Logo" className="h-10 w-auto object-contain" />
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -84,7 +85,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">{children}</main>
+      <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+        {/* Колокольчик уведомлений в правом верхнем углу */}
+        <div className="flex justify-end mb-4">
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+            <Bell className="w-5 h-5 text-[#000052]" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
