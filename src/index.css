@@ -43,7 +43,7 @@
 @layer components {
   /* ===== КАРТОЧКИ ===== */
   .card {
-    @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm;
+    @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm text-[#000052];
     transition: box-shadow 0.2s ease;
   }
 
@@ -109,8 +109,8 @@
     @apply text-gray-400;
   }
 
-  .label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
+    .label {
+    @apply block text-sm font-semibold text-[#000052] mb-1.5; /* Темно-синий, отлично читается на белом */
   }
 
   /* ===== ТАБЛИЦЫ ===== */
