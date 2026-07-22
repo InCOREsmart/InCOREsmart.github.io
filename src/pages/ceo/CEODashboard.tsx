@@ -68,7 +68,7 @@ export function CEODashboard() {
 
   const chartData = [
     { label: 'Выручка', value: metrics.totalRevenue, color: 'bg-[#000052]', width: metrics.totalRevenue > 0 ? '100%' : '5%' },
-    { label: 'Escrow', value: metrics.frozenEscrow, color: 'bg-yellow-500', width: metrics.frozenEscrow > 0 ? `${(metrics.frozenEscrow / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
+    { label: 'Escrow', value: metrics.frozenEscrow, color: 'bg-[#B8860B]', width: metrics.frozenEscrow > 0 ? `${(metrics.frozenEscrow / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
     { label: 'Выплаты', value: metrics.paidToAgents, color: 'bg-blue-500', width: metrics.paidToAgents > 0 ? `${(metrics.paidToAgents / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
   ];
 
@@ -91,34 +91,58 @@ export function CEODashboard() {
         </div>
       )}
 
+      {/* KPI Cards - GOLDEN COLOR */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><DollarSign className="w-5 h-5 text-[#000052]" /><ArrowUpRight className="w-4 h-4 text-green-600" /></div>
+        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+          <div className="flex items-center justify-between mb-3">
+            <DollarSign className="w-5 h-5 text-[#B8860B]" />
+            <ArrowUpRight className="w-4 h-4 text-green-600" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)} ₽</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.totalRevenue')}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><Shield className="w-5 h-5 text-yellow-600" /><Activity className="w-4 h-4 text-yellow-600" /></div>
+
+        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+          <div className="flex items-center justify-between mb-3">
+            <Shield className="w-5 h-5 text-[#B8860B]" />
+            <Activity className="w-4 h-4 text-[#B8860B]" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)} ₽</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.escrowBalance')}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><Users className="w-5 h-5 text-blue-600" /><CheckCircle className="w-4 h-4 text-blue-600" /></div>
+
+        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+          <div className="flex items-center justify-between mb-3">
+            <Users className="w-5 h-5 text-[#B8860B]" />
+            <CheckCircle className="w-4 h-4 text-[#B8860B]" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.paidToAgents)} ₽</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.paidToAgents')}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><TrendingUp className="w-5 h-5 text-purple-600" /><ArrowUpRight className="w-4 h-4 text-purple-600" /></div>
+
+        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <div className="flex items-center justify-between mb-3">
+            <TrendingUp className="w-5 h-5 text-purple-600" />
+            <ArrowUpRight className="w-4 h-4 text-purple-600" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.netProfit)} ₽</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.netProfit')}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><BarChart3 className="w-5 h-5 text-indigo-600" /><TrendingUp className="w-4 h-4 text-indigo-600" /></div>
+
+        <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+          <div className="flex items-center justify-between mb-3">
+            <BarChart3 className="w-5 h-5 text-indigo-600" />
+            <TrendingUp className="w-4 h-4 text-indigo-600" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.avgRoi.toFixed(1)}%</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.avgRoi')}</p>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between mb-3"><Briefcase className="w-5 h-5 text-orange-600" /><Clock className="w-4 h-4 text-orange-600" /></div>
+
+        <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <div className="flex items-center justify-between mb-3">
+            <Briefcase className="w-5 h-5 text-orange-600" />
+            <Clock className="w-4 h-4 text-orange-600" />
+          </div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.activeDealsCount}</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.activeContracts')}</p>
         </div>
@@ -189,7 +213,7 @@ export function CEODashboard() {
         {metrics.pendingPayouts > 0 ? (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
             <span className="text-sm font-medium text-yellow-800">{t('ceoDashboard.totalPending')}</span>
-            <span className="text-xl font-bold text-yellow-700">{formatCurrency(metrics.pendingPayouts)} ₽</span>
+            <span className="text-xl font-bold text-[#B8860B]">{formatCurrency(metrics.pendingPayouts)} ₽</span>
           </div>
         ) : (
           <div className="text-center py-6 text-gray-500 flex items-center justify-center gap-2">

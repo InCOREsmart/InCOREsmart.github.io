@@ -58,31 +58,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+      {/* Sidebar - GOLDEN COLOR */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#B8860B] border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-gray-100 flex justify-center">
+          <div className="p-6 border-b border-yellow-600/30 flex justify-center">
             <img src="/logo.png" alt="InCORE" className="h-10 w-auto object-contain" />
           </div>
 
-          {/* Navigation */}
+          {/* Navigation - WHITE TEXT */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
-              const activeClass = 'bg-[#000052]/5 text-[#000052] border border-[#000052]/10';
-              const inactiveClass = 'text-gray-600 hover:bg-gray-50 hover:text-[#000052]';
-
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    isActive ? activeClass : inactiveClass
+                    isActive
+                      ? 'bg-white/20 text-white border border-white/30'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {item.icon}
@@ -93,8 +92,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* Language Switcher */}
-          <div className="p-4 border-t border-gray-100">
-            <div className="flex items-center gap-2 mb-3 text-gray-500">
+          <div className="p-4 border-t border-yellow-600/30">
+            <div className="flex items-center gap-2 mb-3 text-white/80">
               <Globe className="w-4 h-4" />
               <span className="text-xs font-medium uppercase tracking-wider">
                 {t('nav.language')}
@@ -109,8 +108,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     onClick={() => changeLanguage(lang.code)}
                     className={`px-2 py-1.5 text-xs rounded-md border transition-all font-semibold ${
                       isActiveLang
-                        ? 'bg-[#000052] text-white border-[#000052]'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-[#000052] hover:text-[#000052]'
+                        ? 'bg-white text-[#B8860B] border-white'
+                        : 'bg-transparent text-white border-white/30 hover:border-white hover:bg-white/10'
                     }`}
                   >
                     {lang.name}
@@ -121,21 +120,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* User Profile & Logout */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-yellow-600/30">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-[#000052]/10 flex items-center justify-center text-[#000052] font-bold">
+              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
                 {user?.email?.[0].toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#000052] truncate">
+                <p className="text-sm font-medium text-white truncate">
                   {user?.email}
                 </p>
-                <p className="text-xs text-gray-500">{isCEO ? 'CEO' : 'Agent'}</p>
+                <p className="text-xs text-white/70">{isCEO ? 'CEO' : 'Agent'}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" /> {t('auth.logout')}
             </button>
@@ -145,7 +144,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Mobile Menu Button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md text-[#000052]"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md text-[#B8860B]"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
