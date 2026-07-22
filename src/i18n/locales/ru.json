@@ -20,6 +20,7 @@
     "completedContracts": "Выполнено",
     "paymentStreams": "6 потоков выплат (KPI)",
     "myActiveContracts": "Мои активные контракты",
+    "fullName": "ФИО",
     "noActiveContracts": "Нет активных контрактов"
   },
   "ceoDashboard": {
@@ -64,6 +65,7 @@
     "viewAll": "Все контракты",
     "error": "Ошибка",
     "save": "Сохранить",
+    "cancel": "Отмена",
     "success": "Успешно"
   },
   "company": {

@@ -14,6 +14,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { NotificationBell } from '../ui/NotificationBell';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -154,11 +155,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
         {/* Notification Bell */}
         <div className="flex justify-end mb-4">
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
-            <Bell className="w-5 h-5 text-[#000052]" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-        </div>
+  <NotificationBell />
+</div>
 
         {children}
       </main>

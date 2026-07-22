@@ -1,273 +1,169 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, AlertCircle, User, Phone, Mail, Briefcase, Calendar, MessageSquare } from 'lucide-react';
+import { X, UserPlus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AddAgentModalProps {
+  isOpen: boolean;
   onClose: () => void;
-  onAdded: () => void;
+  onAgentAdded: () => void;
 }
 
-interface FormData {
-  full_name: string;
-  phone: string;
-  email: string;
-  specialization: string;
-  experience: string;
-  comment: string;
-}
-
-const initialFormData: FormData = {
-  full_name: '',
-  phone: '',
-  email: '',
-  specialization: '',
-  experience: '',
-  comment: '',
-};
-
-export function AddAgentModal({ onClose, onAdded }: AddAgentModalProps) {
+export function AddAgentModal({ isOpen, onClose, onAgentAdded }: AddAgentModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [formData, setFormData] = useState<FormData>(initialFormData);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    specialization: '',
+  });
 
-  const handleChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(null);
-  };
-
-  const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length === 0) return '';
-    if (digits.length <= 1) return `+${digits}`;
-    if (digits.length <= 4) return `+${digits.slice(0, 1)}(${digits.slice(1)}`;
-    if (digits.length <= 7) return `+${digits.slice(0, 1)}(${digits.slice(1, 4)})${digits.slice(4)}`;
-    if (digits.length <= 9) return `+${digits.slice(0, 1)}(${digits.slice(1, 4)})${digits.slice(4, 7)}-${digits.slice(7)}`;
-    return `+${digits.slice(0, 1)}(${digits.slice(1, 4)})${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`;
-  };
-
-  const handlePhoneChange = (value: string) => {
-    const formatted = formatPhone(value);
-    handleChange('phone', formatted);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[AddAgentModal] handleSubmit called', formData);
+    if (!user) return;
+
     setLoading(true);
-    setError(null);
-
     try {
-      if (!user) {
-        setError('Пользователь не найден');
-        return;
-      }
-
-      // Get company ID
-      const { data: companyData, error: companyError } = await supabase
+      // Получаем company_id
+      const { data: companyData } = await supabase
         .from('companies')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('[AddAgentModal] Company lookup:', { companyData, companyError });
-
-      if (companyError) {
-        setError(companyError.message);
-        return;
-      }
-
       if (!companyData) {
-        setError('Сначала заполните данные компании в настройках');
+        alert('Сначала заполните данные компании в настройках');
+        setLoading(false);
         return;
       }
 
-      // Create agent record
-      const agentData = {
+      // Создаем агента
+      const { error } = await supabase.from('agents').insert({
         company_id: companyData.id,
         full_name: formData.full_name,
-        phone: formData.phone,
         email: formData.email,
-        specialization: formData.specialization || null,
-        experience: formData.experience || null,
-        comment: formData.comment || null,
-        status: 'pending',
-        // Required fields from schema - set defaults
-        passport_series: '____',
-        passport_number: '______',
-        passport_issued_by: 'Не указан',
-        passport_issue_date: '2000-01-01',
-        passport_department_code: '000-000',
-        inn_personal: '000000000000',
-        snils: '000-000-000 00',
-        tax_status: 'self_employed',
-        bank_name: 'Не указан',
-        bank_bik: '000000000',
-        correspondent_account: '00000000000000000000',
-        settlement_account: '00000000000000000000',
-      };
+        phone: formData.phone,
+        specialization: formData.specialization,
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+      });
 
-      console.log('[AddAgentModal] Inserting agent:', agentData);
+      if (error) throw error;
 
-      const { data, error: insertError } = await supabase
-        .from('agents')
-        .insert(agentData)
-        .select()
-        .single();
+      // Создаем уведомление
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        type: 'AGENT_ADDED',
+        title: 'Агент добавлен',
+        message: `Агент ${formData.full_name} успешно добавлен в систему`,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
 
-      console.log('[AddAgentModal] Insert result:', { data, insertError });
-
-      if (insertError) {
-        setError(insertError.message);
-        return;
-      }
-
-      console.log('[AddAgentModal] Agent created successfully:', data);
-      onAdded();
+      onAgentAdded();
+      onClose();
+      setFormData({ full_name: '', email: '', phone: '', specialization: '' });
     } catch (err) {
-      console.error('[AddAgentModal] Error:', err);
-      setError('Произошла ошибка при сохранении');
+      console.error('Error adding agent:', err);
+      alert(t('common.error'));
     } finally {
       setLoading(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-      <div className="bg-primary border border-text-secondary/20 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-text-secondary/10">
-          <h2 className="text-xl font-display font-semibold text-text-primary">
-            Добавить агента
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold text-[#000052] flex items-center gap-2">
+            <UserPlus className="w-6 h-6" />
+            {t('agent.addAgent')}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-4 bg-error/20 border border-error/30 rounded-lg text-error">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Full Name */}
           <div>
-            <label className="label flex items-center gap-2">
-              <User className="w-4 h-4 text-text-muted" />
-              ФИО *
-            </label>
+            <label className="label">{t('agent.fullName')} *</label>
             <input
-              type="text"
+              name="full_name"
               value={formData.full_name}
-              onChange={(e) => handleChange('full_name', e.target.value)}
+              onChange={handleChange}
               className="input"
               placeholder="Иванов Иван Иванович"
               required
             />
           </div>
 
-          {/* Phone */}
           <div>
-            <label className="label flex items-center gap-2">
-              <Phone className="w-4 h-4 text-text-muted" />
-              Телефон *
-            </label>
+            <label className="label">Email *</label>
             <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              className="input"
-              placeholder="+7(999)999-99-99"
-              required
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="label flex items-center gap-2">
-              <Mail className="w-4 h-4 text-text-muted" />
-              Email *
-            </label>
-            <input
+              name="email"
               type="email"
               value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
+              onChange={handleChange}
               className="input"
-              placeholder="agent@company.com"
+              placeholder="agent@example.com"
               required
             />
           </div>
 
-          {/* Specialization */}
           <div>
-            <label className="label flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-text-muted" />
-              Специализация
-            </label>
+            <label className="label">Телефон *</label>
             <input
-              type="text"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="input"
+              placeholder="+7 (999) 123-45-67"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="label">Специализация *</label>
+            <select
+              name="specialization"
               value={formData.specialization}
-              onChange={(e) => handleChange('specialization', e.target.value)}
+              onChange={handleChange}
               className="input"
-              placeholder="B2B продажи, страхование"
-            />
+              required
+            >
+              <option value="">Выберите специализацию</option>
+              <option value="insurance_b2b">Страхование B2B</option>
+              <option value="insurance_b2c">Страхование B2C</option>
+              <option value="life_insurance">Страхование жизни</option>
+              <option value="property_insurance">Страхование имущества</option>
+              <option value="health_insurance">Медицинское страхование</option>
+            </select>
           </div>
 
-          {/* Experience */}
-          <div>
-            <label className="label flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-text-muted" />
-              Опыт работы
-            </label>
-            <input
-              type="text"
-              value={formData.experience}
-              onChange={(e) => handleChange('experience', e.target.value)}
-              className="input"
-              placeholder="5 лет в продажах"
-            />
-          </div>
-
-          {/* Comment */}
-          <div>
-            <label className="label flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-text-muted" />
-              Комментарий
-            </label>
-            <textarea
-              value={formData.comment}
-              onChange={(e) => handleChange('comment', e.target.value)}
-              className="input min-h-[80px]"
-              placeholder="Дополнительная информация"
-            />
-          </div>
-
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-text-secondary/10">
+          <div className="flex gap-3 justify-end pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary"
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              {t('common.cancel')}
+              {t('common.cancel') || 'Отмена'}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary"
-              onClick={() => console.log('[AddAgentModal] Submit button clicked')}
+              className="btn-primary flex items-center gap-2"
             >
-              {loading ? t('common.loading') : 'Добавить'}
+              <UserPlus className="w-4 h-4" />
+              {loading ? t('common.loading') : t('agent.addAgent')}
             </button>
           </div>
         </form>

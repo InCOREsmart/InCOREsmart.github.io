@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom'; // <-- ДОБАВЛЕНО
 import { Plus, FileText, DollarSign, Calendar, AlertCircle, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase, Contract } from '../../lib/supabase';
@@ -10,6 +11,7 @@ import { CreateContractModal } from '../../components/ui/CreateContractModal';
 export function CEOContractsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate(); // <-- ДОБАВЛЕНО
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,11 @@ export function CEOContractsPage() {
               </thead>
               <tbody>
                 {contracts.map((contract) => (
-                  <tr key={contract.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={contract.id} 
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/ceo/contracts/${contract.id}`)} // <-- ДОБАВЛЕНО: переход на детальную страницу
+                  >
                     <td className="py-4 px-4"><p className="font-medium text-[#000052]">{contract.title}</p><p className="text-sm text-gray-600 truncate max-w-xs">{contract.description}</p></td>
                     <td className="py-4 px-4"><ContractStatusBadge status={contract.status} /></td>
                     <td className="py-4 px-4 text-sm text-gray-600">{formatDate(contract.deadline)}</td>

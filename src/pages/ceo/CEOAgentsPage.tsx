@@ -4,6 +4,7 @@ import { Users, Plus, FileText, DollarSign } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { AddAgentModal } from '../../components/ui/AddAgentModal';
 
 export function CEOAgentsPage() {
   const { t } = useTranslation();
@@ -12,20 +13,19 @@ export function CEOAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    const fetchAgents = async () => {
-      if (!user) return;
-      try {
-        const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-        if (companyData) {
-          const { data } = await supabase.from('agents').select('*').eq('company_id', companyData.id);
-          setAgents(data || []);
-        }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
-    };
-    fetchAgents();
-  }, [user]);
+  const fetchAgents = async () => {
+    if (!user) return;
+    try {
+      const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
+      if (companyData) {
+        const { data } = await supabase.from('agents').select('*').eq('company_id', companyData.id);
+        setAgents(data || []);
+      }
+    } catch (err) { console.error(err); } 
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchAgents(); }, [user]);
 
   if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
 
@@ -65,44 +65,52 @@ export function CEOAgentsPage() {
         </div>
       </div>
 
-      <div className="card text-center py-16">
-        <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-[#000052] mb-2">{t('agent.noAgents')}</h3>
-        <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('agent.waitingTasks')}</p>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> {t('agent.addAgent')}
-        </button>
-      </div>
-
-      {/* Simple Add Agent Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-[#000052] mb-4">{t('agent.addAgent')}</h2>
-            <p className="text-gray-600 mb-6">Функционал добавления агента находится в разработке. В полной версии здесь будет форма с полями: ФИО, Email, Телефон, Специализация.</p>
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Закрыть
-              </button>
-              <button 
-                onClick={() => {
-                  alert('Функционал будет доступен в следующей версии');
-                  setShowAddModal(false);
-                }}
-                className="btn-primary"
-              >
-                Продолжить
-              </button>
-            </div>
-          </div>
+      {agents.length === 0 ? (
+        <div className="card text-center py-16">
+          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-[#000052] mb-2">{t('agent.noAgents')}</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('agent.waitingTasks')}</p>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> {t('agent.addAgent')}
+          </button>
+        </div>
+      ) : (
+        <div className="card">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">ФИО</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Email</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Телефон</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Специализация</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agents.map((agent) => (
+                <tr key={agent.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium text-[#000052]">{agent.full_name}</td>
+                  <td className="py-3 px-4 text-gray-600">{agent.email}</td>
+                  <td className="py-3 px-4 text-gray-600">{agent.phone}</td>
+                  <td className="py-3 px-4 text-gray-600">{agent.specialization}</td>
+                  <td className="py-3 px-4">
+                    <span className="badge badge-success">Активен</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
+
+      <AddAgentModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAgentAdded={fetchAgents}
+      />
     </DashboardLayout>
   );
 }
