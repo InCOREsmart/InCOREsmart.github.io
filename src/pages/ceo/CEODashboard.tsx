@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { 
   DollarSign, TrendingUp, Shield, Users, Briefcase, 
   BarChart3, AlertCircle, CheckCircle, Clock,
-  ArrowUpRight, Activity, FileText
+  ArrowUpRight, Activity, FileText, Plus
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase, Contract } from '../../lib/supabase';
@@ -109,21 +109,20 @@ export function CEODashboard() {
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
 
-  const getStatusColor = (status: string) => {
-    const colors: any = {
-      'ACTIVE': 'bg-blue-100 text-blue-800',
-      'IN_PROGRESS': 'bg-indigo-100 text-indigo-800',
-      'PENDING_APPROVAL': 'bg-yellow-100 text-yellow-800',
-      'PENDING_MANUAL_APPROVAL': 'bg-orange-100 text-orange-800',
-      'COMPLETED': 'bg-green-100 text-green-800',
-      'DRAFT': 'bg-gray-100 text-gray-800',
+  const getStatusBadge = (status: string) => {
+    const badges: any = {
+      'ACTIVE': { class: 'badge-info', text: t('contract.statuses.ACTIVE') },
+      'IN_PROGRESS': { class: 'badge-info', text: t('contract.statuses.IN_PROGRESS') },
+      'PENDING_APPROVAL': { class: 'badge-warning', text: t('contract.statuses.PENDING_APPROVAL') },
+      'PENDING_MANUAL_APPROVAL': { class: 'badge-warning', text: t('contract.statuses.PENDING_MANUAL_APPROVAL') },
+      'COMPLETED': { class: 'badge-success', text: t('contract.statuses.COMPLETED') },
+      'DRAFT': { class: 'badge-gray', text: t('contract.statuses.DRAFT') },
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return badges[status] || { class: 'badge-gray', text: status };
   };
 
-  // Данные для CSS-графика (заглушка для визуализации)
   const chartData = [
-    { label: 'Выручка', value: metrics.totalRevenue, color: 'bg-green-500', width: metrics.totalRevenue > 0 ? '100%' : '5%' },
+    { label: 'Выручка', value: metrics.totalRevenue, color: 'bg-[#000052]', width: metrics.totalRevenue > 0 ? '100%' : '5%' },
     { label: 'Escrow', value: metrics.frozenEscrow, color: 'bg-gold', width: metrics.frozenEscrow > 0 ? `${(metrics.frozenEscrow / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
     { label: 'Выплаты', value: metrics.paidToAgents, color: 'bg-blue-500', width: metrics.paidToAgents > 0 ? `${(metrics.paidToAgents / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
   ];
@@ -132,7 +131,7 @@ export function CEODashboard() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-text-secondary">{t('common.loading')}</div>
+          <div className="text-gray-500">{t('common.loading')}</div>
         </div>
       </DashboardLayout>
     );
@@ -141,92 +140,98 @@ export function CEODashboard() {
   return (
     <DashboardLayout>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-text-primary mb-2">
-          {t('ceoDashboard.title')}
-        </h1>
-        <p className="text-text-secondary">
-          {t('ceoDashboard.subtitle')}
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#000052] mb-2">
+            {t('ceoDashboard.title')}
+          </h1>
+          <p className="text-gray-600">
+            {t('ceoDashboard.subtitle')}
+          </p>
+        </div>
+        <button className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          {t('contracts.createNew')}
+        </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <div className="flex items-center justify-between mb-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <DollarSign className="w-5 h-5 text-[#000052]" />
             <ArrowUpRight className="w-4 h-4 text-green-600" />
           </div>
-          <p className="text-2xl font-bold text-green-700">{formatCurrency(metrics.totalRevenue)} ₽</p>
-          <p className="text-xs text-green-600 mt-1">{t('ceoDashboard.totalRevenue')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)} ₽</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.totalRevenue')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-gold/20 to-gold/10 border-gold/30">
-          <div className="flex items-center justify-between mb-2">
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
             <Shield className="w-5 h-5 text-gold" />
             <Activity className="w-4 h-4 text-gold" />
           </div>
-          <p className="text-2xl font-bold text-gold">{formatCurrency(metrics.frozenEscrow)} ₽</p>
-          <p className="text-xs text-gold mt-1">{t('ceoDashboard.frozenEscrow')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)} ₽</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.frozenEscrow')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
             <Users className="w-5 h-5 text-blue-600" />
             <CheckCircle className="w-4 h-4 text-blue-600" />
           </div>
-          <p className="text-2xl font-bold text-blue-700">{formatCurrency(metrics.paidToAgents)} ₽</p>
-          <p className="text-xs text-blue-600 mt-1">{t('ceoDashboard.paidToAgents')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.paidToAgents)} ₽</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.paidToAgents')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
             <TrendingUp className="w-5 h-5 text-purple-600" />
             <ArrowUpRight className="w-4 h-4 text-purple-600" />
           </div>
-          <p className="text-2xl font-bold text-purple-700">{formatCurrency(metrics.netProfit)} ₽</p>
-          <p className="text-xs text-purple-600 mt-1">{t('ceoDashboard.netProfit')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.netProfit)} ₽</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.netProfit')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
             <BarChart3 className="w-5 h-5 text-indigo-600" />
             <TrendingUp className="w-4 h-4 text-indigo-600" />
           </div>
-          <p className="text-2xl font-bold text-indigo-700">{metrics.avgRoi.toFixed(1)}%</p>
-          <p className="text-xs text-indigo-600 mt-1">{t('ceoDashboard.avgRoi')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{metrics.avgRoi.toFixed(1)}%</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.avgRoi')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
             <Briefcase className="w-5 h-5 text-orange-600" />
             <Clock className="w-4 h-4 text-orange-600" />
           </div>
-          <p className="text-2xl font-bold text-orange-700">{metrics.activeDealsCount}</p>
-          <p className="text-xs text-orange-600 mt-1">{t('ceoDashboard.activeDeals')}</p>
+          <p className="text-2xl font-bold text-[#000052]">{metrics.activeDealsCount}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.activeDeals')}</p>
         </div>
       </div>
 
       {/* Charts & Active Contracts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* CSS Bar Chart */}
-        <div className="card lg:col-span-1">
-          <h2 className="text-lg font-semibold text-text-primary mb-6 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-text-secondary" />
+        <div className="card">
+          <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-gray-600" />
             {t('ceoDashboard.budgetDistribution')}
           </h2>
           <div className="space-y-6">
             {chartData.map((item) => (
               <div key={item.label}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-text-primary">{item.label}</span>
-                  <span className="text-sm font-bold text-text-primary">
+                  <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                  <span className="text-sm font-bold text-[#000052]">
                     {formatCurrency(item.value)} ₽
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
+                <div className="progress-bar">
                   <div
-                    className={`h-full ${item.color} rounded-full transition-all duration-1000 ease-out`}
+                    className={`progress-bar-fill ${item.color}`}
                     style={{ width: item.width }}
                   />
                 </div>
@@ -238,53 +243,56 @@ export function CEODashboard() {
         {/* Active Contracts Table */}
         <div className="card lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-text-secondary" />
+            <h2 className="text-lg font-semibold text-[#000052] flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-gray-600" />
               {t('ceoDashboard.activeContracts')}
             </h2>
-            <button className="text-sm text-gold hover:text-gold/80 font-medium">
+            <button className="text-sm text-[#000052] hover:text-[#000066] font-medium">
               {t('common.viewAll') || 'Все'} →
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead>
-                <tr className="border-b border-text-secondary/10">
-                  <th className="text-left py-3 px-4 text-text-secondary text-sm font-medium">{t('contract.title')}</th>
-                  <th className="text-left py-3 px-4 text-text-secondary text-sm font-medium">{t('contract.status')}</th>
-                  <th className="text-right py-3 px-4 text-text-secondary text-sm font-medium">{t('contract.escrowAmount')}</th>
-                  <th className="text-right py-3 px-4 text-text-secondary text-sm font-medium">ROI</th>
+              <thead className="table-header">
+                <tr>
+                  <th>{t('contract.title')}</th>
+                  <th>{t('contract.status')}</th>
+                  <th className="text-right">{t('contract.escrowAmount')}</th>
+                  <th className="text-right">ROI</th>
                 </tr>
               </thead>
               <tbody>
                 {activeContracts.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-text-secondary">
+                    <td colSpan={4} className="py-8 text-center text-gray-500">
                       {t('dashboard.noActiveContracts')}
                     </td>
                   </tr>
                 ) : (
-                  activeContracts.map((contract) => (
-                    <tr key={contract.id} className="border-b border-text-secondary/5 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4">
-                        <p className="font-medium text-text-primary">{contract.title}</p>
-                        <p className="text-sm text-text-secondary truncate max-w-xs">{contract.description}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-                          {t(`contract.statuses.${contract.status}`) || contract.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-semibold text-gold">
-                        {formatCurrency(contract.escrow_amount || 0)} ₽
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className={`font-semibold ${contract.roi_percentage && contract.roi_percentage > 0 ? 'text-green-600' : 'text-text-muted'}`}>
-                          {contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  activeContracts.map((contract) => {
+                    const badge = getStatusBadge(contract.status);
+                    return (
+                      <tr key={contract.id} className="table-row">
+                        <td>
+                          <p className="font-medium text-[#000052]">{contract.title}</p>
+                          <p className="text-sm text-gray-600 truncate max-w-xs">{contract.description}</p>
+                        </td>
+                        <td>
+                          <span className={`badge ${badge.class}`}>
+                            {badge.text}
+                          </span>
+                        </td>
+                        <td className="text-right font-semibold text-[#000052]">
+                          {formatCurrency(contract.escrow_amount || 0)} ₽
+                        </td>
+                        <td className="text-right">
+                          <span className={`font-semibold ${contract.roi_percentage && contract.roi_percentage > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                            {contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -295,17 +303,17 @@ export function CEODashboard() {
       {/* Pending Payouts & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-text-secondary" />
+          <h2 className="text-lg font-semibold text-[#000052] mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-gray-600" />
             {t('ceoDashboard.pendingPayouts')}
           </h2>
           {metrics.pendingPayouts > 0 ? (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-              <span className="text-sm font-medium text-yellow-800">{t('ceoDashboard.totalPending') || 'Ожидают выплаты'}</span>
+              <span className="text-sm font-medium text-yellow-800">{t('ceoDashboard.totalPending') || 'Ожидают обработки'}</span>
               <span className="text-xl font-bold text-gold">{formatCurrency(metrics.pendingPayouts)} ₽</span>
             </div>
           ) : (
-            <div className="text-center py-8 text-text-secondary">
+            <div className="text-center py-8 text-gray-500">
               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
               <p>{t('ceoDashboard.noPendingPayouts') || 'Все выплаты обработаны'}</p>
             </div>
@@ -313,15 +321,15 @@ export function CEODashboard() {
         </div>
 
         <div className="card">
-          <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-text-secondary" />
+          <h2 className="text-lg font-semibold text-[#000052] mb-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-gray-600" />
             {t('ceoDashboard.alerts') || 'Системные уведомления'}
           </h2>
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
             <Activity className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-text-primary">{t('ceoDashboard.contractHedge') || 'Смарт-контракты активны'}</p>
-              <p className="text-xs text-text-secondary mt-1">{t('ceoDashboard.hedgeNote')}</p>
+              <p className="text-sm font-medium text-[#000052]">{t('ceoDashboard.contractHedge') || 'Смарт-контракты активны'}</p>
+              <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.hedgeNote')}</p>
             </div>
           </div>
         </div>

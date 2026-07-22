@@ -1,184 +1,237 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    font-family: 'Inter', system-ui, sans-serif;
-  }
+/* ===== ГЛОБАЛЬНЫЕ СТИЛИ В СТИЛЕ СБЕРБАНК БИЗНЕС ===== */
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
   body {
-    @apply bg-primary text-text-primary antialiased;
+    @apply bg-gray-50 text-[#000052];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    color: #000052;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 18px;
+    line-height: 1.4;
   }
 }
 
 @layer components {
-  .btn {
-    @apply px-4 py-2.5 rounded-button font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  /* ===== КАРТОЧКИ ===== */
+  .card {
+    @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm;
+    transition: box-shadow 0.2s ease;
   }
 
+  .card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 82, 0.08);
+  }
+
+  /* ===== КНОПКИ ===== */
   .btn-primary {
-    @apply btn bg-gold text-primary-dark hover:bg-gold-light active:bg-gold-dark;
+    @apply bg-[#000052] text-white font-medium py-2.5 px-5 rounded-lg;
+    transition: all 0.2s ease;
+    border: 1px solid #000052;
+  }
+
+  .btn-primary:hover {
+    @apply bg-[#000066];
+    box-shadow: 0 2px 4px rgba(0, 0, 82, 0.2);
+  }
+
+  .btn-primary:disabled {
+    @apply bg-gray-300 border-gray-300 cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply btn bg-card text-text-primary border border-text-secondary/20 hover:bg-primary-light active:bg-card;
+    @apply bg-white text-[#000052] font-medium py-2.5 px-5 rounded-lg border border-gray-300;
+    transition: all 0.2s ease;
   }
 
-  .btn-outline {
-    @apply btn border-2 border-gold text-gold hover:bg-gold hover:text-primary-dark;
+  .btn-secondary:hover {
+    @apply border-[#000052] bg-gray-50;
+  }
+
+  .btn-success {
+    @apply bg-[#000052] text-white font-medium py-2.5 px-5 rounded-lg;
+    transition: all 0.2s ease;
+  }
+
+  .btn-success:hover {
+    @apply bg-[#000066];
   }
 
   .btn-danger {
-    @apply btn bg-error text-white hover:bg-error-dark active:bg-error;
+    @apply bg-red-600 text-white font-medium py-2.5 px-5 rounded-lg;
+    transition: all 0.2s ease;
   }
 
-  .card {
-    @apply bg-card rounded-card p-6 border border-text-secondary/10;
+  .btn-danger:hover {
+    @apply bg-red-700;
   }
 
+  /* ===== ПОЛЯ ВВОДА ===== */
   .input {
-    @apply w-full px-4 py-3 bg-primary-dark border border-text-secondary/20 rounded-button text-text-primary placeholder:text-text-muted focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all duration-200;
+    @apply w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052];
+    transition: all 0.2s ease;
+    font-size: 14px;
+  }
+
+  .input:focus {
+    @apply outline-none border-[#000052] ring-2 ring-[#000052]/10;
+  }
+
+  .input::placeholder {
+    @apply text-gray-400;
   }
 
   .label {
-    @apply block text-sm font-medium text-text-secondary mb-2;
+    @apply block text-sm font-medium text-gray-700 mb-1.5;
   }
 
-  .link {
-    @apply text-gold hover:text-gold-light transition-colors duration-200;
+  /* ===== ТАБЛИЦЫ ===== */
+  .table-header {
+    @apply bg-gray-50 border-b border-gray-200;
+  }
+
+  .table-header th {
+    @apply text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase tracking-wider;
+  }
+
+  .table-row {
+    @apply border-b border-gray-100 hover:bg-gray-50 transition-colors;
+  }
+
+  .table-row td {
+    @apply py-3 px-4 text-sm;
+  }
+
+  /* ===== БЕЙДЖИ СТАТУСОВ ===== */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-50 text-green-700 border border-green-200;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-50 text-yellow-700 border border-yellow-200;
+  }
+
+  .badge-error {
+    @apply bg-red-50 text-red-700 border border-red-200;
+  }
+
+  .badge-info {
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+  }
+
+  .badge-gray {
+    @apply bg-gray-50 text-gray-700 border border-gray-200;
+  }
+
+  /* ===== НАВИГАЦИЯ ===== */
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors;
+  }
+
+  .nav-item:hover {
+    @apply bg-gray-100;
+  }
+
+  .nav-item.active {
+    @apply bg-[#000052]/5 text-[#000052];
+  }
+
+  /* ===== ПРОГРЕСС-БАРЫ ===== */
+  .progress-bar {
+    @apply w-full bg-gray-100 rounded-full h-2 overflow-hidden;
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+
+  /* ===== МОДАЛЬНЫЕ ОКНА ===== */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50;
+  }
+
+  .modal-content {
+    @apply bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between p-6 border-b border-gray-200;
+  }
+
+  .modal-body {
+    @apply p-6;
+  }
+
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-6 border-t border-gray-200;
   }
 }
 
+/* ===== УТИЛИТЫ ===== */
 @layer utilities {
-  .gradient-gold {
-    background: linear-gradient(135deg, #c9a961 0%, #d4b87a 100%);
+  .text-primary {
+    color: #000052;
   }
 
-  .gradient-success {
-    background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
+  .bg-primary {
+    background-color: #000052;
   }
 
-  .gradient-orange {
-    background: linear-gradient(135deg, #e55a28 0%, #ff6b35 100%);
+  .border-primary {
+    border-color: #000052;
   }
 
-  .gradient-primary {
-    background: linear-gradient(135deg, #1a2744 0%, #243456 100%);
+  .ring-primary {
+    --tw-ring-color: rgba(0, 0, 82, 0.1);
   }
 
-  .text-gradient-gold {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #c9a961 0%, #d4b87a 100%);
+  /* Скроллбар */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-}
-/* Базовые стили для всех кнопок */
-.btn {
-  @apply transition-all duration-300 ease-in-out;
-  transform: translateZ(0);
-  will-change: transform, background-color, color;
-}
 
-/* Primary button */
-.btn-primary {
-  @apply bg-gold hover:bg-gold/90 text-white;
-}
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
 
-/* Secondary button */
-.btn-secondary {
-  @apply bg-gray-200 hover:bg-gray-300 text-text-primary;
-}
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
 
-/* Danger button */
-.btn-danger {
-  @apply bg-error hover:bg-error/90 text-white;
-}
-
-/* Success button */
-.btn-success {
-  @apply bg-success hover:bg-success/90 text-white;
-}
-
-/* Кнопки с иконками */
-.btn-icon {
-  @apply flex items-center justify-center;
-  width: 2.5rem;
-  height: 2.5rem;
-}
-
-.btn-icon:hover {
-  @apply scale-105;
-}
-/* === Глобальные изменения цветов InCore === */
-body {
-  background-color: #FFFFFF !important;
-  color: #000052 !important;
-}
-
-/* Основной фон теперь белый */
-.bg-primary {
-  background-color: #FFFFFF !important;
-}
-
-/* Фон карточек делаем слегка серым, чтобы они выделялись на белом фоне */
-.bg-card, .card {
-  background-color: #F8F9FA !important;
-  border: 1px solid rgba(0, 0, 82, 0.08) !important;
-}
-
-/* Заменяем белый и темно-синий текст на новый фирменный #000052 */
-.text-white, 
-.text-primary-dark, 
-.text-text-primary {
-  color: #000052 !important;
-}
-
-/* Вторичный текст делаем чуть светлее для иерархии, но в той же гамме */
-.text-text-secondary, 
-.text-text-muted {
-  color: #000052 !important;
-  opacity: 0.7;
-}
-
-/* Границы и разделители */
-.border-text-secondary\/10, 
-.border-text-secondary\/20 {
-  border-color: rgba(0, 0, 82, 0.1) !important;
-}
-/* Принудительно делаем все поля ввода читаемыми */
-input[type="email"],
-input[type="password"],
-input[type="text"],
-input[type="number"],
-input[type="date"],
-textarea {
-  background-color: #ffffff !important;
-  color: #000052 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-textarea:focus {
-  background-color: #ffffff !important;
-  color: #000052 !important;
-  border-color: #d4af37 !important;
-  outline: none !important;
-  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.3) !important;
-}
-
-/* Если используется placeholder */
-input::placeholder,
-textarea::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
 }
