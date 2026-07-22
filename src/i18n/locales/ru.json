@@ -15,6 +15,7 @@
   },
   "ceoDashboard": {
     "title": "Финансовое ядро",
+    "subtitle": "Сводные показатели экономики компании",
     "totalRevenue": "Общая выручка",
     "frozenEscrow": "Заморожено в Escrow",
     "paidToAgents": "Выплачено агентам",
@@ -26,13 +27,35 @@
     "pendingPayouts": "Предстоящие выплаты",
     "totalPending": "Ожидают обработки",
     "noPendingPayouts": "Нет ожидающих выплат",
-    "alerts": "Уведомления"
+    "alerts": "Уведомления",
+    "contractHedge": "Смарт-контракты активны",
+    "hedgeNote": "Риски хеджированы кодом."
+  },
+  "dashboard": {
+    "activeContracts": "Активные контракты",
+    "escrowBalance": "Баланс эскроу",
+    "totalRevenue": "Общая выручка",
+    "noActiveContracts": "Нет активных контрактов",
+    "welcome": "Добро пожаловать"
+  },
+  "ceo": {
+    "disputesAndApprovals": "Контроль и Арбитраж",
+    "disputesSubtitle": "Ручные подтверждения сбоев Оракула и споры с агентами",
+    "manualApprovals": "Требуют ручного подтверждения",
+    "noManualApprovals": "Все системы Оракула работают штатно.",
+    "confirmPayment": "Подтвердить оплату",
+    "activeDisputes": "Активные споры",
+    "noDisputes": "Споров нет. Экономика доверия работает.",
+    "disputeReason": "Причина спора",
+    "payAgent": "Выплатить агенту",
+    "rejectPayment": "Отказать в выплате"
   },
   "common": {
     "loading": "Загрузка...",
     "viewAll": "Все контракты",
     "error": "Ошибка",
-    "save": "Сохранить"
+    "save": "Сохранить",
+    "success": "Успешно"
   },
   "company": {
     "title": "Данные компании",
@@ -59,25 +82,36 @@
     "ogrnip": "ОГРНИП"
   },
   "contract": {
-    "title": "Название задачи",
+    "title": "Название контракта",
     "status": "Статус",
     "deadline": "Срок исполнения",
-    "escrowAmount": "Баланс эскроу",
+    "escrowAmount": "Сумма эскроу",
     "noContracts": "Нет активных контрактов",
     "createFirst": "Создать первый контракт",
+    "createContract": "Создать контракт",
     "statuses": {
       "ACTIVE": "Активен",
       "IN_PROGRESS": "В работе",
       "PENDING_APPROVAL": "На проверке",
       "PENDING_MANUAL_APPROVAL": "Требует подтверждения",
       "COMPLETED": "Завершен",
-      "DRAFT": "Черновик"
+      "DRAFT": "Черновик",
+      "DISPUTED": "Спор",
+      "DISPUTED_REJECTED": "Отклонено",
+      "PENDING_PAYMENT": "Ожидание оплаты"
     }
   },
   "contracts": {
     "title": "Контракты",
     "createNew": "Создать контракт",
-    "activeCount": "активных контракта"
+    "activeCount": "активных контракта",
+    "unitEconomics": "Unit-экономика",
+    "agentPayouts": "Выплаты агенту",
+    "companyProfit": "Прибыль компании",
+    "publish": "Опубликовать",
+    "unprofitableWarning": "Сделка убыточна",
+    "plannedRevenue": "Плановая выручка",
+    "rewardType": "Тип вознаграждения"
   },
   "nav": {
     "dashboard": "Финансовое ядро",
@@ -89,6 +123,7 @@
   },
   "auth": {
     "login": "Войти",
+    "logout": "Выйти",
     "email": "Email",
     "password": "Пароль"
   }

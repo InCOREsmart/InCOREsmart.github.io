@@ -81,28 +81,26 @@ export function CEODashboard() {
         </button>
       </div>
 
-      {/* Alert для отсутствия компании */}
       {showCompanyAlert && (
         <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-600" />
             <span className="text-sm font-medium text-yellow-800">Для создания контракта сначала заполните данные компании в настройках.</span>
           </div>
-          <button onClick={() => navigate('/settings')} className="text-sm font-semibold text-[#000052] underline">Перейти в настройки</button>
+          <button onClick={() => navigate('/ceo/settings')} className="text-sm font-semibold text-[#000052] underline">Перейти в настройки</button>
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         <div className="card">
           <div className="flex items-center justify-between mb-3"><DollarSign className="w-5 h-5 text-[#000052]" /><ArrowUpRight className="w-4 h-4 text-green-600" /></div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)} ₽</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.totalRevenue')}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('dashboard.totalRevenue')}</p>
         </div>
         <div className="card">
           <div className="flex items-center justify-between mb-3"><Shield className="w-5 h-5 text-yellow-600" /><Activity className="w-4 h-4 text-yellow-600" /></div>
           <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)} ₽</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.frozenEscrow')}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('dashboard.escrowBalance')}</p>
         </div>
         <div className="card">
           <div className="flex items-center justify-between mb-3"><Users className="w-5 h-5 text-blue-600" /><CheckCircle className="w-4 h-4 text-blue-600" /></div>
@@ -122,11 +120,10 @@ export function CEODashboard() {
         <div className="card">
           <div className="flex items-center justify-between mb-3"><Briefcase className="w-5 h-5 text-orange-600" /><Clock className="w-4 h-4 text-orange-600" /></div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.activeDealsCount}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.activeDeals')}</p>
+          <p className="text-xs text-gray-600 mt-1">{t('dashboard.activeContracts')}</p>
         </div>
       </div>
 
-      {/* Charts & Active Contracts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="card">
           <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
@@ -168,7 +165,7 @@ export function CEODashboard() {
               </thead>
               <tbody>
                 {activeContracts.length === 0 ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-gray-500">{t('contract.noContracts')}</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-gray-500">{t('dashboard.noActiveContracts')}</td></tr>
                 ) : (
                   activeContracts.map((contract) => (
                     <tr key={contract.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -185,7 +182,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Pending Payouts */}
       <div className="card">
         <h2 className="text-lg font-semibold text-[#000052] mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.pendingPayouts')}
