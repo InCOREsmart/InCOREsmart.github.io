@@ -1,6 +1,6 @@
 {
   "agent": {
-    "title": "Данные агента",
+    "title": "Агенты",
     "subtitle": "Настройте личные данные и банковскую информацию для выплат",
     "noAgents": "Агенты не найдены",
     "addAgent": "Добавить агента",
@@ -11,7 +11,16 @@
     "viewAvailableContracts": "Доступные контракты",
     "raiseDispute": "Оспорить решение",
     "disputePrompt": "Опишите причину спора:",
-    "disputeSuccess": "Спор передан CEO."
+    "disputeSuccess": "Спор передан CEO.",
+    "dashboardTitle": "Рабочее пространство",
+    "dashboardSubtitle": "Ваши показатели и активные контракты",
+    "totalEarned": "Всего заработано",
+    "pendingPayouts": "Ожидает выплаты",
+    "activeContracts": "Активные контракты",
+    "completedContracts": "Выполнено",
+    "paymentStreams": "6 потоков выплат (KPI)",
+    "myActiveContracts": "Мои активные контракты",
+    "noActiveContracts": "Нет активных контрактов"
   },
   "ceoDashboard": {
     "title": "Финансовое ядро",
@@ -126,5 +135,13 @@
     "logout": "Выйти",
     "email": "Email",
     "password": "Пароль"
+  },
+  "streams": {
+    "newSales": "Новые продажи",
+    "renewal": "Продление",
+    "crossSell": "Кросс-продажи",
+    "planBonus": "Бонус за план",
+    "retention": "Удержание 90 дней",
+    "annual": "Годовой бонус"
   }
 }

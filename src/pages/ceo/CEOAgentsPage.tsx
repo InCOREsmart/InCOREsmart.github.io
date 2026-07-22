@@ -33,9 +33,9 @@ export function CEOAgentsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#000052]">{t('nav.agents')}</h1>
-          <p className="text-gray-600 mt-1">{agents.length} агентов</p>
+          <p className="text-gray-600 mt-1">{agents.length} {t('agent.title').toLowerCase()}</p>
         </div>
-        <button onClick={() => alert('Функционал добавления агента находится в разработке')} className="btn-primary flex items-center gap-2">
+        <button disabled className="btn-primary flex items-center gap-2 opacity-50 cursor-not-allowed" title="Скоро будет доступно">
           <Plus className="w-4 h-4" /> {t('agent.addAgent')}
         </button>
       </div>
@@ -64,8 +64,8 @@ export function CEOAgentsPage() {
       <div className="card text-center py-16">
         <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-[#000052] mb-2">{t('agent.noAgents')}</h3>
-        <p className="text-gray-600 mb-6 max-w-md mx-auto">Добавьте агентов, чтобы назначать их на контракты</p>
-        <button onClick={() => alert('Функционал добавления агента находится в разработке')} className="btn-primary inline-flex items-center gap-2">
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('agent.waitingTasks')}</p>
+        <button disabled className="btn-primary inline-flex items-center gap-2 opacity-50 cursor-not-allowed">
           <Plus className="w-4 h-4" /> {t('agent.addAgent')}
         </button>
       </div>
