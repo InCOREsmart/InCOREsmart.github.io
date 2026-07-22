@@ -1,7 +1,7 @@
 {
   "agent": {
     "title": "Agents",
-    "subtitle": "Configure personal details and bank information for payments",
+    "subtitle": "Configure personal details and bank information for payouts",
     "noAgents": "No agents found",
     "addAgent": "Add Agent",
     "noTasks": "No active contracts",
@@ -13,14 +13,31 @@
     "disputePrompt": "Describe the reason for dispute:",
     "disputeSuccess": "Dispute sent to CEO.",
     "dashboardTitle": "Workspace",
-    "dashboardSubtitle": "Your metrics and active contracts",
+    "dashboardSubtitle": "Your metrics, escrow, and active tasks",
     "totalEarned": "Total Earned",
     "pendingPayouts": "Pending Payouts",
+    "escrowBalance": "Escrow Balance",
     "activeContracts": "Active Contracts",
     "completedContracts": "Completed",
     "paymentStreams": "6 Payment Streams (KPI)",
     "myActiveContracts": "My Active Contracts",
-    "noActiveContracts": "No active contracts"
+    "noActiveContracts": "No active contracts",
+    "fullName": "Full Name",
+    "submitWork": "Submit Work",
+    "smartContractStatus": "Smart Contract Status",
+    "fundsVerified": "Funds verified by Oracle",
+    "clawbackWarning": "Clawback: if client leaves < 90 days, retention bonus is not paid."
+  },
+  "payouts": {
+    "title": "Payouts & Streams",
+    "subtitle": "Smart contract accrual details",
+    "newSales": "New Sales (B2B)",
+    "renewal": "Renewals",
+    "crossSell": "Cross-Sell",
+    "planBonus": "Plan Bonus (Quarter)",
+    "retention": "Retention (90 days)",
+    "annual": "Annual Bonus",
+    "instantRelease": "Instant Fund Release"
   },
   "ceoDashboard": {
     "title": "Financial Core",
@@ -64,6 +81,7 @@
     "viewAll": "All Contracts",
     "error": "Error",
     "save": "Save",
+    "cancel": "Cancel",
     "success": "Success"
   },
   "company": {
@@ -98,6 +116,7 @@
     "noContracts": "No active contracts",
     "createFirst": "Create first contract",
     "createContract": "Create Contract",
+    "riskHedging": "Risk Hedging",
     "statuses": {
       "ACTIVE": "Active",
       "IN_PROGRESS": "In Progress",

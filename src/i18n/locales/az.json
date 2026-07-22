@@ -13,20 +13,37 @@
     "disputePrompt": "Mübahizənin səbəbini təsvir edin:",
     "disputeSuccess": "Mübahizə CEO-ya göndərildi.",
     "dashboardTitle": "İş sahəsi",
-    "dashboardSubtitle": "Sizin göstəriciləriniz və aktiv müqavilələr",
+    "dashboardSubtitle": "Sizin göstəriciləriniz, eskro və aktiv tapşırıqlar",
     "totalEarned": "Ümumi qazanc",
     "pendingPayouts": "Gözləyən ödənişlər",
+    "escrowBalance": "Eskro balansı",
     "activeContracts": "Aktiv müqavilələr",
     "completedContracts": "Tamamlanıb",
     "paymentStreams": "6 Ödəniş axını (KPI)",
     "myActiveContracts": "Mənim aktiv müqavilələrim",
-    "noActiveContracts": "Aktiv müqavilə yoxdur"
+    "noActiveContracts": "Aktiv müqavilə yoxdur",
+    "fullName": "Tam adı",
+    "submitWork": "İşi təqdim et",
+    "smartContractStatus": "Smart müqavilə statusu",
+    "fundsVerified": "Vəsaitlər Oracle tərəfindən təsdiqləndi",
+    "clawbackWarning": "Clawback: müştəri 90 gündən az müddətdə gedərsə, saxlama bonusu ödənilmir."
+  },
+  "payouts": {
+    "title": "Ödənişlər və Axınlar",
+    "subtitle": "Smart müqavilə üzrə hesablamaların təfərrüatları",
+    "newSales": "Yeni satışlar (B2B)",
+    "renewal": "Yeniləmə",
+    "crossSell": "Kross-satış",
+    "planBonus": "Plan bonusu (Rüb)",
+    "retention": "Saxlama (90 gün)",
+    "annual": "İllik bonus",
+    "instantRelease": "Vəsaitlərin ani azad edilməsi"
   },
   "ceoDashboard": {
     "title": "Maliyyə nüvəsi",
     "subtitle": "Şirkət iqtisadiyyatının xülasəsi",
     "totalRevenue": "Ümumi gəlir",
-    "frozenEscrow": "Escrow-da dondurulmuş",
+    "frozenEscrow": "Eskro-da dondurulmuş",
     "paidToAgents": "Agentlərə ödənilmiş",
     "netProfit": "Xalis mənfəət",
     "avgRoi": "Orta ROI",
@@ -42,7 +59,7 @@
   },
   "dashboard": {
     "activeContracts": "Aktiv müqavilələr",
-    "escrowBalance": "Escrow balansı",
+    "escrowBalance": "Eskro balansı",
     "totalRevenue": "Ümumi gəlir",
     "noActiveContracts": "Aktiv müqavilə yoxdur",
     "welcome": "Xoş gəldiniz"
@@ -64,6 +81,7 @@
     "viewAll": "Bütün müqavilələr",
     "error": "Səhv",
     "save": "Saxla",
+    "cancel": "Ləğv et",
     "success": "Uğurlu"
   },
   "company": {
@@ -94,10 +112,11 @@
     "title": "Müqavilənin adı",
     "status": "Status",
     "deadline": "Son tarix",
-    "escrowAmount": "Escrow məbləği",
+    "escrowAmount": "Eskro məbləği",
     "noContracts": "Aktiv müqavilə yoxdur",
     "createFirst": "İlk müqaviləni yarat",
     "createContract": "Müqavilə yarat",
+    "riskHedging": "Risklərin hedcirlənməsi",
     "statuses": {
       "ACTIVE": "Aktiv",
       "IN_PROGRESS": "Davam edir",
