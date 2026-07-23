@@ -1,159 +1,57 @@
 {
-  "agent": {
-    "title": "Агенты",
-    "subtitle": "Настройте личные данные и банковскую информацию для выплат",
-    "noAgents": "Агенты не найдены",
-    "addAgent": "Добавить агента",
-    "noTasks": "Нет активных контрактов",
-    "waitingTasks": "Как только вам назначат контракт, он появится здесь",
-    "completeProfile": "Заполнить профиль",
-    "completeProfileHint": "Заполните профиль, чтобы получать контракты",
-    "viewAvailableContracts": "Доступные контракты",
-    "raiseDispute": "Оспорить",
-    "disputePrompt": "Опишите причину спора:",
-    "disputeSuccess": "Спор передан CEO.",
-    "dashboardTitle": "Рабочее пространство",
-    "dashboardSubtitle": "Ваши показатели, эскроу и активные задачи",
-    "totalEarned": "Всего заработано",
-    "pendingPayouts": "Ожидает выплаты",
-    "escrowBalance": "Баланс эскроу",
-    "activeContracts": "Активные контракты",
-    "completedContracts": "Выполнено",
-    "paymentStreams": "6 потоков выплат (KPI)",
-    "myActiveContracts": "Мои активные контракты",
-    "noActiveContracts": "Нет активных контрактов",
-    "fullName": "ФИО",
-    "submitWork": "Отправить работу",
-    "smartContractStatus": "Статус смарт-контракта",
-    "fundsVerified": "Средства верифицированы Оракулом",
-    "clawbackWarning": "Clawback: если клиент уйдет < 90 дней, бонус за удержание не выплачивается.",
-    "contractWillAppear": "Контракт появится здесь"
-  },
-  "payouts": {
-    "title": "Выплаты и Потоки",
-    "subtitle": "Детализация начислений по смарт-контракту",
-    "newSales": "Новые продажи (B2B)",
-    "renewal": "Продление договоров",
-    "crossSell": "Кросс-продажи",
-    "planBonus": "Бонус за план (Квартал)",
-    "retention": "Удержание (90 дней)",
-    "annual": "Годовой бонус",
-    "instantRelease": "Мгновенный релиз средств"
-  },
+  "nav": { "dashboard": "Финансовое ядро", "contracts": "Контракты", "agents": "Агенты", "settings": "Настройки", "disputes": "Арбитраж", "language": "Язык" },
+  "auth": { "login": "Войти", "logout": "Выйти", "email": "Email", "password": "Пароль", "noAccount": "Нет аккаунта?", "registerNow": "Зарегистрироваться", "subtitle": "Платформа смарт-контрактов для найма" },
+  "common": { "loading": "Загрузка...", "viewAll": "Все", "error": "Ошибка", "save": "Сохранить", "cancel": "Отмена", "success": "Успешно" },
+  
   "ceoDashboard": {
-    "title": "Финансовое ядро",
-    "subtitle": "Сводные показатели экономики компании",
-    "totalRevenue": "Общая выручка",
-    "frozenEscrow": "Заморожено в Escrow",
-    "paidToAgents": "Выплачено агентам",
-    "netProfit": "Чистая прибыль",
-    "avgRoi": "Средний ROI",
-    "activeDeals": "Активные сделки",
-    "budgetDistribution": "Распределение бюджета",
-    "activeContracts": "Активные контракты",
-    "pendingPayouts": "Предстоящие выплаты",
-    "totalPending": "Ожидают обработки",
-    "noPendingPayouts": "Нет ожидающих выплат",
-    "alerts": "Уведомления",
-    "contractHedge": "Смарт-контракты активны",
-    "hedgeNote": "Риски хеджированы кодом."
+    "title": "Финансовое ядро", "subtitle": "Сводные показатели",
+    "totalRevenue": "Общая выручка", "frozenEscrow": "Заморожено в Escrow", "paidToAgents": "Выплачено агентам",
+    "netProfit": "Чистая прибыль", "avgRoi": "Средний ROI", "activeDeals": "Активные сделки",
+    "budgetDistribution": "Распределение бюджета", "activeContracts": "Активные контракты",
+    "pendingPayouts": "Предстоящие выплаты", "totalPending": "Ожидают обработки", "noPendingPayouts": "Нет ожидающих выплат"
   },
+  
   "dashboard": {
-    "activeContracts": "Активные контракты",
-    "escrowBalance": "Баланс эскроу",
-    "totalRevenue": "Общая выручка",
-    "noActiveContracts": "Нет активных контрактов",
-    "welcome": "Добро пожаловать",
-    "contractWillAppear": "Контракт появится здесь"
+    "activeContracts": "Активные контракты", "escrowBalance": "Баланс эскроу", "totalRevenue": "Общая выручка", "noActiveContracts": "Нет активных контрактов", "contractWillAppear": "Контракт появится здесь"
   },
+  
   "contract": {
-    "title": "Название контракта",
-    "status": "Статус",
-    "deadline": "Срок исполнения",
-    "escrowAmount": "Сумма эскроу",
-    "noContracts": "Нет активных контрактов",
-    "createFirst": "Создать первый контракт",
-    "createContract": "Создать контракт",
-    "riskHedging": "Хеджирование рисков",
-    "statuses": {
-      "ACTIVE": "Активен",
-      "IN_PROGRESS": "В работе",
-      "PENDING_APPROVAL": "На проверке",
-      "PENDING_MANUAL_APPROVAL": "Требует подтверждения",
-      "COMPLETED": "Завершен",
-      "DRAFT": "Черновик",
-      "DISPUTED": "Спор",
-      "DISPUTED_REJECTED": "Отклонено",
-      "PENDING_PAYMENT": "Ожидание оплаты"
-    }
+    "title": "Название", "status": "Статус", "deadline": "Дедлайн", "escrowAmount": "Эскроу",
+    "noContracts": "Нет контрактов", "createFirst": "Создать первый", "createContract": "Создать", "riskHedging": "Хеджирование рисков",
+    "statuses": { "ACTIVE": "Активен", "IN_PROGRESS": "В работе", "PENDING_APPROVAL": "На проверке", "COMPLETED": "Завершен", "DRAFT": "Черновик" }
   },
-  "contracts": {
-    "title": "Контракты",
-    "createNew": "Создать контракт",
-    "activeCount": "активных контракта",
-    "unitEconomics": "Unit-экономика",
-    "agentPayouts": "Выплаты агенту",
-    "companyProfit": "Прибыль компании",
-    "publish": "Опубликовать",
-    "unprofitableWarning": "Сделка убыточна",
-    "plannedRevenue": "Плановая выручка",
-    "rewardType": "Тип вознаграждения"
+  
+  "contracts": { "title": "Контракты", "createNew": "Создать контракт", "plannedRevenue": "Плановая выручка" },
+  
+  "agent": {
+    "title": "Агенты", "subtitle": "Управление агентами", "noAgents": "Агенты не найдены", "addAgent": "Добавить агента",
+    "dashboardTitle": "Рабочее пространство", "dashboardSubtitle": "Ваши показатели и эскроу",
+    "totalEarned": "Всего заработано", "pendingPayouts": "Ожидает выплаты", "escrowBalance": "Баланс эскроу",
+    "activeContracts": "Активные контракты", "completedContracts": "Выполнено", "paymentStreams": "6 потоков выплат",
+    "myActiveContracts": "Мои активные контракты", "noActiveContracts": "Нет активных контрактов",
+    "smartContractStatus": "Статус смарт-контракта", "fundsVerified": "Средства верифицированы Оракулом",
+    "clawbackWarning": "Clawback: если клиент уйдет < 90 дней, бонус за удержание не выплачивается.",
+    "personalData": "Личные данные", "paymentDetails": "Реквизиты для выплат",
+    "fullName": "ФИО", "phone": "Телефон", "taxStatus": "Налоговый статус", "selfEmployed": "Самозанятый (6%)", "ip": "ИП (6%)",
+    "inn": "ИНН", "snils": "СНИЛС", "bankName": "Название банка", "bik": "БИК", "correspondentAccount": "Корр. счет", "settlementAccount": "Расчетный счет"
   },
-  "nav": {
-    "dashboard": "Финансовое ядро",
-    "contracts": "Контракты",
-    "agents": "Агенты",
-    "settings": "Настройки",
-    "disputes": "Арбитраж",
-    "language": "Язык"
+  
+  "payouts": {
+    "title": "Выплаты", "subtitle": "Детализация начислений", "newSales": "Новые продажи", "renewal": "Продление",
+    "crossSell": "Кросс-продажи", "planBonus": "Бонус за план", "retention": "Удержание", "annual": "Годовой бонус", "instantRelease": "Мгновенный релиз"
   },
-  "auth": {
-    "login": "Войти",
-    "logout": "Выйти",
-    "email": "Email",
-    "password": "Пароль",
-    "register": "Зарегистрироваться",
-    "noAccount": "Нет аккаунта?",
-    "registerNow": "Зарегистрируйтесь сейчас"
-  },
+  
   "company": {
-    "title": "Данные компании",
-    "subtitle": "Настройте данные компании",
-    "companyType": "Тип организации",
-    "fullName": "ФИО руководителя",
-    "displayName": "Отображаемое имя",
-    "position": "Должность",
-    "phone": "Телефон",
-    "companyName": "Наименование организации",
-    "inn": "ИНН",
-    "kpp": "КПП",
-    "ogrn": "ОГРН",
-    "legalAddress": "Юридический адрес",
-    "bankDetails": "Банковские реквизиты",
-    "bankName": "Название банка",
-    "bankBik": "БИК",
-    "bankInn": "ИНН банка",
-    "correspondentAccount": "Корреспондентский счет",
-    "settlementAccount": "Расчетный счет",
-    "bankAddress": "Адрес банка",
-    "fullNameIP": "ФИО ИП",
-    "innIP": "ИНН ИП",
-    "ogrnip": "ОГРНИП"
+    "title": "Данные компании", "subtitle": "Настройте данные", "companyType": "Тип организации", "fullName": "ФИО руководителя",
+    "displayName": "Отображаемое имя", "position": "Должность", "phone": "Телефон", "companyName": "Наименование",
+    "inn": "ИНН", "kpp": "КПП", "ogrn": "ОГРН", "legalAddress": "Юр. адрес", "bankDetails": "Банковские реквизиты",
+    "bankName": "Название банка", "bankBik": "БИК", "bankInn": "ИНН банка", "correspondentAccount": "Корр. счет", "settlementAccount": "Расчетный счет", "bankAddress": "Адрес банка"
   },
-  "common": {
-    "loading": "Загрузка...",
-    "viewAll": "Все контракты",
-    "error": "Ошибка",
-    "save": "Сохранить",
-    "cancel": "Отмена",
-    "success": "Успешно"
+  
+  "ceo": {
+    "disputesSubtitle": "Ручные подтверждения и споры", "manualApprovals": "Требуют подтверждения", "noManualApprovals": "Системы работают штатно.",
+    "activeDisputes": "Активные споры", "noDisputes": "Споров нет."
   },
-  "streams": {
-    "newSales": "Новые продажи",
-    "renewal": "Продление",
-    "crossSell": "Кросс-продажи",
-    "planBonus": "Бонус за план",
-    "retention": "Удержание 90 дней",
-    "annual": "Годовой бонус"
-  }
+  
+  "streams": { "newSales": "Новые продажи", "renewal": "Продление", "crossSell": "Кросс-продажи", "planBonus": "Бонус за план", "retention": "Удержание", "annual": "Годовой бонус" }
 }
