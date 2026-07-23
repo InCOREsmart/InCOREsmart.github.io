@@ -26,7 +26,8 @@
     "submitWork": "İşi təqdim et",
     "smartContractStatus": "Smart müqavilə statusu",
     "fundsVerified": "Vəsaitlər Oracle tərəfindən təsdiqləndi",
-    "clawbackWarning": "Clawback: müştəri 90 gündən az müddətdə gedərsə, saxlama bonusu ödənilmir."
+    "clawbackWarning": "Clawback: müştəri 90 gündən az müddətdə gedərsə, saxlama bonusu ödənilmir.",
+    "contractWillAppear": "Müqavilə burada görünəcək"
   },
   "payouts": {
     "title": "Ödənişlər və Axınlar",
@@ -62,51 +63,8 @@
     "escrowBalance": "Eskro balansı",
     "totalRevenue": "Ümumi gəlir",
     "noActiveContracts": "Aktiv müqavilə yoxdur",
-    "welcome": "Xoş gəldiniz"
-  },
-  "ceo": {
-    "disputesAndApprovals": "Nəzarət və Arbitraj",
-    "disputesSubtitle": "Oracle uğursuzluqlarının əl ilə təsdiqi və agentlərlə mübahisələr",
-    "manualApprovals": "Əl ilə təsdiq tələb olunur",
-    "noManualApprovals": "Bütün Oracle sistemləri normal işləyir.",
-    "confirmPayment": "Ödənişi təsdiq et",
-    "activeDisputes": "Aktiv mübahisələr",
-    "noDisputes": "Mübahisə yoxdur. Etibar iqtisadiyyatı işləyir.",
-    "disputeReason": "Mübahizənin səbəbi",
-    "payAgent": "Agentə ödə",
-    "rejectPayment": "Ödənişi rədd et"
-  },
-  "common": {
-    "loading": "Yüklənir...",
-    "viewAll": "Bütün müqavilələr",
-    "error": "Səhv",
-    "save": "Saxla",
-    "cancel": "Ləğv et",
-    "success": "Uğurlu"
-  },
-  "company": {
-    "title": "Şirkət məlumatları",
-    "subtitle": "Şirkət məlumatlarını konfiqurasiya edin",
-    "companyType": "Təşkilat növü",
-    "fullName": "Direktorun tam adı",
-    "displayName": "Görünən ad",
-    "position": "Vəzifə",
-    "phone": "Telefon",
-    "companyName": "Şirkət adı",
-    "inn": "VÖEN",
-    "kpp": "KPP",
-    "ogrn": "OGRN",
-    "legalAddress": "Hüquqi ünvan",
-    "bankDetails": "Bank rekvizitləri",
-    "bankName": "Bank adı",
-    "bankBik": "BIK",
-    "bankInn": "Bank VÖEN",
-    "correspondentAccount": "Korrepondent hesab",
-    "settlementAccount": "Cari hesab",
-    "bankAddress": "Bank ünvanı",
-    "fullNameIP": "FƏ sahibinin tam adı",
-    "innIP": "FƏ VÖEN",
-    "ogrnip": "FƏ OGRNIP"
+    "welcome": "Xoş gəldiniz",
+    "contractWillAppear": "Müqavilə burada görünəcək"
   },
   "contract": {
     "title": "Müqavilənin adı",
@@ -153,7 +111,42 @@
     "login": "Daxil ol",
     "logout": "Çıxış",
     "email": "Email",
-    "password": "Şifrə"
+    "password": "Şifrə",
+    "register": "Qeydiyyat",
+    "noAccount": "Hesabınız yoxdur?",
+    "registerNow": "İndi qeydiyyatdan keçin"
+  },
+  "company": {
+    "title": "Şirkət məlumatları",
+    "subtitle": "Şirkət məlumatlarını konfiqurasiya edin",
+    "companyType": "Təşkilat növü",
+    "fullName": "Direktorun tam adı",
+    "displayName": "Görünən ad",
+    "position": "Vəzifə",
+    "phone": "Telefon",
+    "companyName": "Şirkət adı",
+    "inn": "VÖEN",
+    "kpp": "KPP",
+    "ogrn": "OGRN",
+    "legalAddress": "Hüquqi ünvan",
+    "bankDetails": "Bank rekvizitləri",
+    "bankName": "Bank adı",
+    "bankBik": "BIK",
+    "bankInn": "Bank VÖEN",
+    "correspondentAccount": "Korrepondent hesab",
+    "settlementAccount": "Cari hesab",
+    "bankAddress": "Bank ünvanı",
+    "fullNameIP": "FƏ sahibinin tam adı",
+    "innIP": "FƏ VÖEN",
+    "ogrnip": "FƏ OGRNIP"
+  },
+  "common": {
+    "loading": "Yüklənir...",
+    "viewAll": "Bütün müqavilələr",
+    "error": "Səhv",
+    "save": "Saxla",
+    "cancel": "Ləğv et",
+    "success": "Uğurlu"
   },
   "streams": {
     "newSales": "Yeni satışlar",

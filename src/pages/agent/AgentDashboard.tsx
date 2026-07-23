@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DollarSign, Shield, Briefcase, CheckCircle, Target, ArrowUpRight, Clock } from 'lucide-react';
+import { DollarSign, Shield, Briefcase, CheckCircle, Target, ArrowUpRight, Clock, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase, Contract } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { TrendingUp } from 'lucide-react';
 
 export function AgentDashboard() {
   const { t } = useTranslation();
@@ -59,7 +58,6 @@ export function AgentDashboard() {
         <p className="text-gray-600 mt-1">{t('agent.dashboardSubtitle')}</p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
           <div className="flex items-center justify-between mb-3"><DollarSign className="w-5 h-5 text-[#B8860B]" /><ArrowUpRight className="w-4 h-4 text-green-600" /></div>
@@ -88,7 +86,6 @@ export function AgentDashboard() {
         </div>
       </div>
 
-      {/* 6 Streams & Smart Contract Info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="card lg:col-span-2">
           <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
@@ -118,7 +115,7 @@ export function AgentDashboard() {
               <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-green-800">{t('agent.fundsVerified')}</p>
-                <p className="text-xs text-green-700 mt-1">Средства заблокированы в эскроу и будут выплачены автоматически после верификации Оракулом.</p>
+                <p className="text-xs text-green-700 mt-1">{t('agent.fundsVerified')}</p>
               </div>
             </div>
             <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex items-start gap-3">
@@ -132,7 +129,6 @@ export function AgentDashboard() {
         </div>
       </div>
 
-      {/* Active Contracts Table */}
       <div className="card">
         <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-gray-600" /> {t('agent.myActiveContracts')}
@@ -141,10 +137,10 @@ export function AgentDashboard() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Название</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Статус</th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Эскроу</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Дедлайн</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.title')}</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.status')}</th>
+                <th className="text-right py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.escrowAmount')}</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.deadline')}</th>
               </tr>
             </thead>
             <tbody>

@@ -26,7 +26,8 @@
     "submitWork": "Жұмысты жіберу",
     "smartContractStatus": "Смарт-келісімшарт мәртебесі",
     "fundsVerified": "Қаражат Oracle арқылы тексерілді",
-    "clawbackWarning": "Clawback: егер клиент 90 күннен аз уақытта кетсе, ұстап қалу бонусы төленбейді."
+    "clawbackWarning": "Clawback: егер клиент 90 күннен аз уақытта кетсе, ұстап қалу бонусы төленбейді.",
+    "contractWillAppear": "Келісімшарт мұнда пайда болады"
   },
   "payouts": {
     "title": "Төлемдер және ағындар",
@@ -62,51 +63,8 @@
     "escrowBalance": "Эскроу балансы",
     "totalRevenue": "Жалпы түсім",
     "noActiveContracts": "Белсенді келісімшарттар жоқ",
-    "welcome": "Қош келдіңіз"
-  },
-  "ceo": {
-    "disputesAndApprovals": "Бақылау және Арбитраж",
-    "disputesSubtitle": "Oracle ақауларын қолмен растау және агенттермен даулар",
-    "manualApprovals": "Қолмен растауды қажет етеді",
-    "noManualApprovals": "Барлық Oracle жүйелері қалыпты жұмыс істейді.",
-    "confirmPayment": "Төлемді растау",
-    "activeDisputes": "Белсенді даулар",
-    "noDisputes": "Даулар жоқ. Сенім экономикасы жұмыс істейді.",
-    "disputeReason": "Даудың себебі",
-    "payAgent": "Агентке төлеу",
-    "rejectPayment": "Төлемді қабылдамау"
-  },
-  "common": {
-    "loading": "Жүктелуде...",
-    "viewAll": "Барлық келісімшарттар",
-    "error": "Қате",
-    "save": "Сақтау",
-    "cancel": "Болдырмау",
-    "success": "Сәтті"
-  },
-  "company": {
-    "title": "Компания деректері",
-    "subtitle": "Компания деректерін теңшеңіз",
-    "companyType": "Ұйым түрі",
-    "fullName": "Басшының толық аты-жөні",
-    "displayName": "Көрсетілетін атау",
-    "position": "Лауазым",
-    "phone": "Телефон",
-    "companyName": "Компания атауы",
-    "inn": "ЖСН/БСН",
-    "kpp": "КПП",
-    "ogrn": "ОГРН",
-    "legalAddress": "Заңды мекенжай",
-    "bankDetails": "Банк деректері",
-    "bankName": "Банк атауы",
-    "bankBik": "БИК",
-    "bankInn": "Банк ЖСН",
-    "correspondentAccount": "Корреспонденттік шот",
-    "settlementAccount": "Ағымдағы шот",
-    "bankAddress": "Банк мекенжайы",
-    "fullNameIP": "ЖК толық аты-жөні",
-    "innIP": "ЖК ЖСН",
-    "ogrnip": "ЖК ОГРНИП"
+    "welcome": "Қош келдіңіз",
+    "contractWillAppear": "Келісімшарт мұнда пайда болады"
   },
   "contract": {
     "title": "Келісімшарт атауы",
@@ -153,7 +111,42 @@
     "login": "Кіру",
     "logout": "Шығу",
     "email": "Email",
-    "password": "Құпия сөз"
+    "password": "Құпия сөз",
+    "register": "Тіркелу",
+    "noAccount": "Есеп жоқ па?",
+    "registerNow": "Қазір тіркеліңіз"
+  },
+  "company": {
+    "title": "Компания деректері",
+    "subtitle": "Компания деректерін теңшеңіз",
+    "companyType": "Ұйым түрі",
+    "fullName": "Басшының толық аты-жөні",
+    "displayName": "Көрсетілетін атау",
+    "position": "Лауазым",
+    "phone": "Телефон",
+    "companyName": "Компания атауы",
+    "inn": "ЖСН/БСН",
+    "kpp": "КПП",
+    "ogrn": "ОГРН",
+    "legalAddress": "Заңды мекенжай",
+    "bankDetails": "Банк деректері",
+    "bankName": "Банк атауы",
+    "bankBik": "БИК",
+    "bankInn": "Банк ЖСН",
+    "correspondentAccount": "Корреспонденттік шот",
+    "settlementAccount": "Ағымдағы шот",
+    "bankAddress": "Банк мекенжайы",
+    "fullNameIP": "ЖК толық аты-жөні",
+    "innIP": "ЖК ЖСН",
+    "ogrnip": "ЖК ОГРНИП"
+  },
+  "common": {
+    "loading": "Жүктелуде...",
+    "viewAll": "Барлық келісімшарттар",
+    "error": "Қате",
+    "save": "Сақтау",
+    "cancel": "Болдырмау",
+    "success": "Сәтті"
   },
   "streams": {
     "newSales": "Жаңа сатылымдар",

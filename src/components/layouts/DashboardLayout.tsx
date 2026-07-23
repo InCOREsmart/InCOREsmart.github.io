@@ -14,7 +14,6 @@ import {
   Bell
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { NotificationBell } from '../ui/NotificationBell';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -59,19 +58,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar - GOLDEN COLOR */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#B8860B] border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="p-6 border-b border-yellow-600/30 flex justify-center">
             <img src="/logo.png" alt="InCORE" className="h-10 w-auto object-contain" />
           </div>
 
-          {/* Navigation - WHITE TEXT */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
@@ -92,7 +88,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          {/* Language Switcher */}
           <div className="p-4 border-t border-yellow-600/30">
             <div className="flex items-center gap-2 mb-3 text-white/80">
               <Globe className="w-4 h-4" />
@@ -120,7 +115,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
 
-          {/* User Profile & Logout */}
           <div className="p-4 border-t border-yellow-600/30">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
@@ -143,7 +137,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Menu Button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md text-[#B8860B]"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -151,13 +144,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      {/* Main Content */}
       <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-        {/* Notification Bell */}
         <div className="flex justify-end mb-4">
-  <NotificationBell />
-</div>
-
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+            <Bell className="w-5 h-5 text-[#000052]" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+        </div>
         {children}
       </main>
     </div>

@@ -26,7 +26,8 @@
     "submitWork": "Submit Work",
     "smartContractStatus": "Smart Contract Status",
     "fundsVerified": "Funds verified by Oracle",
-    "clawbackWarning": "Clawback: if client leaves < 90 days, retention bonus is not paid."
+    "clawbackWarning": "Clawback: if client leaves < 90 days, retention bonus is not paid.",
+    "contractWillAppear": "Contract will appear here"
   },
   "payouts": {
     "title": "Payouts & Streams",
@@ -62,51 +63,8 @@
     "escrowBalance": "Escrow Balance",
     "totalRevenue": "Total Revenue",
     "noActiveContracts": "No active contracts",
-    "welcome": "Welcome"
-  },
-  "ceo": {
-    "disputesAndApprovals": "Control & Arbitration",
-    "disputesSubtitle": "Manual Oracle failure confirmations and disputes with agents",
-    "manualApprovals": "Require Manual Approval",
-    "noManualApprovals": "All Oracle systems operating normally.",
-    "confirmPayment": "Confirm Payment",
-    "activeDisputes": "Active Disputes",
-    "noDisputes": "No disputes. Trust economy works.",
-    "disputeReason": "Dispute Reason",
-    "payAgent": "Pay Agent",
-    "rejectPayment": "Reject Payment"
-  },
-  "common": {
-    "loading": "Loading...",
-    "viewAll": "All Contracts",
-    "error": "Error",
-    "save": "Save",
-    "cancel": "Cancel",
-    "success": "Success"
-  },
-  "company": {
-    "title": "Company Data",
-    "subtitle": "Configure company details",
-    "companyType": "Organization Type",
-    "fullName": "Director Full Name",
-    "displayName": "Display Name",
-    "position": "Position",
-    "phone": "Phone",
-    "companyName": "Company Name",
-    "inn": "INN",
-    "kpp": "KPP",
-    "ogrn": "OGRN",
-    "legalAddress": "Legal Address",
-    "bankDetails": "Bank Details",
-    "bankName": "Bank Name",
-    "bankBik": "BIK",
-    "bankInn": "Bank INN",
-    "correspondentAccount": "Correspondent Account",
-    "settlementAccount": "Settlement Account",
-    "bankAddress": "Bank Address",
-    "fullNameIP": "IE Full Name",
-    "innIP": "IE INN",
-    "ogrnip": "IE OGRNIP"
+    "welcome": "Welcome",
+    "contractWillAppear": "Contract will appear here"
   },
   "contract": {
     "title": "Contract Title",
@@ -153,7 +111,42 @@
     "login": "Login",
     "logout": "Logout",
     "email": "Email",
-    "password": "Password"
+    "password": "Password",
+    "register": "Register",
+    "noAccount": "Don't have an account?",
+    "registerNow": "Register now"
+  },
+  "company": {
+    "title": "Company Data",
+    "subtitle": "Configure company details",
+    "companyType": "Organization Type",
+    "fullName": "Director Full Name",
+    "displayName": "Display Name",
+    "position": "Position",
+    "phone": "Phone",
+    "companyName": "Company Name",
+    "inn": "INN",
+    "kpp": "KPP",
+    "ogrn": "OGRN",
+    "legalAddress": "Legal Address",
+    "bankDetails": "Bank Details",
+    "bankName": "Bank Name",
+    "bankBik": "BIK",
+    "bankInn": "Bank INN",
+    "correspondentAccount": "Correspondent Account",
+    "settlementAccount": "Settlement Account",
+    "bankAddress": "Bank Address",
+    "fullNameIP": "IE Full Name",
+    "innIP": "IE INN",
+    "ogrnip": "IE OGRNIP"
+  },
+  "common": {
+    "loading": "Loading...",
+    "viewAll": "All Contracts",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "success": "Success"
   },
   "streams": {
     "newSales": "New Sales",
