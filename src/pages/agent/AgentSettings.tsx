@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Save, User, Banknote } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -24,9 +23,31 @@ export function AgentSettings() {
   useEffect(() => {
     const fetchAgent = async () => {
       if (!user) return;
-      const { data } = await supabase.from('agents').select('*').eq('user_id', user.id).maybeSingle();
-      if (data) setFormData(prev => ({ ...prev, ...data }));
+      try {
+        const { data } = await supabase
+          .from('agents')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setFormData(prev => ({
+            full_name: data.full_name || '',
+            phone: data.phone || '',
+            tax_status: data.tax_status || 'self_employed',
+            inn: data.inn || '',
+            snils: data.snils || '',
+            bank_name: data.bank_name || '',
+            bank_bik: data.bank_bik || '',
+            correspondent_account: data.correspondent_account || '',
+            settlement_account: data.settlement_account || '',
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching agent:', err);
+      }
     };
+    
     fetchAgent();
   }, [user]);
 
@@ -37,68 +58,196 @@ export function AgentSettings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
       if (!user) return;
-      const { data: existing } = await supabase.from('agents').select('id').eq('user_id', user.id).maybeSingle();
+      
+      const { data: existing } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
       if (existing) {
-        await supabase.from('agents').update(formData).eq('user_id', user.id);
+        const { error } = await supabase
+          .from('agents')
+          .update(formData)
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
       } else {
-        await supabase.from('agents').insert({ ...formData, user_id: user.id });
+        const { error } = await supabase
+          .from('agents')
+          .insert({ ...formData, user_id: user.id });
+        
+        if (error) throw error;
       }
+      
       alert(t('common.success'));
-    } catch (err) { 
-      console.error(err); 
-      alert(t('common.error')); 
-    } finally { 
-      setLoading(false); 
+    } catch (err) {
+      console.error(err);
+      alert(t('common.error'));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <DashboardLayout>
+    <div className="max-w-4xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#000052]">{t('agent.title')}</h1>
         <p className="text-gray-600 mt-1">{t('agent.subtitle')}</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-4xl space-y-8">
-        <div className="card">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Личные данные */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <User className="w-5 h-5 text-[#000052]" />
             <h2 className="text-lg font-semibold text-[#000052]">{t('agent.personalData') || 'Личные данные'}</h2>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="label">{t('agent.fullName')} *</label><input name="full_name" value={formData.full_name} onChange={handleChange} className="input" required /></div>
-            <div><label className="label">{t('agent.phone') || 'Телефон'} *</label><input name="phone" value={formData.phone} onChange={handleChange} className="input" required /></div>
             <div>
-              <label className="label">{t('agent.taxStatus') || 'Налоговый статус'} *</label>
-              <select name="tax_status" value={formData.tax_status} onChange={handleChange} className="input">
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.fullName')} *
+              </label>
+              <input
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.phone') || 'Телефон'} *
+              </label>
+              <input
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.taxStatus') || 'Налоговый статус'} *
+              </label>
+              <select
+                name="tax_status"
+                value={formData.tax_status}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+              >
                 <option value="self_employed">{t('agent.selfEmployed') || 'Самозанятый (6%)'}</option>
                 <option value="ip">{t('agent.ip') || 'ИП (6%)'}</option>
               </select>
             </div>
-            <div><label className="label">{t('agent.inn') || 'ИНН'} *</label><input name="inn" value={formData.inn} onChange={handleChange} className="input" required /></div>
-            <div><label className="label">{t('agent.snils') || 'СНИЛС'} *</label><input name="snils" value={formData.snils} onChange={handleChange} className="input" required /></div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.inn') || 'ИНН'} *
+              </label>
+              <input
+                name="inn"
+                value={formData.inn}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.snils') || 'СНИЛС'} *
+              </label>
+              <input
+                name="snils"
+                value={formData.snils}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
           </div>
         </div>
 
-        <div className="card">
+        {/* Реквизиты для выплат */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <Banknote className="w-5 h-5 text-[#B8860B]" />
             <h2 className="text-lg font-semibold text-[#000052]">{t('agent.paymentDetails') || 'Реквизиты для выплат'}</h2>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="label">{t('agent.bankName') || 'Название банка'} *</label><input name="bank_name" value={formData.bank_name} onChange={handleChange} className="input" required /></div>
-            <div><label className="label">{t('agent.bik') || 'БИК'} *</label><input name="bank_bik" value={formData.bank_bik} onChange={handleChange} className="input" required /></div>
-            <div><label className="label">{t('agent.correspondentAccount') || 'Корр. счет'} *</label><input name="correspondent_account" value={formData.correspondent_account} onChange={handleChange} className="input" required /></div>
-            <div className="md:col-span-2"><label className="label">{t('agent.settlementAccount') || 'Расчетный счет'} *</label><input name="settlement_account" value={formData.settlement_account} onChange={handleChange} className="input" required /></div>
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.bankName') || 'Название банка'} *
+              </label>
+              <input
+                name="bank_name"
+                value={formData.bank_name}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.bik') || 'БИК'} *
+              </label>
+              <input
+                name="bank_bik"
+                value={formData.bank_bik}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.correspondentAccount') || 'Корр. счет'} *
+              </label>
+              <input
+                name="correspondent_account"
+                value={formData.correspondent_account}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
+            
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                {t('agent.settlementAccount') || 'Расчетный счет'} *
+              </label>
+              <input
+                name="settlement_account"
+                value={formData.settlement_account}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                required
+              />
+            </div>
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-          <Save className="w-4 h-4" /> {loading ? t('common.loading') : t('common.save')}
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-[#000052] text-white font-medium py-2.5 px-5 rounded-lg border border-[#000052] hover:bg-[#000066] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          {loading ? t('common.loading') : t('common.save')}
         </button>
       </form>
-    </DashboardLayout>
+    </div>
   );
 }

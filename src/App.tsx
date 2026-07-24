@@ -1,135 +1,92 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { CEODashboard } from './pages/ceo/CEODashboard';
+import { CEOSettings } from './pages/ceo/CEOSettings';
 import { CEOContractsPage } from './pages/ceo/CEOContractsPage';
 import { CEOContractDetailPage } from './pages/ceo/CEOContractDetailPage';
-import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { CEODisputesPage } from './pages/ceo/CEODisputesPage';
-import { CEOSettings } from './pages/ceo/CEOSettings';
+import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
-import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 import { AgentSettings } from './pages/agent/AgentSettings';
-import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
+import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 
-const ProtectedRoute: React.FC<{
-  children: React.ReactNode;
-  allowedRoles: Array<'CEO' | 'AGENT' | 'ADMIN'>;
-}> = ({ children, allowedRoles }) => {
+function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles: string[] }) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <div className="text-[#000052] text-lg">Загрузка...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#000052] mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
-  if (!role || !allowedRoles.includes(role)) {
+  if (role && !allowedRoles.includes(role)) {
+    if (role === 'CEO') return <Navigate to="/ceo/dashboard" replace />;
+    if (role === 'AGENT') return <Navigate to="/agent/dashboard" replace />;
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
-};
+}
 
-const AppRoutes: React.FC = () => {
+function PublicRoute({ children }: { children: ReactNode }) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <div className="text-[#000052] text-lg">Загрузка...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#000052] mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
       </div>
     );
   }
 
+  if (user && role) {
+    if (role === 'CEO') return <Navigate to="/ceo/dashboard" replace />;
+    if (role === 'AGENT') return <Navigate to="/agent/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
-      <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" replace />} />
-      
-      <Route path="/ceo/dashboard" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEODashboard /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/ceo/contracts" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEOContractsPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/ceo/contracts/:id" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEOContractDetailPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/ceo/agents" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEOAgentsPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/ceo/disputes" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEODisputesPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/ceo/settings" element={
-        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-          <DashboardLayout><CEOSettings /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/agent/dashboard" element={
-        <ProtectedRoute allowedRoles={['AGENT']}>
-          <DashboardLayout><AgentDashboard /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/agent/contracts" element={
-        <ProtectedRoute allowedRoles={['AGENT']}>
-          <DashboardLayout><AgentContractsPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/agent/settings" element={
-        <ProtectedRoute allowedRoles={['AGENT']}>
-          <DashboardLayout><AgentSettings /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/agent/payouts" element={
-        <ProtectedRoute allowedRoles={['AGENT']}>
-          <DashboardLayout><AgentPayoutsPage /></DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/" element={
-        user ? (
-          <Navigate to={role === 'CEO' ? '/ceo/dashboard' : '/agent/dashboard'} replace />
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      } />
-      
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+
+      {/* CEO Routes */}
+      <Route path="/ceo/dashboard" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/contracts" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/contracts/:id" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/agents" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/disputes" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/settings" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
+
+      {/* Agent Routes */}
+      <Route path="/agent/dashboard" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/agent/contracts" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/agent/settings" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
+
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
-};
+}
 
-const App: React.FC = () => {
+function App() {
   return (
     <HashRouter>
       <AuthProvider>
@@ -137,6 +94,6 @@ const App: React.FC = () => {
       </AuthProvider>
     </HashRouter>
   );
-};
+}
 
 export default App;
