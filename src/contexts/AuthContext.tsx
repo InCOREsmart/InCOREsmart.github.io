@@ -28,63 +28,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Функция определения роли пользователя
   const determineRole = async (userId: string): Promise<UserRole> => {
-    // 1. Проверяем user_metadata (сохраняется при регистрации)
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.user_metadata?.role) {
-      return user.user_metadata.role as UserRole;
+    try {
+      // 1. Проверяем user_metadata (сохраняется при регистрации)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.role) {
+        return user.user_metadata.role as UserRole;
+      }
+
+      // 2. Проверяем таблицу companies (CEO)
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (companyData) return 'CEO';
+
+      // 3. Проверяем таблицу agents (Агент)
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (agentData) return 'AGENT';
+
+      // 4. По умолчанию — Агент
+      return 'AGENT';
+    } catch (err) {
+      console.error('Error determining role:', err);
+      return 'AGENT'; // Fallback
     }
-
-    // 2. Проверяем таблицу companies (CEO)
-    const { data: companyData } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (companyData) return 'CEO';
-
-    // 3. Проверяем таблицу agents (Агент)
-    const { data: agentData } = await supabase
-      .from('agents')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (agentData) return 'AGENT';
-
-    // 4. По умолчанию — Агент
-    return 'AGENT';
   };
 
   useEffect(() => {
-    // Проверяем текущую сессию при загрузке
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        setUser(session.user);
-        const userRole = await determineRole(session.user.id);
-        setRole(userRole);
-      }
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    // Слушаем изменения авторизации
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
+        setSession(session);
+        
+        if (session?.user) {
+          setUser(session.user);
+          const userRole = await determineRole(session.user.id);
+          if (isMounted) setRole(userRole);
+        }
+      } catch (err) {
+        console.error('Auth init error:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      
       setSession(session);
+      
       if (session?.user) {
         setUser(session.user);
         const userRole = await determineRole(session.user.id);
-        setRole(userRole);
+        if (isMounted) setRole(userRole);
       } else {
         setUser(null);
         setRole(null);
       }
-      setLoading(false);
+      
+      if (isMounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
