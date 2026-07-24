@@ -1,111 +1,309 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { DollarSign, Shield, CheckCircle, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { supabase, Contract } from '../../lib/supabase';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { useTranslation } from 'react-i18next';
+import { 
+  DollarSign, 
+  Clock, 
+  ShieldCheck, 
+  Calendar, 
+  CheckCircle, 
+  XCircle, 
+  Loader2,
+  FileText,
+  PieChart,
+  TrendingUp
+} from 'lucide-react';
 
-export function AgentPayoutsPage() {
+export const AgentPayoutsPage: React.FC = () => {
+  const { user, role } = useAuth();
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
+    const fetchPayouts = async () => {
       try {
-        const { data } = await supabase.from('contracts').select('*').eq('agent_id', user.id);
-        setContracts(data || []);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+        setLoading(true);
+        // В реальном проекте здесь будет запрос к Supabase
+        // const { data, error } = await supabase.from('payouts').select('*');
+        // if (error) throw error;
+        // setPayouts(data || []);
+        
+        // Для демо временно используем тестовые данные
+        setPayouts([
+          {
+            id: '1',
+            type: 'new_sales',
+            amount: 5000,
+            status: 'PENDING',
+            description: 'Бонус за новые продажи',
+            releaseDate: new Date(Date.now() + 86400000).toISOString(),
+            contractId: 'contract-1'
+          },
+          {
+            id: '2',
+            type: 'renewal',
+            amount: 1500,
+            status: 'PENDING',
+            description: 'Бонус за продление',
+            releaseDate: new Date(Date.now() + 172800000).toISOString(),
+            contractId: 'contract-2'
+          },
+          {
+            id: '3',
+            type: 'retention',
+            amount: 1000,
+            status: 'PENDING',
+            description: 'Бонус за удержание (90 дней)',
+            releaseDate: new Date(Date.now() + 7776000000).toISOString(),
+            contractId: 'contract-3'
+          },
+          {
+            id: '4',
+            type: 'annual',
+            amount: 500,
+            status: 'PENDING',
+            description: 'Годовой бонус (1/12)',
+            releaseDate: new Date(Date.now() + 2592000000).toISOString(),
+            contractId: 'contract-4'
+          }
+        ]);
+      } catch (error) {
+        console.error('Error fetching payouts:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchData();
-  }, [user]);
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
+    if (role === 'AGENT') {
+      fetchPayouts();
+    }
+  }, [role]);
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            {t('payouts.status.pending', { defaultValue: 'Ожидает' })}
+          </span>
+        );
+      case 'RELEASED':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            {t('payouts.status.released', { defaultValue: 'Выплачено' })}
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            {t('payouts.status.cancelled', { defaultValue: 'Отменено' })}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            {t('payouts.status.unknown', { defaultValue: 'Неизвестно' })}
+          </span>
+        );
+    }
+  };
 
-  const totalPayout = contracts.reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
-  const completedPayout = contracts.filter(c => c.status === 'COMPLETED').reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
-
-  const streams = [
-    { key: 'newSales', name: t('payouts.newSales'), percent: 50, color: 'bg-[#000052]' },
-    { key: 'renewal', name: t('payouts.renewal'), percent: 15, color: 'bg-blue-500' },
-    { key: 'crossSell', name: t('payouts.crossSell'), percent: 10, color: 'bg-indigo-500' },
-    { key: 'planBonus', name: t('payouts.planBonus'), percent: 10, color: 'bg-purple-500' },
-    { key: 'retention', name: t('payouts.retention'), percent: 10, color: 'bg-[#B8860B]' },
-    { key: 'annual', name: t('payouts.annual'), percent: 5, color: 'bg-green-500' },
-  ];
+  if (!user || role !== 'AGENT') {
+    return null;
+  }
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#000052]">{t('payouts.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('payouts.subtitle')}</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
-          <div className="flex items-center gap-3"><DollarSign className="w-5 h-5 text-[#B8860B]" /><div><p className="text-xs text-gray-600">{t('agent.pendingPayouts')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalPayout - completedPayout)} ₽</p></div></div>
-        </div>
-        <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <div className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-600" /><div><p className="text-xs text-gray-600">{t('agent.totalEarned')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(completedPayout)} ₽</p></div></div>
-        </div>
-        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
-          <div className="flex items-center gap-3"><Shield className="w-5 h-5 text-[#B8860B]" /><div><p className="text-xs text-gray-600">{t('payouts.instantRelease')}</p><p className="text-2xl font-bold text-[#000052]">Мгновенно</p></div></div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-gray-600" /> Структура выплат
-          </h2>
-          <div className="space-y-4">
-            {streams.map((stream) => (
-              <div key={stream.key} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-[#000052]">{stream.name}</span>
-                  <span className="text-sm font-bold text-[#B8860B]">{stream.percent}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                  <div className={`h-full ${stream.color} rounded-full`} style={{ width: `${stream.percent}%` }} />
-                </div>
-              </div>
-            ))}
+      <div className="p-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#000052] mb-2">
+              {t('payouts.title', { defaultValue: 'Выплаты и потоки' })}
+            </h1>
+            <p className="text-gray-500">
+              {t('payouts.subtitle', { defaultValue: 'Ваши выплаты и условия смарт-контрактов' })}
+            </p>
           </div>
         </div>
 
-        <div className="card">
-          <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#B8860B]" /> Условия смарт-контракта
-          </h2>
-          <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-green-800">Выплата при верификации</p>
-                <p className="text-xs text-green-700 mt-1">Как только Оракул подтверждает поступление средств от клиента, смарт-контракт мгновенно переводит вашу комиссию на расчетный счет.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold text-[#000052] mb-6 flex items-center">
+                <FileText className="w-5 h-5 text-[#B8860B] mr-2" />
+                {t('payouts.paymentStreams', { defaultValue: 'Потоки выплат' })}
+              </h2>
+              
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="animate-spin h-8 w-8 text-[#B8860B]" />
+                </div>
+              ) : payouts.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-xl">
+                  <div className="text-5xl mb-4">💰</div>
+                  <h3 className="text-xl font-medium text-[#000052] mb-2">
+                    {t('payouts.noPayouts', { defaultValue: 'Выплаты не найдены' })}
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    {t('payouts.noPayoutsDescription', { defaultValue: 'Ваша история выплат будет отображена здесь' })}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {payouts.map((payout) => (
+                    <div key={payout.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-2">
+                            <div className="bg-[#B8860B] p-2 rounded-lg mr-3">
+                              <DollarSign className="w-5 h-5 text-white" />
+                            </div>
+                            <h3 className="text-lg font-medium text-[#000052]">
+                              {payout.description}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <span className="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
+                              {t(`payouts.types.${payout.type}`, { defaultValue: payout.type })}
+                            </span>
+                            <span className="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
+                              {t('payouts.releaseDate', { defaultValue: 'Дата релиза' })}: {new Date(payout.releaseDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 text-sm">
+                            {t('payouts.details', { defaultValue: 'Контракт' })}: #{payout.contractId}
+                          </p>
+                        </div>
+                        <div className="text-right mt-4 md:mt-0">
+                          <div className="text-2xl font-bold text-[#000052] mb-1">
+                            {new Intl.NumberFormat('ru-RU', { 
+                              style: 'currency', 
+                              currency: 'RUB',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                            }).format(payout.amount)}
+                          </div>
+                          {getStatusBadge(payout.status)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-[#000052] mb-6 flex items-center">
+                <PieChart className="w-5 h-5 text-[#B8860B] mr-2" />
+                {t('payouts.smartContractStatus', { defaultValue: 'Статус смарт-контракта' })}
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-lg font-medium text-[#000052] mb-2 flex items-center">
+                    <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                    {t('payouts.fundsVerified', { defaultValue: 'Средства верифицированы' })}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {t('payouts.fundsVerifiedDescription', { defaultValue: 'Средства заблокированы в смарт-контракте и готовы к выплате при выполнении условий' })}
+                  </p>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center mb-2">
+                      <TrendingUp className="w-4 h-4 text-green-500 mr-2" />
+                      <span className="font-medium text-green-800">{t('payouts.instantRelease', { defaultValue: 'Мгновенный релиз' })}</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      {t('payouts.instantReleaseDescription', { defaultValue: 'Как только Оракул подтверждает поступление средств от клиента, смарт-контракт мгновенно переводит вашу комиссию на расчетный счет.' })}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-lg font-medium text-[#000052] mb-2 flex items-center">
+                    <ShieldCheck className="w-5 h-5 text-red-500 mr-2" />
+                    {t('payouts.clawbackWarning', { defaultValue: 'Clawback (Удержание)' })}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {t('payouts.clawbackWarningDescription', { defaultValue: 'Бонус за удержание (10%) не выплачивается, если клиент расторгает договор в течение первых 90 дней. Это защищает бизнес от фрода.' })}
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center mb-2">
+                      <Clock className="w-4 h-4 text-red-500 mr-2" />
+                      <span className="font-medium text-red-800">{t('payouts.annualBonus', { defaultValue: 'Годовой бонус (5%)' })}</span>
+                    </div>
+                    <p className="text-sm text-red-700">
+                      {t('payouts.annualBonusDescription', { defaultValue: 'Накапливается ежемесячно (1/12). Выплачивается в конце года при выполнении KPI. Ваши деньги застрахованы математикой.' })}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-yellow-800">Clawback (Удержание)</p>
-                <p className="text-xs text-yellow-700 mt-1">Бонус за удержание (10%) не выплачивается, если клиент расторгает договор в течение первых 90 дней. Это защищает бизнес от фрода.</p>
-              </div>
-            </div>
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-              <Clock className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-blue-800">Годовой бонус (5%)</p>
-                <p className="text-xs text-blue-700 mt-1">Накапливается ежемесячно (1/12). Выплачивается в конце года при выполнении KPI. Ваши деньги застрахованы математикой.</p>
-              </div>
+          </div>
+          
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-8">
+              <h2 className="text-xl font-semibold text-[#000052] mb-6 flex items-center">
+                <Calendar className="w-5 h-5 text-[#B8860B] mr-2" />
+                {t('payouts.upcomingPayouts', { defaultValue: 'Предстоящие выплаты' })}
+              </h2>
+              
+              {loading ? (
+                <div className="flex justify-center items-center h-48">
+                  <Loader2 className="animate-spin h-8 w-8 text-[#B8860B]" />
+                </div>
+              ) : payouts.filter(p => p.status === 'PENDING').length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📅</div>
+                  <h3 className="text-lg font-medium text-[#000052] mb-2">
+                    {t('payouts.noUpcomingPayouts', { defaultValue: 'Предстоящих выплат нет' })}
+                  </h3>
+                  <p className="text-gray-500">
+                    {t('payouts.noUpcomingPayoutsDescription', { defaultValue: 'Все выплаты уже обработаны' })}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {payouts.filter(p => p.status === 'PENDING').map((payout) => (
+                    <div key={payout.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="font-medium text-[#000052]">
+                            {payout.description}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {new Date(payout.releaseDate).toLocaleDateString('ru-RU', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                        <span className="bg-[#B8860B] text-white px-3 py-1 rounded-full text-sm font-medium">
+                          {new Intl.NumberFormat('ru-RU', { 
+                            style: 'currency', 
+                            currency: 'RUB',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                          }).format(payout.amount)}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-[#B8860B] rounded-full" 
+                          style={{ width: '75%' }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
     </DashboardLayout>
   );
-}
+};
