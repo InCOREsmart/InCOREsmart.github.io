@@ -1,146 +1,231 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { UserPlus, Mail, Lock, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { Globe } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
-export const RegisterPage: React.FC = () => {
+export function RegisterPage() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'CEO' | 'AGENT'>('CEO');
   const [error, setError] = useState('');
-  const { signUp, loading } = useAuth();
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const languages = [
+    { code: 'ru', name: 'RU' },
+    { code: 'en', name: 'EN' },
+    { code: 'kk', name: 'KK' },
+    { code: 'az', name: 'AZ' },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Пароль должен содержать не менее 6 символов');
+    if (password !== confirmPassword) {
+      setError('Пароли не совпадают');
       return;
     }
 
+    if (password.length < 6) {
+      setError('Пароль должен содержать минимум 6 символов');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await signUp(email, password, role);
-      navigate('/');
+      // Регистрируем пользователя через Supabase напрямую
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: role,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (data.user) {
+        // Создаем запись в соответствующей таблице в зависимости от роли
+        if (role === 'CEO') {
+          await supabase.from('companies').insert({
+            user_id: data.user.id,
+            company_type: 'ООО',
+            full_name: '',
+            display_name: '',
+            position: '',
+            phone: '',
+            company_name: '',
+            inn: '',
+            kpp: '',
+            ogrn: '',
+            legal_address: '',
+          });
+        } else {
+          await supabase.from('agents').insert({
+            user_id: data.user.id,
+            full_name: '',
+            email: email,
+            phone: '',
+            specialization: '',
+            tax_status: 'self_employed',
+            inn: '',
+            snils: '',
+            bank_name: '',
+            bank_bik: '',
+            correspondent_account: '',
+            settlement_account: '',
+            status: 'ACTIVE',
+          });
+        }
+      }
+
+      // Перенаправляем на страницу входа
+      navigate('/login');
     } catch (err: any) {
-      console.error('Register error:', err);
-      setError(err.message || 'Ошибка при регистрации. Возможно, пользователь уже существует.');
+      setError(err.message || 'Ошибка регистрации');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#000052] mb-4">
-            <UserPlus className="w-8 h-8 text-[#B8860B]" />
-          </div>
-          <h2 className="text-2xl font-bold text-[#000052]">Регистрация в InCORE</h2>
-          <p className="text-gray-500 mt-2">Создайте аккаунт для начала работы</p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Переключатель языков */}
+      <div className="flex justify-end p-4">
+        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200">
+          <Globe className="w-4 h-4 text-gray-600" />
+          {languages.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => i18n.changeLanguage(lang.code)}
+              className={`px-2 py-1 text-xs rounded font-semibold transition-colors ${
+                i18n.language === lang.code
+                  ? 'bg-[#000052] text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {lang.name}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
+      <div className="flex-1 flex items-center justify-center px-4 pb-8">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-[#000052]">InCORE</h1>
+            <p className="text-gray-600 mt-2">{t('auth.subtitle') || 'Платформа смарт-контрактов для найма'}</p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Роль</label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-[#000052] mb-6 text-center">
+              {t('auth.register') || 'Регистрация'}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                  {t('auth.email')} *
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                  placeholder="example@company.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                  {t('auth.password')} *
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                  placeholder="Минимум 6 символов"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                  {t('auth.confirmPassword') || 'Подтвердите пароль'} *
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                  placeholder="Повторите пароль"
+                  required
+                />
+              </div>
+
+              {/* Выбор роли */}
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                  {t('auth.role') || 'Роль'} *
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole('CEO')}
+                    className={`p-3 rounded-lg border-2 transition-all font-medium ${
+                      role === 'CEO'
+                        ? 'border-[#000052] bg-[#000052]/5 text-[#000052]'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    CEO
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('AGENT')}
+                    className={`p-3 rounded-lg border-2 transition-all font-medium ${
+                      role === 'AGENT'
+                        ? 'border-[#000052] bg-[#000052]/5 text-[#000052]'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {t('auth.agentRole') || 'Агент'}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
               <button
-                type="button"
-                onClick={() => setRole('CEO')}
-                className={`py-3 px-4 rounded-lg border font-medium transition-all ${
-                  role === 'CEO'
-                    ? 'bg-[#000052] text-white border-[#000052]'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-[#000052]'
-                }`}
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#000052] text-white font-medium py-3 rounded-lg border border-[#000052] hover:bg-[#000066] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                CEO / Собственник
+                {loading ? t('common.loading') : t('auth.register') || 'Зарегистрироваться'}
               </button>
-              <button
-                type="button"
-                onClick={() => setRole('AGENT')}
-                className={`py-3 px-4 rounded-lg border font-medium transition-all ${
-                  role === 'AGENT'
-                    ? 'bg-[#000052] text-white border-[#000052]'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-[#000052]'
-                }`}
-              >
-                Агент
-              </button>
-            </div>
+
+              <div className="text-center">
+                <span className="text-gray-600">{t('auth.noAccount') || 'Уже есть аккаунт?'} </span>
+                <Link to="/login" className="text-[#000052] font-medium hover:underline">
+                  {t('auth.login')}
+                </Link>
+              </div>
+            </form>
           </div>
-
-          <div>
-            <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="reg-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#000052] focus:border-transparent outline-none transition-all"
-                placeholder="name@company.com"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700 mb-2">
-              Пароль (мин. 6 символов)
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                id="reg-password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#000052] focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#000052] hover:bg-[#000070] text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Создание аккаунта...</span>
-              </>
-            ) : (
-              <span>Зарегистрироваться</span>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Уже есть аккаунт?{' '}
-            <Link to="/login" className="font-semibold text-[#B8860B] hover:text-[#9a7009] transition-colors">
-              Войти
-            </Link>
-          </p>
         </div>
       </div>
     </div>
   );
-};
+}

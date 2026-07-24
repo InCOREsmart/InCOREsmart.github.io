@@ -31,7 +31,7 @@ export function AgentSettings() {
           .maybeSingle();
         
         if (data) {
-          setFormData(prev => ({
+          setFormData({
             full_name: data.full_name || '',
             phone: data.phone || '',
             tax_status: data.tax_status || 'self_employed',
@@ -41,7 +41,7 @@ export function AgentSettings() {
             bank_bik: data.bank_bik || '',
             correspondent_account: data.correspondent_account || '',
             settlement_account: data.settlement_account || '',
-          }));
+          });
         }
       } catch (err) {
         console.error('Error fetching agent:', err);
@@ -100,7 +100,6 @@ export function AgentSettings() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Личные данные */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <User className="w-5 h-5 text-[#000052]" />
@@ -109,75 +108,31 @@ export function AgentSettings() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.fullName')} *
-              </label>
-              <input
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.fullName')} *</label>
+              <input name="full_name" value={formData.full_name} onChange={handleChange} className="input" required />
             </div>
-            
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.phone') || 'Телефон'} *
-              </label>
-              <input
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.phone') || 'Телефон'} *</label>
+              <input name="phone" value={formData.phone} onChange={handleChange} className="input" required />
             </div>
-            
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.taxStatus') || 'Налоговый статус'} *
-              </label>
-              <select
-                name="tax_status"
-                value={formData.tax_status}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-              >
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.taxStatus') || 'Налоговый статус'} *</label>
+              <select name="tax_status" value={formData.tax_status} onChange={handleChange} className="input">
                 <option value="self_employed">{t('agent.selfEmployed') || 'Самозанятый (6%)'}</option>
                 <option value="ip">{t('agent.ip') || 'ИП (6%)'}</option>
               </select>
             </div>
-            
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.inn') || 'ИНН'} *
-              </label>
-              <input
-                name="inn"
-                value={formData.inn}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.inn') || 'ИНН'} *</label>
+              <input name="inn" value={formData.inn} onChange={handleChange} className="input" required />
             </div>
-            
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.snils') || 'СНИЛС'} *
-              </label>
-              <input
-                name="snils"
-                value={formData.snils}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.snils') || 'СНИЛС'} *</label>
+              <input name="snils" value={formData.snils} onChange={handleChange} className="input" required />
             </div>
           </div>
         </div>
 
-        {/* Реквизиты для выплат */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <Banknote className="w-5 h-5 text-[#B8860B]" />
@@ -186,66 +141,26 @@ export function AgentSettings() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.bankName') || 'Название банка'} *
-              </label>
-              <input
-                name="bank_name"
-                value={formData.bank_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.bankName') || 'Название банка'} *</label>
+              <input name="bank_name" value={formData.bank_name} onChange={handleChange} className="input" required />
             </div>
-            
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.bik') || 'БИК'} *
-              </label>
-              <input
-                name="bank_bik"
-                value={formData.bank_bik}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.bik') || 'БИК'} *</label>
+              <input name="bank_bik" value={formData.bank_bik} onChange={handleChange} className="input" required />
             </div>
-            
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.correspondentAccount') || 'Корр. счет'} *
-              </label>
-              <input
-                name="correspondent_account"
-                value={formData.correspondent_account}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.correspondentAccount') || 'Корр. счет'} *</label>
+              <input name="correspondent_account" value={formData.correspondent_account} onChange={handleChange} className="input" required />
             </div>
-            
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {t('agent.settlementAccount') || 'Расчетный счет'} *
-              </label>
-              <input
-                name="settlement_account"
-                value={formData.settlement_account}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('agent.settlementAccount') || 'Расчетный счет'} *</label>
+              <input name="settlement_account" value={formData.settlement_account} onChange={handleChange} className="input" required />
             </div>
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-[#000052] text-white font-medium py-2.5 px-5 rounded-lg border border-[#000052] hover:bg-[#000066] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save className="w-4 h-4" />
-          {loading ? t('common.loading') : t('common.save')}
+        <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
+          <Save className="w-4 h-4" /> {loading ? t('common.loading') : t('common.save')}
         </button>
       </form>
     </div>

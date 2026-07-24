@@ -1,117 +1,103 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, UserProfile, UserRole } from '../lib/supabase';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
+
+export type UserRole = 'CEO' | 'AGENT' | 'ADMIN';
 
 interface AuthContextType {
-  user: SupabaseUser | null;
-  profile: UserProfile | null;
+  user: User | null;
+  session: Session | null;
   role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userRole: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  role: null,
+  loading: true,
+  signIn: async () => {},
+  signOut: async () => {},
+});
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
+
+  const determineRole = async (userId: string): Promise<UserRole> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.user_metadata?.role) {
+        return user.user_metadata.role as UserRole;
+      }
+
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (companyData) return 'CEO';
+
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (agentData) return 'AGENT';
+
+      return 'AGENT';
+    } catch (err) {
+      console.error('Error determining role:', err);
+      return 'AGENT';
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
 
-    const initializeAuth = async () => {
+    const initAuth = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const session = data?.session;
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user && isMounted) {
+        if (!isMounted) return;
+        
+        setSession(session);
+        
+        if (session?.user) {
           setUser(session.user);
-          
-          let detectedRole: UserRole | null = null;
-          const metadataRole = session.user.user_metadata?.role as UserRole | undefined;
-          
-          if (metadataRole === 'CEO' || metadataRole === 'AGENT' || metadataRole === 'ADMIN') {
-            detectedRole = metadataRole;
-          } else {
-            const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', session.user.id).maybeSingle();
-            if (companyData) {
-              detectedRole = 'CEO';
-            } else {
-              const { data: agentData } = await supabase.from('agents').select('id').eq('user_id', session.user.id).maybeSingle();
-              if (agentData) {
-                detectedRole = 'AGENT';
-              } else {
-                detectedRole = 'ADMIN';
-              }
-            }
-          }
-          
-          if (isMounted) {
-            setRole(detectedRole);
-            setProfile({
-              id: session.user.id,
-              email: session.user.email || '',
-              role: detectedRole || 'ADMIN'
-            });
-          }
+          const userRole = await determineRole(session.user.id);
+          if (isMounted) setRole(userRole);
         }
-      } catch (error) {
-        console.error('Auth init error:', error);
+      } catch (err) {
+        console.error('Auth init error:', err);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
-    initializeAuth();
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       
-      if (event === 'SIGNED_IN' && session?.user) {
+      setSession(session);
+      
+      if (session?.user) {
         setUser(session.user);
-        let detectedRole: UserRole | null = null;
-        const metadataRole = session.user.user_metadata?.role as UserRole | undefined;
-        
-        if (metadataRole === 'CEO' || metadataRole === 'AGENT' || metadataRole === 'ADMIN') {
-          detectedRole = metadataRole;
-        } else {
-          const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', session.user.id).maybeSingle();
-          if (companyData) {
-            detectedRole = 'CEO';
-          } else {
-            const { data: agentData } = await supabase.from('agents').select('id').eq('user_id', session.user.id).maybeSingle();
-            if (agentData) {
-              detectedRole = 'AGENT';
-            } else {
-              detectedRole = 'ADMIN';
-            }
-          }
-        }
-        setRole(detectedRole);
-        setProfile({
-          id: session.user.id,
-          email: session.user.email || '',
-          role: detectedRole || 'ADMIN'
-        });
-      } else if (event === 'SIGNED_OUT') {
+        const userRole = await determineRole(session.user.id);
+        if (isMounted) setRole(userRole);
+      } else {
         setUser(null);
         setRole(null);
-        setProfile(null);
       }
+      
+      if (isMounted) setLoading(false);
     });
 
     return () => {
@@ -121,51 +107,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string, userRole: UserRole) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { role: userRole } }
-      });
-      if (error) throw error;
-    } catch (error) {
-      console.error('Sign up error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
   };
 
   const signOut = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error) {
-      console.error('Sign out error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, role, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
+
+export const useAuth = () => useContext(AuthContext);
