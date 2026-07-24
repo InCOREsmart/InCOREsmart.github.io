@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, role } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,9 +18,14 @@ export function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, password);
-      navigate('/ceo/dashboard');
+      // Редирект по роли (роль определится после входа)
+      setTimeout(() => {
+        if (role === 'CEO') navigate('/ceo/dashboard');
+        else if (role === 'AGENT') navigate('/agent/dashboard');
+        else navigate('/login');
+      }, 100);
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Неверный email или пароль');
     } finally {
       setLoading(false);
     }
@@ -31,54 +36,30 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[#000052]">InCORE</h1>
-          <p className="text-gray-600 mt-2">{t('auth.subtitle') || 'Platform for data-driven hiring'}</p>
+          <p className="text-gray-600 mt-2">{t('auth.subtitle') || 'Платформа смарт-контрактов для найма'}</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                {t('auth.email')}
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#000052]/50"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.email')}</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" required />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                {t('auth.password')}
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#000052]/50"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.password')}</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" required />
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg"><p className="text-sm text-red-700">{error}</p></div>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary py-3 text-base"
-            >
+            <button type="submit" disabled={loading} className="w-full btn-primary py-3 text-base">
               {loading ? t('common.loading') : t('auth.login')}
             </button>
 
-            <div className="text-center mt-4">
-              <span className="text-gray-600">{t('auth.noAccount') || "Don't have an account?"}</span>
-              <Link to="/register" className="ml-2 text-[#000052] font-medium hover:underline">
-                {t('auth.registerNow') || 'Register now'}
-              </Link>
+            <div className="text-center">
+              <span className="text-gray-600">{t('auth.noAccount') || 'Нет аккаунта?'} </span>
+              <Link to="/register" className="text-[#000052] font-medium hover:underline">{t('auth.registerNow') || 'Зарегистрироваться'}</Link>
             </div>
           </form>
         </div>

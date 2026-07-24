@@ -2,28 +2,88 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
+export type UserRole = 'CEO' | 'AGENT' | 'ADMIN';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, session: null, loading: true, signIn: async () => {}, signOut: async () => {} });
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  session: null,
+  role: null,
+  loading: true,
+  signIn: async () => {},
+  signOut: async () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Функция определения роли пользователя
+  const determineRole = async (userId: string): Promise<UserRole> => {
+    // 1. Проверяем user_metadata (сохраняется при регистрации)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.user_metadata?.role) {
+      return user.user_metadata.role as UserRole;
+    }
+
+    // 2. Проверяем таблицу companies (CEO)
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (companyData) return 'CEO';
+
+    // 3. Проверяем таблицу agents (Агент)
+    const { data: agentData } = await supabase
+      .from('agents')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (agentData) return 'AGENT';
+
+    // 4. По умолчанию — Агент
+    return 'AGENT';
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session); setUser(session?.user ?? null); setLoading(false);
+    // Проверяем текущую сессию при загрузке
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(session.user);
+        const userRole = await determineRole(session.user.id);
+        setRole(userRole);
+      }
+      setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session); setUser(session?.user ?? null); setLoading(false);
+
+    // Слушаем изменения авторизации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      if (session?.user) {
+        setUser(session.user);
+        const userRole = await determineRole(session.user.id);
+        setRole(userRole);
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+      setLoading(false);
     });
+
     return () => subscription.unsubscribe();
   }, []);
 
@@ -32,10 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setRole(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

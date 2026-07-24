@@ -34,7 +34,7 @@ export function CEOAgentsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#000052]">{t('nav.agents')}</h1>
-          <p className="text-gray-600 mt-1">{agents.length} {t('agent.title').toLowerCase()}</p>
+          <p className="text-gray-600 mt-1">{agents.length} агентов</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -69,10 +69,9 @@ export function CEOAgentsPage() {
         <div className="card text-center py-16">
           <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-[#000052] mb-2">{t('agent.noAgents')}</h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">{t('agent.waitingTasks')}</p>
           <button 
             onClick={() => setShowAddModal(true)}
-            className="btn-primary inline-flex items-center gap-2"
+            className="btn-primary inline-flex items-center gap-2 mt-6"
           >
             <Plus className="w-4 h-4" /> {t('agent.addAgent')}
           </button>
@@ -82,11 +81,11 @@ export function CEOAgentsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">ФИО</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Email</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Телефон</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Специализация</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">Статус</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">ФИО</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">Email</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">Телефон</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">Специализация</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">Статус</th>
               </tr>
             </thead>
             <tbody>
