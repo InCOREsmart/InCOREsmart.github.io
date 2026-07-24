@@ -1,107 +1,117 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
-
-export type UserRole = 'CEO' | 'AGENT' | 'ADMIN';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase, UserProfile, UserRole } from '../lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: SupabaseUser | null;
+  profile: UserProfile | null;
   role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, userRole: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  role: null,
-  loading: true,
-  signIn: async () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const determineRole = async (userId: string): Promise<UserRole> => {
-    try {
-      // 1. Проверяем user_metadata (сохраняется при регистрации)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.role) {
-        return user.user_metadata.role as UserRole;
-      }
-
-      // 2. Проверяем таблицу companies (CEO)
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (companyData) return 'CEO';
-
-      // 3. Проверяем таблицу agents (Агент)
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (agentData) return 'AGENT';
-
-      // 4. По умолчанию — Агент
-      return 'AGENT';
-    } catch (err) {
-      console.error('Error determining role:', err);
-      return 'AGENT'; // Fallback
-    }
-  };
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
 
-    const initAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
         
-        if (!isMounted) return;
-        
-        setSession(session);
-        
-        if (session?.user) {
+        if (session?.user && isMounted) {
           setUser(session.user);
-          const userRole = await determineRole(session.user.id);
-          if (isMounted) setRole(userRole);
+          
+          let detectedRole: UserRole | null = null;
+          const metadataRole = session.user.user_metadata?.role as UserRole | undefined;
+          
+          if (metadataRole === 'CEO' || metadataRole === 'AGENT' || metadataRole === 'ADMIN') {
+            detectedRole = metadataRole;
+          } else {
+            const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', session.user.id).maybeSingle();
+            if (companyData) {
+              detectedRole = 'CEO';
+            } else {
+              const { data: agentData } = await supabase.from('agents').select('id').eq('user_id', session.user.id).maybeSingle();
+              if (agentData) {
+                detectedRole = 'AGENT';
+              } else {
+                detectedRole = 'ADMIN';
+              }
+            }
+          }
+          
+          if (isMounted) {
+            setRole(detectedRole);
+            setProfile({
+              id: session.user.id,
+              email: session.user.email || '',
+              role: detectedRole || 'ADMIN'
+            });
+          }
         }
-      } catch (err) {
-        console.error('Auth init error:', err);
+      } catch (error) {
+        console.error('Auth init error:', error);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    initAuth();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       
-      setSession(session);
-      
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        const userRole = await determineRole(session.user.id);
-        if (isMounted) setRole(userRole);
-      } else {
+        let detectedRole: UserRole | null = null;
+        const metadataRole = session.user.user_metadata?.role as UserRole | undefined;
+        
+        if (metadataRole === 'CEO' || metadataRole === 'AGENT' || metadataRole === 'ADMIN') {
+          detectedRole = metadataRole;
+        } else {
+          const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', session.user.id).maybeSingle();
+          if (companyData) {
+            detectedRole = 'CEO';
+          } else {
+            const { data: agentData } = await supabase.from('agents').select('id').eq('user_id', session.user.id).maybeSingle();
+            if (agentData) {
+              detectedRole = 'AGENT';
+            } else {
+              detectedRole = 'ADMIN';
+            }
+          }
+        }
+        setRole(detectedRole);
+        setProfile({
+          id: session.user.id,
+          email: session.user.email || '',
+          role: detectedRole || 'ADMIN'
+        });
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setRole(null);
+        setProfile(null);
       }
-      
-      if (isMounted) setLoading(false);
     });
 
     return () => {
@@ -111,22 +121,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, userRole: UserRole) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { role: userRole } }
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, role, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export const useAuth = () => useContext(AuthContext);
+};

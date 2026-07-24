@@ -36,16 +36,16 @@ export interface UserProfile {
 export interface Company {
   id: string;
   user_id: string;
+  company_type: CompanyType;
   full_name: string;
   display_name?: string;
   position?: string;
-  company_type: CompanyType;
+  phone?: string;
   company_name: string;
   inn: string;
   kpp?: string;
   ogrn: string;
   legal_address: string;
-  phone?: string;
   bank_name: string;
   bank_bik: string;
   bank_inn: string;
@@ -60,24 +60,17 @@ export interface Agent {
   user_id?: string;
   company_id?: string;
   full_name: string;
-  phone: string;
   email?: string;
-  status?: string;
+  phone: string;
   specialization?: string;
-  experience?: string;
-  comment?: string;
-  passport_series: string;
-  passport_number: string;
-  passport_issued_by: string;
-  passport_issue_date: string;
-  passport_department_code: string;
-  inn_personal: string;
-  snils: string;
   tax_status: TaxStatus;
+  inn: string;
+  snils: string;
   bank_name: string;
   bank_bik: string;
   correspondent_account: string;
   settlement_account: string;
+  status?: string;
   created_at: string;
 }
 
@@ -89,6 +82,7 @@ export interface PaymentStream {
   release?: string;
   clawback?: boolean;
 }
+
 export interface Contract {
   id: string;
   company_id: string;
@@ -96,30 +90,22 @@ export interface Contract {
   ceo_id?: string;
   title: string;
   description: string;
-  
-  // Обновленные статусы с поддержкой арбитража и ручного подтверждения
-  status: 'DRAFT' | 'PENDING_PAYMENT' | 'ACTIVE' | 'IN_PROGRESS' | 'PENDING_APPROVAL' | 'PENDING_MANUAL_APPROVAL' | 'COMPLETED' | 'DISPUTED' | 'DISPUTED_REJECTED';
-  
+  status: ContractStatus;
   escrow_amount: number;
-  escrow_status: 'PENDING' | 'FUNDED' | 'FROZEN' | 'RELEASED';
+  escrow_status: EscrowStatus;
   deadline: string;
   created_at: string;
   updated_at?: string;
-  
-  // --- НОВЫЕ ПОЛЯ ДЛЯ UNIT-ЭКОНОМИКИ ---
-  revenue?: number;                // Плановая выручка
-  agent_payouts_total?: number;    // Плановые выплаты агенту
-  company_profit?: number;         // Прибыль компании
-  roi_percentage?: number;         // ROI контракта
-  reward_type?: 'standard_b2b' | 'renewal' | 'cross_sell'; // Тип вознаграждения
-  
-  // --- ПОЛЯ ДЛЯ АРБИТРАЖА И РУЧНОГО ПОДТВЕРЖДЕНИЯ ---
+  revenue?: number;
+  agent_payouts_total?: number;
+  company_profit?: number;
+  roi_percentage?: number;
+  reward_type?: 'standard_b2b' | 'renewal' | 'cross_sell';
   requires_manual_approval?: boolean;
   dispute_id?: string;
-  
-  // Старое поле (оставляем для обратной совместимости, если оно где-то используется)
   kpi_revenue?: number;
 }
+
 export interface DailyMetric {
   id: string;
   contract_id: string;
@@ -145,18 +131,18 @@ export interface Transaction {
 export interface Notification {
   id: string;
   user_id: string;
+  type: NotificationType;
   title: string;
   message: string;
-  type: NotificationType;
   is_read: boolean;
   created_at: string;
 }
 
 export const DEFAULT_PAYMENT_STREAMS: PaymentStream[] = [
-  { id: 'new_sales', name: 'Бонус за новые продажи', percent: 10 },
-  { id: 'renewal', name: 'Бонус за продление', percent: 3 },
-  { id: 'cross_sell', name: 'Бонус за кросс-продажи', percent: 5 },
-  { id: 'plan_bonus', name: 'Бонус за выполнение плана', amount: 50000 },
-  { id: 'annual_bonus', name: 'Годовой бонус', release: '1/12_per_month' },
-  { id: 'retention_bonus', name: 'Бонус за удержание (90 дней)', clawback: true },
+  { id: 'new_sales', name: 'Бонус за новые продажи', percent: 50 },
+  { id: 'renewal', name: 'Бонус за продление', percent: 15 },
+  { id: 'cross_sell', name: 'Бонус за кросс-продажи', percent: 10 },
+  { id: 'plan_bonus', name: 'Бонус за выполнение плана', percent: 10 },
+  { id: 'retention', name: 'Бонус за удержание (90 дней)', percent: 10, clawback: true },
+  { id: 'annual', name: 'Годовой бонус', percent: 5 },
 ];
