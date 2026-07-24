@@ -1,23 +1,15 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-
-// Auth pages
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-
-// Layout
 import { DashboardLayout } from './components/layouts/DashboardLayout';
-
-// CEO pages
 import { CEODashboard } from './pages/ceo/CEODashboard';
 import { CEOContractsPage } from './pages/ceo/CEOContractsPage';
 import { CEOContractDetailPage } from './pages/ceo/CEOContractDetailPage';
 import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { CEODisputesPage } from './pages/ceo/CEODisputesPage';
 import { CEOSettings } from './pages/ceo/CEOSettings';
-
-// Agent pages
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 import { AgentSettings } from './pages/agent/AgentSettings';
@@ -32,7 +24,7 @@ const ProtectedRoute: React.FC<{
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <div className="text-[#000052] text-lg font-medium">Загрузка...</div>
+        <div className="text-[#000052] text-lg">Загрузка...</div>
       </div>
     );
   }
@@ -45,7 +37,7 @@ const ProtectedRoute: React.FC<{
     return <Navigate to="/login" replace />;
   }
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return <>{children}</>;
 };
 
 const AppRoutes: React.FC = () => {
@@ -54,120 +46,84 @@ const AppRoutes: React.FC = () => {
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <div className="text-[#000052] text-lg font-medium">Загрузка...</div>
+        <div className="text-[#000052] text-lg">Загрузка...</div>
       </div>
     );
   }
 
   return (
     <Routes>
-      {/* Public routes */}
-      <Route
-        path="/login"
-        element={user ? <Navigate to={role === 'CEO' ? '/ceo/dashboard' : '/agent/dashboard'} replace /> : <LoginPage />}
-      />
-      <Route
-        path="/register"
-        element={user ? <Navigate to="/" replace /> : <RegisterPage />}
-      />
-
-      {/* CEO routes */}
-      <Route
-        path="/ceo/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEODashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ceo/contracts"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEOContractsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ceo/contracts/:id"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEOContractDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ceo/agents"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEOAgentsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ceo/disputes"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEODisputesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ceo/settings"
-        element={
-          <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
-            <CEOSettings />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Agent routes */}
-      <Route
-        path="/agent/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={['AGENT']}>
-            <AgentDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/agent/contracts"
-        element={
-          <ProtectedRoute allowedRoles={['AGENT']}>
-            <AgentContractsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/agent/settings"
-        element={
-          <ProtectedRoute allowedRoles={['AGENT']}>
-            <AgentSettings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/agent/payouts"
-        element={
-          <ProtectedRoute allowedRoles={['AGENT']}>
-            <AgentPayoutsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Root redirect */}
-      <Route
-        path="/"
-        element={
-          user ? (
-            <Navigate to={role === 'CEO' ? '/ceo/dashboard' : '/agent/dashboard'} replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-
-      {/* 404 */}
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" replace />} />
+      <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" replace />} />
+      
+      <Route path="/ceo/dashboard" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEODashboard /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ceo/contracts" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEOContractsPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ceo/contracts/:id" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEOContractDetailPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ceo/agents" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEOAgentsPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ceo/disputes" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEODisputesPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ceo/settings" element={
+        <ProtectedRoute allowedRoles={['CEO', 'ADMIN']}>
+          <DashboardLayout><CEOSettings /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/agent/dashboard" element={
+        <ProtectedRoute allowedRoles={['AGENT']}>
+          <DashboardLayout><AgentDashboard /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/agent/contracts" element={
+        <ProtectedRoute allowedRoles={['AGENT']}>
+          <DashboardLayout><AgentContractsPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/agent/settings" element={
+        <ProtectedRoute allowedRoles={['AGENT']}>
+          <DashboardLayout><AgentSettings /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/agent/payouts" element={
+        <ProtectedRoute allowedRoles={['AGENT']}>
+          <DashboardLayout><AgentPayoutsPage /></DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/" element={
+        user ? (
+          <Navigate to={role === 'CEO' ? '/ceo/dashboard' : '/agent/dashboard'} replace />
+        ) : (
+          <Navigate to="/login" replace />
+        )
+      } />
+      
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

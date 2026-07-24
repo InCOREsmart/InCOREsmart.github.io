@@ -37,18 +37,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const menu = role === 'CEO' || role === 'ADMIN' ? ceoMenu : agentMenu;
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Боковое меню */}
-      <aside className="w-64 bg-[#B8860B] text-white flex flex-col shadow-lg">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <aside className="w-64 bg-[#B8860B] text-white flex flex-col shadow-lg flex-shrink-0">
         <div className="p-6 border-b border-[#9a7009]">
-          <img src="/logo.png" alt="InCORE" className="h-10 w-auto mb-2" onError={(e) => {
+          <img src="/logo.png" alt="InCORE" className="h-10 w-auto" onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
           }} />
-          <h1 className="text-xl font-bold hidden">InCORE</h1>
         </div>
         
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menu.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -83,10 +80,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </div>
       </aside>
 
-      {/* Основной контент */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Верхняя панель */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm flex-shrink-0">
           <h2 className="text-[#000052] text-xl font-semibold">
             {role === 'CEO' ? 'Кабинет CEO' : 'Кабинет Агента'}
           </h2>
@@ -101,7 +96,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           </div>
         </header>
 
-        {/* Контент страницы */}
         <div className="flex-1 overflow-auto p-8">
           {children}
         </div>
