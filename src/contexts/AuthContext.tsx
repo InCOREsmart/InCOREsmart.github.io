@@ -30,18 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const determineRole = async (userId: string): Promise<UserRole> => {
     try {
-      console.log('ROLE 1: determineRole', userId);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      console.log('ROLE 2: getUser', user);
-
-      if (user?.user_metadata?.role) {
-        console.log('ROLE 3: metadata role', user.user_metadata.role);
-        return user.user_metadata.role as UserRole;
-      }
+      console.log('ROLE 1', userId);
 
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
@@ -49,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      console.log('ROLE 4: company', companyData, companyError);
+      console.log('ROLE company', companyData, companyError);
 
       if (companyData) return 'CEO';
 
@@ -59,11 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      console.log('ROLE 5: agent', agentData, agentError);
+      console.log('ROLE agent', agentData, agentError);
 
       if (agentData) return 'AGENT';
 
-      console.log('ROLE 6: default AGENT');
       return 'AGENT';
     } catch (err) {
       console.error('ROLE ERROR', err);
@@ -72,46 +60,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('AUTH 1: useEffect');
-
     let isMounted = true;
 
     const initAuth = async () => {
-      console.log('AUTH 2: initAuth');
-
       try {
-        console.log('AUTH 3: before getSession');
+        console.log('AUTH init');
 
         const {
           data: { session },
           error,
         } = await supabase.auth.getSession();
 
-        console.log('AUTH 4: after getSession', session, error);
+        console.log('SESSION', session, error);
 
         if (!isMounted) return;
 
         setSession(session);
 
         if (session?.user) {
-          console.log('AUTH 5: user', session.user.id);
-
           setUser(session.user);
 
           const userRole = await determineRole(session.user.id);
 
-          console.log('AUTH 6: role', userRole);
-
-          if (isMounted) setRole(userRole);
+          if (isMounted) {
+            setRole(userRole);
+          }
         } else {
-          console.log('AUTH 5: no session');
+          setUser(null);
+          setRole(null);
         }
       } catch (err) {
         console.error('AUTH ERROR', err);
       } finally {
-        console.log('AUTH 7: loading=false');
-
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          console.log('LOADING FALSE');
+          setLoading(false);
+        }
       }
     };
 
@@ -119,9 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('AUTH EVENT', event, session);
-
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
 
       setSession(session);
@@ -131,13 +113,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const userRole = await determineRole(session.user.id);
 
-        if (isMounted) setRole(userRole);
+        if (isMounted) {
+          setRole(userRole);
+        }
       } else {
         setUser(null);
         setRole(null);
       }
 
-      if (isMounted) setLoading(false);
+      if (isMounted) {
+        setLoading(false);
+      }
     });
 
     return () => {
@@ -147,8 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('SIGN IN');
-
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -158,8 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    console.log('SIGN OUT');
-
     await supabase.auth.signOut();
 
     setUser(null);
