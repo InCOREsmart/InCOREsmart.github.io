@@ -28,35 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const determineRole = async (userId: string): Promise<UserRole> => {
-    try {
-      console.log('ROLE 1', userId);
-
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      console.log('ROLE company', companyData, companyError);
-
-      if (companyData) return 'CEO';
-
-      const { data: agentData, error: agentError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      console.log('ROLE agent', agentData, agentError);
-
-      if (agentData) return 'AGENT';
-
-      return 'AGENT';
-    } catch (err) {
-      console.error('ROLE ERROR', err);
-      return 'AGENT';
-    }
+  const determineRole = async (): Promise<UserRole> => {
+    console.log('ROLE BYPASSED');
+    return 'CEO';
   };
 
   useEffect(() => {
@@ -80,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           setUser(session.user);
 
-          const userRole = await determineRole(session.user.id);
+          const userRole = await determineRole();
 
           if (isMounted) {
             setRole(userRole);
@@ -111,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         setUser(session.user);
 
-        const userRole = await determineRole(session.user.id);
+        const userRole = await determineRole();
 
         if (isMounted) {
           setRole(userRole);
