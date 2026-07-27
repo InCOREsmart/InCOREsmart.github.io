@@ -82,6 +82,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
+    console.log('1. initAuth started');
+
+const { data: { session } } = await supabase.auth.getSession();
+
+console.log('2. session =', session);
+
+if (session?.user) {
+  console.log('3. determineRole');
+  const userRole = await determineRole(session.user.id);
+  console.log('4. role =', userRole);
+}
+
+console.log('5. loading false');
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
