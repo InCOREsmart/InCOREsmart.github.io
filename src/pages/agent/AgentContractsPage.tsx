@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Clock, CheckCircle, DollarSign } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -100,17 +99,13 @@ export function AgentContractsPage() {
   };
 
   if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        </div>
-      </DashboardLayout>
-    );
+    return <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-text-secondary">{t('common.loading')}</div>
+    </div>;
   }
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-display font-bold text-text-primary">
           {t('contracts.title')}
@@ -193,6 +188,6 @@ export function AgentContractsPage() {
           ))}
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }

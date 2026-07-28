@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, Shield, Briefcase, CheckCircle, Target, ArrowUpRight, Clock, TrendingUp } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase, Contract } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -40,7 +39,7 @@ export function AgentDashboard() {
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
 
   const streams = [
     { name: t('payouts.newSales'), percent: 50, color: 'bg-[#000052]' },
@@ -52,7 +51,7 @@ export function AgentDashboard() {
   ];
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#000052]">{t('agent.dashboardTitle')}</h1>
         <p className="text-gray-600 mt-1">{t('agent.dashboardSubtitle')}</p>
@@ -160,6 +159,6 @@ export function AgentDashboard() {
           </table>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

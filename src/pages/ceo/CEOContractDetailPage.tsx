@@ -17,7 +17,6 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
 import { EscrowBadge } from '../../components/ui/EscrowBadge';
 import { supabase, Contract, PaymentStream, DEFAULT_PAYMENT_STREAMS } from '../../lib/supabase';
@@ -260,12 +259,10 @@ export function CEOContractDetailPage() {
     }
   };
 
-  // ИСПРАВЛЕНИЕ: принимаем number | undefined и используем || 0
   const formatCurrency = (amount: number | undefined) => {
     return new Intl.NumberFormat('ru-RU').format(amount || 0);
   };
 
-  // ИСПРАВЛЕНИЕ: принимаем string | undefined и обрабатываем пустое значение
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'Не указано';
     return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -289,30 +286,26 @@ export function CEOContractDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-text-secondary">{t('common.loading')}</div>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-text-secondary">{t('common.loading')}</div>
+      </div>
     );
   }
 
   if (!contract) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <AlertCircle className="w-12 h-12 text-error mb-4" />
-          <p className="text-text-primary mb-4">Контракт не найден</p>
-          <button onClick={() => navigate('/ceo/contracts')} className="btn-primary">
-            Вернуться к списку
-          </button>
-        </div>
-      </DashboardLayout>
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <AlertCircle className="w-12 h-12 text-error mb-4" />
+        <p className="text-text-primary mb-4">Контракт не найден</p>
+        <button onClick={() => navigate('/ceo/contracts')} className="btn-primary">
+          Вернуться к списку
+        </button>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => navigate('/ceo/contracts')}
@@ -806,6 +799,6 @@ export function CEOContractDetailPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }

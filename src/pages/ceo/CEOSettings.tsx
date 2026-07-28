@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Save, Building2 } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -63,7 +62,7 @@ export function CEOSettings() {
   };
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#000052]">{t('company.title')}</h1>
         <p className="text-gray-600 mt-1">{t('company.subtitle')}</p>
@@ -159,6 +158,6 @@ export function CEOSettings() {
           <Save className="w-4 h-4" /> {loading ? t('common.loading') : t('common.save')}
         </button>
       </form>
-    </DashboardLayout>
+    </div>
   );
 }

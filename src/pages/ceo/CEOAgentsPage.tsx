@@ -1,15 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, Plus, FileText, DollarSign } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { AddAgentModal } from '../../components/ui/AddAgentModal';
 
+interface Agent {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  status: string;
+}
+
 export function CEOAgentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -27,10 +35,10 @@ export function CEOAgentsPage() {
 
   useEffect(() => { fetchAgents(); }, [user]);
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#000052]">{t('nav.agents')}</h1>
@@ -110,6 +118,6 @@ export function CEOAgentsPage() {
         onClose={() => setShowAddModal(false)}
         onAgentAdded={fetchAgents}
       />
-    </DashboardLayout>
+    </div>
   );
 }
