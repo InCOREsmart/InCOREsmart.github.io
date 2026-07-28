@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, TrendingUp, Shield, Users, Briefcase, BarChart3, CheckCircle, Clock, ArrowUpRight, Activity, Plus, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { supabase, Contract } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
@@ -64,7 +63,7 @@ export function CEODashboard() {
     }
   };
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
 
   const chartData = [
     { label: t('dashboard.totalRevenue'), value: metrics.totalRevenue, color: 'bg-[#000052]', width: metrics.totalRevenue > 0 ? '100%' : '5%' },
@@ -73,7 +72,7 @@ export function CEODashboard() {
   ];
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
         <button onClick={handleCreateClick} className="btn-primary flex items-center gap-2">
@@ -204,6 +203,6 @@ export function CEODashboard() {
       </div>
 
       <CreateContractModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={() => { setIsModalOpen(false); window.location.reload(); }} />
-    </DashboardLayout>
+    </div>
   );
 }
