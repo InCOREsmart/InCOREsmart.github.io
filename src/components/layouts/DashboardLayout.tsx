@@ -34,7 +34,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     { path: '/agent/settings', icon: Settings, label: t('nav.settings') },
   ];
 
-  const menu = role === 'CEO' || role === 'ADMIN' ? ceoMenu : agentMenu;
+  const menu = role === 'ceo' ? ceoMenu : agentMenu;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -68,7 +68,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             onClick={() => i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')}
             className="w-full flex items-center space-x-3 px-4 py-2 rounded-lg hover:bg-[#9a7009] text-white text-sm"
           >
-            <span>🌐 {i18n.language.toUpperCase()}</span>
+            <span> {i18n.language.toUpperCase()}</span>
           </button>
           <button
             onClick={handleLogout}
@@ -83,7 +83,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm flex-shrink-0">
           <h2 className="text-[#000052] text-xl font-semibold">
-            {role === 'CEO' ? 'Кабинет CEO' : 'Кабинет Агента'}
+            {role === 'ceo' ? 'Кабинет CEO' : 'Кабинет Агента'}
           </h2>
           <div className="flex items-center space-x-4">
             <button className="relative p-2 text-gray-500 hover:text-[#000052] transition-colors">
@@ -91,7 +91,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
             <div className="w-8 h-8 bg-[#000052] rounded-full flex items-center justify-center text-white font-bold">
-              {role?.[0]}
+              {role?.[0]?.toUpperCase()}
             </div>
           </div>
         </header>
