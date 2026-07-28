@@ -21,80 +21,96 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const determineRole = async (userId: string): Promise<UserRole> => {
-    console.log('ROLE: reading user_roles...', userId);
+    console.log('🔍 ROLE: Step 1 - starting determineRole for', userId);
     try {
-      // 1. Проверяем user_metadata (сохраняется при регистрации)
-      const { data: userData } = await supabase.auth.getUser();
+      console.log('🔍 ROLE: Step 2 - calling supabase.auth.getUser()');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('❌ ROLE: Step 2 error (getUser):', userError);
+      }
+
       if (userData?.user?.user_metadata?.role) {
-        console.log('ROLE: found in metadata', userData.user.user_metadata.role);
+        console.log('✅ ROLE: Step 3 - found in metadata:', userData.user.user_metadata.role);
         return userData.user.user_metadata.role as UserRole;
       }
 
-      // 2. Проверяем таблицу companies (CEO)
-      // ИСПОЛЬЗУЕМ maybeSingle вместо single, чтобы избежать ошибки, если записей нет
+      console.log('🔍 ROLE: Step 4 - checking companies table');
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (companyData && !companyError) {
-        console.log('ROLE: found in companies');
+      if (companyError) {
+        console.error('❌ ROLE: Step 4 error (companies):', companyError);
+      } else if (companyData) {
+        console.log('✅ ROLE: Step 5 - found in companies');
         return 'ceo';
       }
 
-      // 3. Проверяем таблицу agents (Агент)
+      console.log('🔍 ROLE: Step 6 - checking agents table');
       const { data: agentData, error: agentError } = await supabase
         .from('agents')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (agentData && !agentError) {
-        console.log('ROLE: found in agents');
+      if (agentError) {
+        console.error('❌ ROLE: Step 6 error (agents):', agentError);
+      } else if (agentData) {
+        console.log('✅ ROLE: Step 7 - found in agents');
         return 'agent';
       }
 
-      console.log('ROLE: no role found in DB, defaulting to guest');
+      console.log('⚠️ ROLE: Step 8 - no role found in DB, defaulting to guest');
       return 'guest';
     } catch (error) {
-      console.error('Error determining role:', error);
+      console.error('💥 ROLE: Step 9 - CRITICAL ERROR in determineRole:', error);
       return 'guest';
     }
   };
 
   useEffect(() => {
-    console.log('AUTH INIT');
+    console.log('🚀 AUTH INIT');
     
-    // Функция для инициализации сессии при первой загрузке
     const initializeAuth = async () => {
+      console.log('🚀 AUTH: Step 1 - initializeAuth started');
       try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log('AUTH STATE CHANGED:', currentSession ? 'SIGNED_IN' : 'SIGNED_OUT');
+        console.log('🚀 AUTH: Step 2 - calling getSession()');
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ AUTH: Step 2 error (getSession):', sessionError);
+        }
+
+        console.log('🚀 AUTH STATE CHANGED:', currentSession ? 'SIGNED_IN' : 'SIGNED_OUT');
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
+          console.log('🚀 AUTH: Step 3 - user exists, calling determineRole');
           const userRole = await determineRole(currentSession.user.id);
+          console.log('🚀 AUTH: Step 4 - role determined:', userRole);
           setRole(userRole);
         } else {
+          console.log('🚀 AUTH: Step 3 - no user, setting role to guest');
           setRole('guest');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('💥 AUTH: CRITICAL ERROR in initializeAuth:', error);
         setRole('guest');
       } finally {
-        // КРИТИЧНО: всегда снимаем флаг загрузки, даже при ошибке
+        console.log('🏁 AUTH: Step 5 - FINALLY block reached, setting loading to FALSE');
         setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Подписываемся на изменения состояния аутентификации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('AUTH STATE CHANGED:', event);
+        console.log('🔄 AUTH STATE CHANGED (subscription):', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
@@ -104,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setRole('guest');
         }
-        // КРИТИЧНО: всегда снимаем флаг загрузки при изменении состояния
+        console.log('🏁 AUTH: Subscription finally block, setting loading to FALSE');
         setLoading(false);
       }
     );

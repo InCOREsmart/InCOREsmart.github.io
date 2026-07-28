@@ -20,11 +20,26 @@ import {
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
 import { EscrowBadge } from '../../components/ui/EscrowBadge';
-import { supabase, Contract, Agent, Company, DEFAULT_PAYMENT_STREAMS, PaymentStream } from '../../lib/supabase';
+import { supabase, Contract, PaymentStream, DEFAULT_PAYMENT_STREAMS } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface AgentWithUser extends Agent {
+interface AgentWithUser {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone: string;
+  email?: string;
   user_email?: string;
+  [key: string]: any;
+}
+
+interface CompanyData {
+  id: string;
+  company_name?: string;
+  inn?: string;
+  settlement_account?: string;
+  bank_name?: string;
+  [key: string]: any;
 }
 
 export function CEOContractDetailPage() {
@@ -34,7 +49,7 @@ export function CEOContractDetailPage() {
   const { user } = useAuth();
 
   const [contract, setContract] = useState<Contract | null>(null);
-  const [company, setCompany] = useState<Company | null>(null);
+  const [company, setCompany] = useState<CompanyData | null>(null);
   const [agents, setAgents] = useState<AgentWithUser[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -45,7 +60,6 @@ export function CEOContractDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Edit form state
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -67,7 +81,6 @@ export function CEOContractDetailPage() {
       console.log('[CEOContractDetailPage] fetchData called');
       setLoading(true);
       try {
-        // Get company
         const { data: companyData } = await supabase
           .from('companies')
           .select('*')
@@ -76,7 +89,6 @@ export function CEOContractDetailPage() {
 
         setCompany(companyData);
 
-        // Get contract
         const { data: contractData } = await supabase
           .from('contracts')
           .select('*')
@@ -102,7 +114,6 @@ export function CEOContractDetailPage() {
           });
         }
 
-        // Get agents for this company
         if (companyData) {
           const { data: agentsData } = await supabase
             .from('agents')
@@ -154,10 +165,7 @@ export function CEOContractDetailPage() {
         return;
       }
 
-      setContract({
-        ...contract!,
-        ...editForm,
-      });
+      setContract({ ...contract!, ...editForm });
       setShowEditModal(false);
       setSuccess('Контракт обновлен');
       console.log('[handleEditContract] Success');
@@ -189,10 +197,7 @@ export function CEOContractDetailPage() {
         return;
       }
 
-      setContract({
-        ...contract!,
-        agent_id: selectedAgentId,
-      });
+      setContract({ ...contract!, agent_id: selectedAgentId });
       setShowAgentDropdown(false);
       setSuccess('Агент назначен');
       console.log('[handleAssignAgent] Success');
@@ -211,7 +216,6 @@ export function CEOContractDetailPage() {
     try {
       const escrowAmount = Math.round((contract?.kpi_revenue || 0) * 0.12);
 
-      // Update contract status
       const { error: updateError } = await supabase
         .from('contracts')
         .update({
@@ -226,7 +230,6 @@ export function CEOContractDetailPage() {
         return;
       }
 
-      // Create transaction record
       const { error: txnError } = await supabase
         .from('transactions')
         .insert({
@@ -257,11 +260,14 @@ export function CEOContractDetailPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ru-RU').format(amount);
+  // ИСПРАВЛЕНИЕ: принимаем number | undefined и используем || 0
+  const formatCurrency = (amount: number | undefined) => {
+    return new Intl.NumberFormat('ru-RU').format(amount || 0);
   };
 
-  const formatDate = (dateStr: string) => {
+  // ИСПРАВЛЕНИЕ: принимаем string | undefined и обрабатываем пустое значение
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Не указано';
     return new Date(dateStr).toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
@@ -269,7 +275,7 @@ export function CEOContractDetailPage() {
     });
   };
 
-  const getStreamStatus = (stream: PaymentStream) => {
+  const getStreamStatus = (stream: PaymentStream | any) => {
     if (!contract?.escrow_status || contract.escrow_status === 'PENDING') return 'locked';
     if (contract.escrow_status === 'FUNDED') return 'unlocked';
     if (contract.escrow_status === 'RELEASED') return 'released';
@@ -307,7 +313,6 @@ export function CEOContractDetailPage() {
 
   return (
     <DashboardLayout>
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => navigate('/ceo/contracts')}
@@ -323,10 +328,7 @@ export function CEOContractDetailPage() {
         </div>
         {contract.status === 'DRAFT' && (
           <button
-            onClick={() => {
-              console.log('[Edit button] Clicked');
-              setShowEditModal(true);
-            }}
+            onClick={() => setShowEditModal(true)}
             className="btn-primary flex items-center gap-2"
           >
             <Edit className="w-5 h-5" />
@@ -335,7 +337,6 @@ export function CEOContractDetailPage() {
         )}
       </div>
 
-      {/* Alerts */}
       {error && (
         <div className="flex items-center gap-2 p-4 bg-error/20 border border-error/30 rounded-lg text-error mb-6">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -350,9 +351,7 @@ export function CEOContractDetailPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Status Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="card">
               <p className="text-text-secondary text-sm mb-1">Статус</p>
@@ -378,7 +377,6 @@ export function CEOContractDetailPage() {
             </div>
           </div>
 
-          {/* KPI Metrics */}
           <div className="card">
             <h2 className="text-lg font-display font-semibold text-text-primary mb-4">
               {t('kpi.title')}
@@ -386,15 +384,15 @@ export function CEOContractDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.calls')}</p>
-                <p className="text-2xl font-bold text-text-primary">{contract.kpi_calls}</p>
+                <p className="text-2xl font-bold text-text-primary">{contract.kpi_calls || 0}</p>
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.meetings')}</p>
-                <p className="text-2xl font-bold text-text-primary">{contract.kpi_meetings}</p>
+                <p className="text-2xl font-bold text-text-primary">{contract.kpi_meetings || 0}</p>
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.proposals')}</p>
-                <p className="text-2xl font-bold text-text-primary">{contract.kpi_proposals}</p>
+                <p className="text-2xl font-bold text-text-primary">{contract.kpi_proposals || 0}</p>
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.revenue')}</p>
@@ -406,7 +404,7 @@ export function CEOContractDetailPage() {
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.targetConversion')}</p>
-                <p className="text-2xl font-bold text-text-primary">{contract.target_conversion}%</p>
+                <p className="text-2xl font-bold text-text-primary">{contract.target_conversion || 0}%</p>
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.avgCheck')}</p>
@@ -414,18 +412,17 @@ export function CEOContractDetailPage() {
               </div>
               <div>
                 <p className="text-text-secondary text-sm">{t('kpi.targetClients')}</p>
-                <p className="text-2xl font-bold text-text-primary">{contract.target_clients}</p>
+                <p className="text-2xl font-bold text-text-primary">{contract.target_clients || 0}</p>
               </div>
             </div>
           </div>
 
-          {/* 6 Payment Streams */}
           <div className="card">
             <h2 className="text-lg font-display font-semibold text-text-primary mb-4">
               {t('paymentStreams.title')}
             </h2>
             <div className="space-y-3">
-              {paymentStreams.map((stream) => {
+              {paymentStreams.map((stream: PaymentStream | any, index: number) => {
                 const status = getStreamStatus(stream);
                 const StatusIcon = status === 'locked' ? Lock : Unlock;
                 const statusColor = status === 'locked' ? 'text-text-muted' :
@@ -433,12 +430,12 @@ export function CEOContractDetailPage() {
 
                 return (
                   <div
-                    key={stream.id}
+                    key={stream.id || index}
                     className="flex items-center justify-between py-3 px-4 bg-primary-dark rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <StatusIcon className={`w-5 h-5 ${statusColor}`} />
-                      <span className="text-text-primary">{stream.name}</span>
+                      <span className="text-text-primary">{stream.name || 'Поток'}</span>
                       {stream.clawback && (
                         <span className="text-xs px-2 py-0.5 rounded bg-warning/20 text-warning">
                           Clawback
@@ -469,9 +466,7 @@ export function CEOContractDetailPage() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Agent Block */}
           <div className="card">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-gold/20 rounded-lg">
@@ -487,7 +482,7 @@ export function CEOContractDetailPage() {
                 <div className="flex items-center gap-3 p-3 bg-primary-dark rounded-lg">
                   <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
                     <span className="text-gold font-medium">
-                      {selectedAgent.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      {(selectedAgent.full_name || 'A').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                     </span>
                   </div>
                   <div>
@@ -515,10 +510,7 @@ export function CEOContractDetailPage() {
                 ) : (
                   <div className="relative">
                     <button
-                      onClick={() => {
-                        console.log('[Agent dropdown] Clicked');
-                        setShowAgentDropdown(!showAgentDropdown);
-                      }}
+                      onClick={() => setShowAgentDropdown(!showAgentDropdown)}
                       className="w-full flex items-center justify-between p-3 bg-primary-dark rounded-lg text-text-secondary hover:text-text-primary transition-colors"
                     >
                       <span>Выбрать агента</span>
@@ -532,7 +524,6 @@ export function CEOContractDetailPage() {
                             key={agent.id}
                             onClick={() => {
                               setSelectedAgentId(agent.id);
-                              console.log('[Agent selected]', agent.id);
                             }}
                             className={`w-full flex items-center gap-3 p-3 hover:bg-primary-dark transition-colors ${
                               selectedAgentId === agent.id ? 'bg-gold/10' : ''
@@ -540,7 +531,7 @@ export function CEOContractDetailPage() {
                           >
                             <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center">
                               <span className="text-gold text-sm font-medium">
-                                {agent.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                                {(agent.full_name || 'A').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                               </span>
                             </div>
                             <div className="text-left">
@@ -568,7 +559,6 @@ export function CEOContractDetailPage() {
             )}
           </div>
 
-          {/* Escrow Block */}
           <div className="card">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-success/20 rounded-lg">
@@ -596,7 +586,6 @@ export function CEOContractDetailPage() {
               {contract.status === 'DRAFT' && (
                 <button
                   onClick={() => {
-                    console.log('[Escrow button] Clicked');
                     if (!contract.agent_id) {
                       setError('Сначала назначьте агента');
                       return;
@@ -619,7 +608,6 @@ export function CEOContractDetailPage() {
         </div>
       </div>
 
-      {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
           <div className="bg-primary border border-text-secondary/20 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -772,7 +760,6 @@ export function CEOContractDetailPage() {
         </div>
       )}
 
-      {/* Escrow Modal */}
       {showEscrowModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
           <div className="bg-primary border border-text-secondary/20 rounded-2xl w-full max-w-md">
@@ -797,10 +784,10 @@ export function CEOContractDetailPage() {
 
               <div className="card bg-primary-light text-sm">
                 <p className="text-text-secondary mb-2">Реквизиты для оплаты:</p>
-                <p className="text-text-primary font-medium">{company?.company_name}</p>
-                <p className="text-text-secondary mt-2">ИНН: {company?.inn}</p>
-                <p className="text-text-secondary">Расч. счет: {company?.settlement_account}</p>
-                <p className="text-text-secondary">Банк: {company?.bank_name}</p>
+                <p className="text-text-primary font-medium">{company?.company_name || 'Не указано'}</p>
+                <p className="text-text-secondary mt-2">ИНН: {company?.inn || 'Не указано'}</p>
+                <p className="text-text-secondary">Расч. счет: {company?.settlement_account || 'Не указано'}</p>
+                <p className="text-text-secondary">Банк: {company?.bank_name || 'Не указано'}</p>
               </div>
 
               <div className="flex gap-3 pt-4">
