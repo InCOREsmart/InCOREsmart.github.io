@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom'; // <-- ДОБАВЛЕНО
-import { Plus, FileText, DollarSign, Calendar, AlertCircle, TrendingUp } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
+import { useNavigate } from 'react-router-dom';
+import { Plus, FileText, DollarSign, AlertCircle, TrendingUp } from 'lucide-react';
 import { supabase, Contract } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
@@ -11,7 +10,7 @@ import { CreateContractModal } from '../../components/ui/CreateContractModal';
 export function CEOContractsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const navigate = useNavigate(); // <-- ДОБАВЛЕНО
+  const navigate = useNavigate();
 
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,17 +36,24 @@ export function CEOContractsPage() {
   }, [user]);
 
   const handleContractCreated = () => { setIsModalOpen(false); window.location.reload(); };
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU').format(amount);
-  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('ru-RU');
+  
+  // ИСПРАВЛЕНО: принимаем number | undefined
+  const formatCurrency = (amount: number | undefined) => new Intl.NumberFormat('ru-RU').format(amount || 0);
+  
+  // ИСПРАВЛЕНО: принимаем string | undefined
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Не указано';
+    return new Date(dateStr).toLocaleDateString('ru-RU');
+  };
 
   const activeContracts = contracts.filter(c => !['COMPLETED', 'DISPUTED', 'DISPUTED_REJECTED'].includes(c.status)).length;
   const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
   const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || c.kpi_revenue || 0), 0);
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
@@ -112,7 +118,7 @@ export function CEOContractsPage() {
                   <tr 
                     key={contract.id} 
                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/ceo/contracts/${contract.id}`)} // <-- ДОБАВЛЕНО: переход на детальную страницу
+                    onClick={() => navigate(`/ceo/contracts/${contract.id}`)}
                   >
                     <td className="py-4 px-4"><p className="font-medium text-[#000052]">{contract.title}</p><p className="text-sm text-gray-600 truncate max-w-xs">{contract.description}</p></td>
                     <td className="py-4 px-4"><ContractStatusBadge status={contract.status} /></td>
@@ -128,6 +134,6 @@ export function CEOContractsPage() {
         </div>
       )}
       <CreateContractModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={handleContractCreated} />
-    </DashboardLayout>
+    </div>
   );
 }
