@@ -20,107 +20,105 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
 
-  const determineRole = async (userId: string): Promise<UserRole> => {
-    console.log('🔍 ROLE: Step 1 - starting determineRole for', userId);
+  const determineRole = async (currentUser: User): Promise<UserRole> => {
+    console.log('🔍 ROLE: определяем роль для', currentUser.id);
+    
+    // 1. Сначала проверяем user_metadata (сохраняется при регистрации)
+    const metadataRole = currentUser.user_metadata?.role as UserRole | undefined;
+    if (metadataRole && (metadataRole === 'ceo' || metadataRole === 'agent')) {
+      console.log('✅ ROLE: найдена в metadata:', metadataRole);
+      return metadataRole;
+    }
+
+    // 2. Если в metadata нет — проверяем таблицу companies (CEO)
     try {
-      console.log('🔍 ROLE: Step 2 - calling supabase.auth.getUser()');
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError) {
-        console.error('❌ ROLE: Step 2 error (getUser):', userError);
-      }
-
-      if (userData?.user?.user_metadata?.role) {
-        console.log('✅ ROLE: Step 3 - found in metadata:', userData.user.user_metadata.role);
-        return userData.user.user_metadata.role as UserRole;
-      }
-
-      console.log('🔍 ROLE: Step 4 - checking companies table');
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', currentUser.id)
         .maybeSingle();
 
       if (companyError) {
-        console.error('❌ ROLE: Step 4 error (companies):', companyError);
+        console.error('❌ ROLE: ошибка запроса companies:', companyError);
       } else if (companyData) {
-        console.log('✅ ROLE: Step 5 - found in companies');
+        console.log('✅ ROLE: найдена в companies → ceo');
         return 'ceo';
       }
+    } catch (err) {
+      console.error('❌ ROLE: исключение при запросе companies:', err);
+    }
 
-      console.log('🔍 ROLE: Step 6 - checking agents table');
+    // 3. Если не CEO — проверяем таблицу agents (Агент)
+    try {
       const { data: agentData, error: agentError } = await supabase
         .from('agents')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', currentUser.id)
         .maybeSingle();
 
       if (agentError) {
-        console.error('❌ ROLE: Step 6 error (agents):', agentError);
+        console.error('❌ ROLE: ошибка запроса agents:', agentError);
       } else if (agentData) {
-        console.log('✅ ROLE: Step 7 - found in agents');
+        console.log('✅ ROLE: найдена в agents → agent');
         return 'agent';
       }
-
-      console.log('⚠️ ROLE: Step 8 - no role found in DB, defaulting to guest');
-      return 'guest';
-    } catch (error) {
-      console.error('💥 ROLE: Step 9 - CRITICAL ERROR in determineRole:', error);
-      return 'guest';
+    } catch (err) {
+      console.error('❌ ROLE: исключение при запросе agents:', err);
     }
+
+    console.log('⚠️ ROLE: роль не найдена, устанавливаем guest');
+    return 'guest';
   };
 
   useEffect(() => {
     console.log('🚀 AUTH INIT');
     
     const initializeAuth = async () => {
-      console.log('🚀 AUTH: Step 1 - initializeAuth started');
       try {
-        console.log('🚀 AUTH: Step 2 - calling getSession()');
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+        console.log('🚀 AUTH: получаем сессию...');
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
-        if (sessionError) {
-          console.error('❌ AUTH: Step 2 error (getSession):', sessionError);
+        if (error) {
+          console.error('❌ AUTH: ошибка getSession:', error);
         }
 
-        console.log('🚀 AUTH STATE CHANGED:', currentSession ? 'SIGNED_IN' : 'SIGNED_OUT');
+        console.log('🚀 AUTH: сессия', currentSession ? 'НАЙДЕНА' : 'ПУСТАЯ');
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          console.log('🚀 AUTH: Step 3 - user exists, calling determineRole');
-          const userRole = await determineRole(currentSession.user.id);
-          console.log('🚀 AUTH: Step 4 - role determined:', userRole);
+          console.log('🚀 AUTH: пользователь найден, определяем роль...');
+          const userRole = await determineRole(currentSession.user);
+          console.log('🚀 AUTH: итоговая роль:', userRole);
           setRole(userRole);
         } else {
-          console.log('🚀 AUTH: Step 3 - no user, setting role to guest');
+          console.log('🚀 AUTH: пользователь не найден, роль = guest');
           setRole('guest');
         }
       } catch (error) {
-        console.error('💥 AUTH: CRITICAL ERROR in initializeAuth:', error);
+        console.error('💥 AUTH: критическая ошибка:', error);
         setRole('guest');
       } finally {
-        console.log('🏁 AUTH: Step 5 - FINALLY block reached, setting loading to FALSE');
+        console.log('🏁 AUTH: загрузка завершена, loading = false');
         setLoading(false);
       }
     };
 
     initializeAuth();
 
+    // Подписка на изменения состояния аутентификации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('🔄 AUTH STATE CHANGED (subscription):', event);
+        console.log('🔄 AUTH STATE CHANGED:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          const userRole = await determineRole(currentSession.user.id);
+          const userRole = await determineRole(currentSession.user);
           setRole(userRole);
         } else {
           setRole('guest');
         }
-        console.log('🏁 AUTH: Subscription finally block, setting loading to FALSE');
         setLoading(false);
       }
     );
