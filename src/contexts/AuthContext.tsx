@@ -1,179 +1,141 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'CEO' | 'AGENT' | 'ADMIN';
+type UserRole = 'ceo' | 'agent' | 'guest' | null;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  role: UserRole | null;
+  role: UserRole;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  role: null,
-  loading: true,
-  signIn: async () => {},
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<UserRole | null>(null);
+  const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
 
   const determineRole = async (userId: string): Promise<UserRole> => {
+    console.log('ROLE: reading user_roles...', userId);
     try {
-      console.log('ROLE: reading user_roles...', userId);
+      // 1. Проверяем user_metadata (сохраняется при регистрации)
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.user_metadata?.role) {
+        console.log('ROLE: found in metadata', userData.user.user_metadata.role);
+        return userData.user.user_metadata.role as UserRole;
+      }
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
+      // 2. Проверяем таблицу companies (CEO)
+      // ИСПОЛЬЗУЕМ maybeSingle вместо single, чтобы избежать ошибки, если записей нет
+      const { data: companyData, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      console.log('ROLE RESULT:', data, error);
-
-      if (error) {
-        console.error('ROLE ERROR:', error);
-        return 'AGENT';
+      if (companyData && !companyError) {
+        console.log('ROLE: found in companies');
+        return 'ceo';
       }
 
-      if (data?.role === 'CEO') {
-        return 'CEO';
+      // 3. Проверяем таблицу agents (Агент)
+      const { data: agentData, error: agentError } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (agentData && !agentError) {
+        console.log('ROLE: found in agents');
+        return 'agent';
       }
 
-      if (data?.role === 'ADMIN') {
-        return 'ADMIN';
-      }
-
-      return 'AGENT';
-    } catch (err) {
-      console.error('ROLE EXCEPTION:', err);
-      return 'AGENT';
+      console.log('ROLE: no role found in DB, defaulting to guest');
+      return 'guest';
+    } catch (error) {
+      console.error('Error determining role:', error);
+      return 'guest';
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadSession = async () => {
+    console.log('AUTH INIT');
+    
+    // Функция для инициализации сессии при первой загрузке
+    const initializeAuth = async () => {
       try {
-        console.log('AUTH INIT');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('AUTH STATE CHANGED:', currentSession ? 'SIGNED_IN' : 'SIGNED_OUT');
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        console.log('SESSION:', session, error);
-
-        if (!isMounted) return;
-
-        setSession(session);
-
-        if (!session?.user) {
-          setUser(null);
-          setRole(null);
-          return;
+        if (currentSession?.user) {
+          const userRole = await determineRole(currentSession.user.id);
+          setRole(userRole);
+        } else {
+          setRole('guest');
         }
-
-        setUser(session.user);
-
-        const detectedRole = await determineRole(session.user.id);
-
-        if (!isMounted) return;
-
-        setRole(detectedRole);
-      } catch (err) {
-        console.error('AUTH ERROR:', err);
-
-        if (isMounted) {
-          setUser(null);
-          setSession(null);
-          setRole(null);
-        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setRole('guest');
       } finally {
-        if (isMounted) {
-          console.log('LOADING FALSE');
-          setLoading(false);
-        }
+        // КРИТИЧНО: всегда снимаем флаг загрузки, даже при ошибке
+        setLoading(false);
       }
     };
 
-    loadSession();
+    initializeAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
+    // Подписываемся на изменения состояния аутентификации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log('AUTH STATE CHANGED:', event);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-      console.log('AUTH STATE CHANGED:', _event);
-
-      setSession(session);
-
-      if (!session?.user) {
-        setUser(null);
-        setRole(null);
+        if (currentSession?.user) {
+          const userRole = await determineRole(currentSession.user.id);
+          setRole(userRole);
+        } else {
+          setRole('guest');
+        }
+        // КРИТИЧНО: всегда снимаем флаг загрузки при изменении состояния
         setLoading(false);
-        return;
       }
-
-      setUser(session.user);
-
-      const detectedRole = await determineRole(session.user.id);
-
-      if (!isMounted) return;
-
-      setRole(detectedRole);
-      setLoading(false);
-    });
+    );
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw error;
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setRole('guest');
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-
-    setUser(null);
-    setSession(null);
-    setRole(null);
-  };
-
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        role,
-        loading,
-        signIn,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{ user, session, role, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
