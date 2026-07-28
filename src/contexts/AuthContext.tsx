@@ -21,47 +21,94 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
 
+  const determineRole = async (currentUser: User): Promise<UserRole> => {
+    console.log('🔍 Определяем роль для:', currentUser.id);
+    
+    // 1. Проверяем metadata (приводим к нижнему регистру)
+    const metaRole = (currentUser.user_metadata?.role as string | undefined)?.toLowerCase();
+    if (metaRole === 'agent' || metaRole === 'ceo') {
+      console.log('✅ Роль найдена в metadata:', metaRole);
+      return metaRole;
+    }
+
+    // 2. Проверяем таблицу companies (CEO)
+    try {
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+        
+      if (companyData) {
+        console.log('✅ Роль найдена в таблице companies -> ceo');
+        return 'ceo';
+      }
+    } catch (err) {
+      console.error('Ошибка проверки companies:', err);
+    }
+
+    // 3. Проверяем таблицу agents (Агент)
+    try {
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+        
+      if (agentData) {
+        console.log('✅ Роль найдена в таблице agents -> agent');
+        return 'agent';
+      }
+    } catch (err) {
+      console.error('Ошибка проверки agents:', err);
+    }
+
+    console.log('⚠️ Роль не найдена, устанавливаем ceo по умолчанию');
+    return 'ceo';
+  };
+
   useEffect(() => {
     console.log('🚀 AUTH INIT');
     
-    // ГАРАНТИРОВАННАЯ РАЗБЛОКИРОВКА ЧЕРЕЗ 100 МС
-    const timer = setTimeout(() => {
-      console.log('✅ AUTH: Интерфейс разблокирован');
+    // ГАРАНТИРОВАННАЯ РАЗБЛОКИРОВКА ЧЕРЕЗ 300 МС
+    const forceLoadTimer = setTimeout(() => {
+      console.log('⏱️ AUTH: Таймаут истек, принудительно снимаем loading');
       setLoading(false);
-    }, 100);
+    }, 300);
 
-    // Фоновая проверка сессии (не блокирует UI)
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (currentSession?.user) {
-        setUser(currentSession.user);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
-        
-        // Берем роль ТОЛЬКО из metadata (быстро, без запросов к БД)
-        const metaRole = currentSession.user.user_metadata?.role as string | undefined;
-        if (metaRole === 'ceo' || metaRole === 'agent') {
-          setRole(metaRole);
-          console.log('✅ Роль из metadata:', metaRole);
-        } else {
-          setRole('guest');
-          console.log('️ Роль не найдена в metadata');
-        }
-      } else {
-        console.log('👤 Пользователь не авторизован');
-      }
-    }).catch(err => {
-      console.error(' Ошибка getSession:', err);
-    });
+        setUser(currentSession?.user ?? null);
 
-    // Подписка на изменения
+        if (currentSession?.user) {
+          const userRole = await determineRole(currentSession.user);
+          setRole(userRole);
+        } else {
+          setRole(null);
+        }
+      } catch (error) {
+        console.error('💥 AUTH ERROR:', error);
+        setRole(null);
+      } finally {
+        console.log('🏁 AUTH: Загрузка завершена (loading = false)');
+        setLoading(false);
+        clearTimeout(forceLoadTimer);
+      }
+    };
+
+    initializeAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log('🔄 AUTH STATE CHANGED:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        
+
         if (currentSession?.user) {
-          const metaRole = currentSession.user.user_metadata?.role as string | undefined;
-          setRole(metaRole === 'ceo' || metaRole === 'agent' ? metaRole : 'guest');
+          const userRole = await determineRole(currentSession.user);
+          setRole(userRole);
         } else {
           setRole(null);
         }
@@ -70,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(forceLoadTimer);
       subscription.unsubscribe();
     };
   }, []);
@@ -80,7 +127,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Роль обновится через onAuthStateChange
     } catch (error: any) {
       console.error('Ошибка входа:', error);
       throw new Error(error.message || 'Неверный email или пароль');
