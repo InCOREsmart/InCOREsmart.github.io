@@ -31,8 +31,8 @@ function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allow
   if (!user) return <Navigate to="/login" replace />;
 
   if (role && !allowedRoles.includes(role)) {
-    if (role === 'CEO') return <Navigate to="/ceo/dashboard" replace />;
-    if (role === 'AGENT') return <Navigate to="/agent/dashboard" replace />;
+    if (role === 'ceo') return <Navigate to="/ceo/dashboard" replace />;
+    if (role === 'agent') return <Navigate to="/agent/dashboard" replace />;
     return <Navigate to="/login" replace />;
   }
 
@@ -54,8 +54,8 @@ function PublicRoute({ children }: { children: ReactNode }) {
   }
 
   if (user && role) {
-    if (role === 'CEO') return <Navigate to="/ceo/dashboard" replace />;
-    if (role === 'AGENT') return <Navigate to="/agent/dashboard" replace />;
+    if (role === 'ceo') return <Navigate to="/ceo/dashboard" replace />;
+    if (role === 'agent') return <Navigate to="/agent/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -67,18 +67,18 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
-      {/* CEO Routes - DashboardLayout оборачивает здесь */}
-      <Route path="/ceo/dashboard" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/contracts" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/contracts/:id" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/agents" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/disputes" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/settings" element={<ProtectedRoute allowedRoles={['CEO']}><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
+      {/* CEO Routes */}
+      <Route path="/ceo/dashboard" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/contracts" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/contracts/:id" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/agents" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/disputes" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/ceo/settings" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
 
-      {/* Agent Routes - DashboardLayout оборачивает здесь */}
-      <Route path="/agent/dashboard" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/agent/contracts" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/agent/settings" element={<ProtectedRoute allowedRoles={['AGENT']}><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
+      {/* Agent Routes */}
+      <Route path="/agent/dashboard" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/agent/contracts" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
+      <Route path="/agent/settings" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
 
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
