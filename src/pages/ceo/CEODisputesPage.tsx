@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle, FileText } from 'lucide-react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 
 export function CEODisputesPage() {
   const { t } = useTranslation();
@@ -9,10 +8,10 @@ export function CEODisputesPage() {
 
   useEffect(() => { setLoading(false); }, []);
 
-  if (loading) return <DashboardLayout><div className="p-8 text-[#000052]">{t('common.loading')}</div></DashboardLayout>;
+  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
 
   return (
-    <DashboardLayout>
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#000052]">{t('nav.disputes')}</h1>
         <p className="text-gray-600 mt-1">{t('ceo.disputesSubtitle') || 'Ручные подтверждения сбоев Оракула и споры с агентами'}</p>
@@ -39,6 +38,6 @@ export function CEODisputesPage() {
           <p className="text-gray-600">{t('ceo.noDisputes') || 'Споров нет. Экономика доверия работает.'}</p>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
