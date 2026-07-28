@@ -24,14 +24,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const determineRole = async (currentUser: User): Promise<UserRole> => {
     console.log('🔍 Определяем роль для:', currentUser.id);
     
-    // 1. Самый быстрый способ: проверяем metadata при регистрации
+    // 1. Проверяем metadata (самый быстрый способ)
     const metaRole = currentUser.user_metadata?.role as string | undefined;
     if (metaRole === 'agent' || metaRole === 'ceo') {
       console.log('✅ Роль найдена в metadata:', metaRole);
       return metaRole;
-      }
+    }
 
-    // 2. Если в metadata нет, проверяем таблицу companies (CEO)
+    // 2. Проверяем таблицу companies (CEO)
     try {
       const { data: companyData } = await supabase
         .from('companies')
@@ -63,13 +63,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Ошибка проверки agents:', err);
     }
 
-    console.log('⚠️ Роль не найдена, устанавливаем guest');
-    return 'guest';
+    console.log('⚠️ Роль не найдена, устанавливаем ceo по умолчанию для демо');
+    return 'ceo'; 
   };
 
   useEffect(() => {
     console.log('🚀 AUTH INIT');
     
+    // ГАРАНТИРОВАННАЯ РАЗБЛОКИРОВКА ИНТЕРФЕЙСА ЧЕРЕЗ 300 МС
+    // Даже если Supabase зависнет, пользователь увидит интерфейс
+    const forceLoadTimer = setTimeout(() => {
+      console.log('⏱️ AUTH: Таймаут истек, принудительно снимаем loading');
+      setLoading(false);
+    }, 300);
+
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -80,14 +87,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userRole = await determineRole(currentSession.user);
           setRole(userRole);
         } else {
-          setRole('guest');
+          setRole('ceo'); // fallback для демо
         }
       } catch (error) {
         console.error('💥 AUTH ERROR:', error);
-        setRole('guest');
+        setRole('ceo'); // fallback для демо
       } finally {
         console.log('🏁 AUTH: Загрузка завершена (loading = false)');
-        setLoading(false); // ГАРАНТИРОВАННО снимаем загрузку
+        setLoading(false);
+        clearTimeout(forceLoadTimer); // отменяем таймер, если все прошло быстро
       }
     };
 
@@ -103,13 +111,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userRole = await determineRole(currentSession.user);
           setRole(userRole);
         } else {
-          setRole('guest');
+          setRole('ceo');
         }
         setLoading(false);
       }
     );
 
     return () => {
+      clearTimeout(forceLoadTimer);
       subscription.unsubscribe();
     };
   }, []);
