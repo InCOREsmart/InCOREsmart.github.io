@@ -28,43 +28,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const determineRole = async (): Promise<UserRole> => {
-    console.log('ROLE BYPASSED');
-    return 'CEO';
+  const determineRole = async (userId: string): Promise<UserRole> => {
+    try {
+      console.log('ROLE: reading user_roles...', userId);
+
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      console.log('ROLE RESULT:', data, error);
+
+      if (error) {
+        console.error('ROLE ERROR:', error);
+        return 'AGENT';
+      }
+
+      if (data?.role === 'CEO') {
+        return 'CEO';
+      }
+
+      if (data?.role === 'ADMIN') {
+        return 'ADMIN';
+      }
+
+      return 'AGENT';
+    } catch (err) {
+      console.error('ROLE EXCEPTION:', err);
+      return 'AGENT';
+    }
   };
 
   useEffect(() => {
     let isMounted = true;
 
-    const initAuth = async () => {
+    const loadSession = async () => {
       try {
-        console.log('AUTH init');
+        console.log('AUTH INIT');
 
         const {
           data: { session },
           error,
         } = await supabase.auth.getSession();
 
-        console.log('SESSION', session, error);
+        console.log('SESSION:', session, error);
 
         if (!isMounted) return;
 
         setSession(session);
 
-        if (session?.user) {
-          setUser(session.user);
-
-          const userRole = await determineRole();
-
-          if (isMounted) {
-            setRole(userRole);
-          }
-        } else {
+        if (!session?.user) {
           setUser(null);
           setRole(null);
+          return;
         }
+
+        setUser(session.user);
+
+        const detectedRole = await determineRole(session.user.id);
+
+        if (!isMounted) return;
+
+        setRole(detectedRole);
       } catch (err) {
-        console.error('AUTH ERROR', err);
+        console.error('AUTH ERROR:', err);
+
+        if (isMounted) {
+          setUser(null);
+          setSession(null);
+          setRole(null);
+        }
       } finally {
         if (isMounted) {
           console.log('LOADING FALSE');
@@ -73,31 +107,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    initAuth();
+    loadSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
 
+      console.log('AUTH STATE CHANGED:', _event);
+
       setSession(session);
 
-      if (session?.user) {
-        setUser(session.user);
-
-        const userRole = await determineRole();
-
-        if (isMounted) {
-          setRole(userRole);
-        }
-      } else {
+      if (!session?.user) {
         setUser(null);
         setRole(null);
+        setLoading(false);
+        return;
       }
 
-      if (isMounted) {
-        setLoading(false);
-      }
+      setUser(session.user);
+
+      const detectedRole = await determineRole(session.user.id);
+
+      if (!isMounted) return;
+
+      setRole(detectedRole);
+      setLoading(false);
     });
 
     return () => {
@@ -112,7 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
   };
 
   const signOut = async () => {
