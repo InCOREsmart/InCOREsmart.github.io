@@ -37,10 +37,8 @@ export function CEOContractsPage() {
 
   const handleContractCreated = () => { setIsModalOpen(false); window.location.reload(); };
   
-  // ИСПРАВЛЕНО: принимаем number | undefined
-  const formatCurrency = (amount: number | undefined) => new Intl.NumberFormat('ru-RU').format(amount || 0);
+  const formatCurrency = (amount: number | undefined) => '$' + new Intl.NumberFormat('en-US').format(amount || 0);
   
-  // ИСПРАВЛЕНО: принимаем string | undefined
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return 'Не указано';
     return new Date(dateStr).toLocaleDateString('ru-RU');
@@ -59,7 +57,7 @@ export function CEOContractsPage() {
           <h1 className="text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
           <p className="text-gray-600 mt-1">{activeContracts} {t('dashboard.activeContracts').toLowerCase()}</p>
         </div>
-        <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="btn-primary flex items-center gap-2">
+        <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="bg-[#000052] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#000066]">
           <Plus className="w-5 h-5" /> {t('contracts.createNew')}
         </button>
         {showNoCompanyAlert && (
@@ -70,37 +68,37 @@ export function CEOContractsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="card">
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#000052]/10 rounded-lg"><FileText className="w-5 h-5 text-[#000052]" /></div>
             <div><p className="text-xs text-gray-600">{t('dashboard.activeContracts')}</p><p className="text-2xl font-bold text-[#000052]">{activeContracts}</p></div>
           </div>
         </div>
-        <div className="card">
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 rounded-lg"><DollarSign className="w-5 h-5 text-yellow-600" /></div>
-            <div><p className="text-xs text-gray-600">{t('dashboard.escrowBalance')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalEscrow)} ₽</p></div>
+            <div><p className="text-xs text-gray-600">{t('dashboard.escrowBalance')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalEscrow)}</p></div>
           </div>
         </div>
-        <div className="card">
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-            <div><p className="text-xs text-gray-600">{t('dashboard.totalRevenue')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalRevenue)} ₽</p></div>
+            <div><p className="text-xs text-gray-600">{t('dashboard.totalRevenue')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalRevenue)}</p></div>
           </div>
         </div>
       </div>
 
       {contracts.length === 0 ? (
-        <div className="card text-center py-12">
+        <div className="bg-white p-6 rounded-lg border border-gray-200 text-center py-12">
           <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-[#000052] mb-2">{t('contract.noContracts')}</h3>
           <p className="text-gray-600 mb-6">{t('contract.createFirst')}</p>
-          <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="btn-primary inline-flex items-center gap-2">
+          <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="bg-[#000052] text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[#000066]">
             <Plus className="w-5 h-5" /> {t('contracts.createNew')}
           </button>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -123,8 +121,8 @@ export function CEOContractsPage() {
                     <td className="py-4 px-4"><p className="font-medium text-[#000052]">{contract.title}</p><p className="text-sm text-gray-600 truncate max-w-xs">{contract.description}</p></td>
                     <td className="py-4 px-4"><ContractStatusBadge status={contract.status} /></td>
                     <td className="py-4 px-4 text-sm text-gray-600">{formatDate(contract.deadline)}</td>
-                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.revenue || contract.kpi_revenue || 0)} ₽</td>
-                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.escrow_amount || 0)} ₽</td>
+                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.revenue || contract.kpi_revenue || 0)}</td>
+                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.escrow_amount || 0)}</td>
                     <td className="py-4 px-4 text-right font-semibold text-green-600">{contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}</td>
                   </tr>
                 ))}

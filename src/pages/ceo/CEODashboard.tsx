@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DollarSign, TrendingUp, Shield, Users, Briefcase, BarChart3, CheckCircle, Clock, ArrowUpRight, Activity, Plus, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -53,7 +53,7 @@ export function CEODashboard() {
     setMetrics({ totalRevenue: revenue, frozenEscrow: escrow, paidToAgents: paid, netProfit: profit, avgRoi: roiCount > 0 ? roiSum / roiCount : 0, activeDealsCount: activeCount, pendingPayouts });
   };
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: number) => '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
 
   const handleCreateClick = () => {
     if (companyId) {
@@ -75,7 +75,7 @@ export function CEODashboard() {
     <div>
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
-        <button onClick={handleCreateClick} className="btn-primary flex items-center gap-2">
+        <button onClick={handleCreateClick} className="bg-[#000052] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#000066]">
           <Plus className="w-4 h-4" /> {t('contracts.createNew')}
         </button>
       </div>
@@ -91,37 +91,37 @@ export function CEODashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
           <div className="flex items-center justify-between mb-3"><DollarSign className="w-5 h-5 text-[#B8860B]" /><ArrowUpRight className="w-4 h-4 text-green-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)} ₽</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)}</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.totalRevenue')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
           <div className="flex items-center justify-between mb-3"><Shield className="w-5 h-5 text-[#B8860B]" /><Activity className="w-4 h-4 text-[#B8860B]" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)} ₽</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)}</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.escrowBalance')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5 border-[#B8860B]/30">
+        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
           <div className="flex items-center justify-between mb-3"><Users className="w-5 h-5 text-[#B8860B]" /><CheckCircle className="w-4 h-4 text-[#B8860B]" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.paidToAgents)} ₽</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.paidToAgents)}</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.paidToAgents')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <div className="bg-white p-4 rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
           <div className="flex items-center justify-between mb-3"><TrendingUp className="w-5 h-5 text-purple-600" /><ArrowUpRight className="w-4 h-4 text-purple-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.netProfit)} ₽</p>
+          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.netProfit)}</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.netProfit')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+        <div className="bg-white p-4 rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100">
           <div className="flex items-center justify-between mb-3"><BarChart3 className="w-5 h-5 text-indigo-600" /><TrendingUp className="w-4 h-4 text-indigo-600" /></div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.avgRoi.toFixed(1)}%</p>
           <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.avgRoi')}</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+        <div className="bg-white p-4 rounded-lg border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100">
           <div className="flex items-center justify-between mb-3"><Briefcase className="w-5 h-5 text-orange-600" /><Clock className="w-4 h-4 text-orange-600" /></div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.activeDealsCount}</p>
           <p className="text-xs text-gray-600 mt-1">{t('dashboard.activeContracts')}</p>
@@ -129,7 +129,7 @@ export function CEODashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="card">
+        <div className="bg-white p-6 rounded-lg border border-gray-200">
           <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.budgetDistribution')}
           </h2>
@@ -138,7 +138,7 @@ export function CEODashboard() {
               <div key={item.label}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                  <span className="text-sm font-bold text-[#000052]">{formatCurrency(item.value)} ₽</span>
+                  <span className="text-sm font-bold text-[#000052]">{formatCurrency(item.value)}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div className={`h-full ${item.color} rounded-full transition-all duration-500`} style={{ width: item.width }} />
@@ -148,7 +148,7 @@ export function CEODashboard() {
           </div>
         </div>
 
-        <div className="card lg:col-span-2">
+        <div className="bg-white p-6 rounded-lg border border-gray-200 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-[#000052] flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.activeContracts')}
@@ -174,8 +174,8 @@ export function CEODashboard() {
                   activeContracts.map((contract) => (
                     <tr key={contract.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4"><p className="font-medium text-[#000052]">{contract.title}</p></td>
-                      <td className="py-3 px-4"><span className="badge badge-info">{t(`contract.statuses.${contract.status}`) || contract.status}</span></td>
-                      <td className="py-3 px-4 text-right font-semibold text-[#000052]">{formatCurrency(contract.escrow_amount || 0)} ₽</td>
+                      <td className="py-3 px-4"><span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">{t(`contract.statuses.${contract.status}`) || contract.status}</span></td>
+                      <td className="py-3 px-4 text-right font-semibold text-[#000052]">{formatCurrency(contract.escrow_amount || 0)}</td>
                       <td className="py-3 px-4 text-right font-semibold text-green-600">{contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}</td>
                     </tr>
                   ))
@@ -186,14 +186,14 @@ export function CEODashboard() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="bg-white p-6 rounded-lg border border-gray-200">
         <h2 className="text-lg font-semibold text-[#000052] mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.pendingPayouts')}
         </h2>
         {metrics.pendingPayouts > 0 ? (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
             <span className="text-sm font-medium text-yellow-800">{t('ceoDashboard.totalPending')}</span>
-            <span className="text-xl font-bold text-[#B8860B]">{formatCurrency(metrics.pendingPayouts)} ₽</span>
+            <span className="text-xl font-bold text-[#B8860B]">{formatCurrency(metrics.pendingPayouts)}</span>
           </div>
         ) : (
           <div className="text-center py-6 text-gray-500 flex items-center justify-center gap-2">
