@@ -42,7 +42,7 @@ export function RegisterPage() {
         password,
         options: {
           data: {
-            role: role, // Сохраняем строго в нижнем регистре: 'ceo' или 'agent'
+            role: role,
           },
         },
       });
@@ -66,7 +66,7 @@ export function RegisterPage() {
           });
           if (companyError) throw new Error('Не удалось создать профиль компании: ' + companyError.message);
         } else {
-          // УПРОЩЕННАЯ ВСТАВКА: только гарантированно существующие поля
+          // ДОБАВЛЕНО: passport_series и passport_number для удовлетворения NOT NULL ограничения в БД
           const { error: agentError } = await supabase.from('agents').insert({
             user_id: data.user.id,
             full_name: '',
@@ -74,6 +74,8 @@ export function RegisterPage() {
             phone: '',
             tax_status: 'self_employed',
             status: 'ACTIVE',
+            passport_series: '', 
+            passport_number: '',
           });
           if (agentError) throw new Error('Не удалось создать профиль агента: ' + agentError.message);
         }
