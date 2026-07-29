@@ -66,21 +66,13 @@ export function RegisterPage() {
           });
           if (companyError) throw new Error('Не удалось создать профиль компании: ' + companyError.message);
         } else {
-          // БЕЗОПАСНАЯ ВСТАВКА АГЕНТА: явно указываем company_id: null, если он не привязан к компании при регистрации
+          // УПРОЩЕННАЯ ВСТАВКА: только гарантированно существующие поля
           const { error: agentError } = await supabase.from('agents').insert({
             user_id: data.user.id,
-            company_id: null, // Явно указываем null, чтобы избежать ошибок NOT NULL, если поле необязательно
             full_name: '',
             email: email,
             phone: '',
-            specialization: '',
             tax_status: 'self_employed',
-            inn: '',
-            snils: '',
-            bank_name: '',
-            bank_bik: '',
-            correspondent_account: '',
-            settlement_account: '',
             status: 'ACTIVE',
           });
           if (agentError) throw new Error('Не удалось создать профиль агента: ' + agentError.message);
