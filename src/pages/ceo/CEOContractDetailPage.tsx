@@ -1,438 +1,797 @@
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { X, Calculator, Users, AlertCircle, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Edit,
+  UserPlus,
+  Wallet,
+  AlertCircle,
+  CheckCircle,
+  Calendar,
+  DollarSign,
+  Users,
+  TrendingUp,
+  ChevronDown,
+  X,
+  Lock,
+  Unlock,
+} from 'lucide-react';
+import { supabase, Contract, PaymentStream, DEFAULT_PAYMENT_STREAMS } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface Agent {
+interface AgentWithUser {
   id: string;
+  user_id: string;
   full_name: string;
-  specialization: string;
+  phone: string;
+  email?: string;
+  user_email?: string;
+  [key: string]: any;
 }
 
-interface CreateContractModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreated: () => void;
+interface CompanyData {
+  id: string;
+  company_name?: string;
+  inn?: string;
+  settlement_account?: string;
+  bank_name?: string;
+  [key: string]: any;
 }
 
-export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContractModalProps) {
-  const { t } = useTranslation();
+export function CEOContractDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [title, setTitle] = useState('');
-  const [revenue, setRevenue] = useState<number | ''>('');
-  const [deadline, setDeadline] = useState('');
-  const [selectedAgentId, setSelectedAgentId] = useState('');
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [company, setCompany] = useState<CompanyData | null>(null);
+  const [agents, setAgents] = useState<AgentWithUser[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  const [showEscrowModal, setShowEscrowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const [kpiCalls, setKpiCalls] = useState<number | ''>('');
-  const [kpiMeetings, setKpiMeetings] = useState<number | ''>('');
-  const [kpiProposals, setKpiProposals] = useState<number | ''>('');
-  const [minCheck, setMinCheck] = useState<number | ''>('');
-  const [targetConversion, setTargetConversion] = useState<number | ''>('');
-  const [avgCheck, setAvgCheck] = useState<number | ''>('');
-  const [targetClients, setTargetClients] = useState<number | ''>('');
-
-  const [kpiSuggestions, setKpiSuggestions] = useState({
-    calls: 0,
-    meetings: 0,
-    proposals: 0,
-    clients: 0,
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    deadline: '',
+    kpi_calls: 0,
+    kpi_meetings: 0,
+    kpi_proposals: 0,
+    kpi_revenue: 0,
+    min_check: 0,
+    target_conversion: 20,
+    avg_check: 0,
+    target_clients: 0,
   });
 
   useEffect(() => {
-    if (isOpen && user) {
-      const fetchAgents = async () => {
+    const fetchData = async () => {
+      if (!user || !id) return;
+
+      setLoading(true);
+      try {
         const { data: companyData } = await supabase
           .from('companies')
-          .select('id')
+          .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (companyData) {
-          const { data } = await supabase
-            .from('agents')
-            .select('id, full_name, specialization')
-            .eq('company_id', companyData.id)
-            .eq('status', 'ACTIVE');
-          setAgents(data || []);
+        setCompany(companyData);
+
+        const { data: contractData } = await supabase
+          .from('contracts')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (contractData) {
+          setContract(contractData as Contract);
+          setEditForm({
+            title: contractData.title || '',
+            description: contractData.description || '',
+            deadline: contractData.deadline || '',
+            kpi_calls: contractData.kpi_calls || 0,
+            kpi_meetings: contractData.kpi_meetings || 0,
+            kpi_proposals: contractData.kpi_proposals || 0,
+            kpi_revenue: contractData.kpi_revenue || 0,
+            min_check: contractData.min_check || 0,
+            target_conversion: contractData.target_conversion || 20,
+            avg_check: contractData.avg_check || 0,
+            target_clients: contractData.target_clients || 0,
+          });
         }
-      };
-      fetchAgents();
-    }
-  }, [isOpen, user]);
 
-  useEffect(() => {
-    const rev = typeof revenue === 'number' ? revenue : 0;
-    const avg = typeof avgCheck === 'number' && avgCheck > 0 ? avgCheck : 500000;
-    const conv = typeof targetConversion === 'number' && targetConversion > 0 ? targetConversion / 100 : 0.20;
+        if (companyData) {
+          const { data: agentsData } = await supabase
+            .from('agents')
+            .select('*')
+            .eq('company_id', companyData.id);
 
-    const clients = Math.ceil(rev / avg);
-    const meetings = Math.ceil(clients / conv);
-    const calls = Math.ceil(meetings / 0.7);
-    const proposals = Math.ceil(meetings * 0.8);
-
-    setKpiSuggestions({ calls, meetings, proposals, clients });
-  }, [revenue, avgCheck, targetConversion]);
-
-  const [economics, setEconomics] = useState({
-    platformFee: 0,
-    escrow: 0,
-    retentionBonus: 0,
-    otherPayouts: 0,
-    companyProfit: 0,
-    roi: 0,
-  });
-
-  useEffect(() => {
-    const rev = typeof revenue === 'number' ? revenue : 0;
-    const platformFee = rev * 0.12;
-    const escrow = rev * 0.132;
-    const retentionBonus = escrow * 0.10;
-    const otherPayouts = escrow * 0.90;
-    const companyProfit = rev - escrow - platformFee;
-    const roi = escrow > 0 ? (companyProfit / escrow) * 100 : 0;
-
-    setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit, roi });
-  }, [revenue]);
-
-  const formatMoney = (amount: number) => {
-    return '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || typeof revenue !== 'number') return;
-
-    setLoading(true);
-    try {
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!companyData) {
-        alert(t('contractModal.errorNoCompany', 'Ошибка: Компания не найдена. Заполните данные в настройках.'));
+          if (agentsData) {
+            setAgents(agentsData as AgentWithUser[]);
+          }
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки:', err);
+        setError('Ошибка загрузки данных');
+      } finally {
         setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, id]);
+
+  const handleEditContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({
+          title: editForm.title,
+          description: editForm.description,
+          deadline: editForm.deadline,
+          kpi_calls: editForm.kpi_calls,
+          kpi_meetings: editForm.kpi_meetings,
+          kpi_proposals: editForm.kpi_proposals,
+          kpi_revenue: editForm.kpi_revenue,
+          min_check: editForm.min_check,
+          target_conversion: editForm.target_conversion,
+          avg_check: editForm.avg_check,
+          target_clients: editForm.target_clients,
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        setError(updateError.message);
         return;
       }
 
-      const finalCalls = typeof kpiCalls === 'number' ? kpiCalls : kpiSuggestions.calls;
-      const finalMeetings = typeof kpiMeetings === 'number' ? kpiMeetings : kpiSuggestions.meetings;
-      const finalProposals = typeof kpiProposals === 'number' ? kpiProposals : kpiSuggestions.proposals;
-      const finalClients = typeof targetClients === 'number' ? targetClients : kpiSuggestions.clients;
-
-      const generatedDescription = title + ' | KPI: ' + finalCalls + ' ' + t('contractModal.kpiCallsLabel', 'звонков') + ', ' + finalMeetings + ' ' + t('contractModal.kpiMeetingsLabel', 'встреч') + ', ' + finalProposals + ' ' + t('contractModal.kpiProposalsLabel', 'КП') + ', ' + finalClients + ' ' + t('contractModal.kpiClientsLabel', 'клиентов');
-
-      const { error } = await supabase.from('contracts').insert({
-        company_id: companyData.id,
-        agent_id: selectedAgentId || null,
-        title: title,
-        description: generatedDescription,
-        kpi_revenue: revenue,
-        revenue: revenue,
-        kpi_calls: finalCalls,
-        kpi_meetings: finalMeetings,
-        kpi_proposals: finalProposals,
-        min_check: typeof minCheck === 'number' ? minCheck : 0,
-        target_conversion: typeof targetConversion === 'number' ? targetConversion : 20,
-        avg_check: typeof avgCheck === 'number' ? avgCheck : 500000,
-        target_clients: finalClients,
-        escrow_amount: economics.escrow,
-        agent_payouts_total: economics.escrow,
-        company_profit: economics.companyProfit,
-        roi_percentage: economics.roi,
-        deadline: deadline,
-        status: selectedAgentId ? 'PENDING_APPROVAL' : 'DRAFT',
-        created_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-
-      onCreated();
-      onClose();
-      setTitle('');
-      setRevenue('');
-      setDeadline('');
-      setSelectedAgentId('');
-      setKpiCalls('');
-      setKpiMeetings('');
-      setKpiProposals('');
-      setMinCheck('');
-      setTargetConversion('');
-      setAvgCheck('');
-      setTargetClients('');
+      setContract({ ...contract!, ...editForm });
+      setShowEditModal(false);
+      setSuccess('Контракт обновлен');
     } catch (err) {
-      console.error('Ошибка создания контракта:', err);
-      alert(t('common.error', 'Ошибка') + ': ' + (err as Error).message);
+      setError('Ошибка при сохранении');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (!isOpen) return null;
+  const handleAssignAgent = async () => {
+    if (!selectedAgentId) {
+      setError('Выберите агента');
+      return;
+    }
 
-  const isProfitable = economics.roi > 0 && typeof revenue === 'number' && revenue > 0;
-  const rev = typeof revenue === 'number' ? revenue : 0;
+    setSaving(true);
+    setError(null);
 
-  const streams = [
-    { name: t('payouts.newSales', 'Новые продажи'), percent: 50, color: 'bg-[#000052]' },
-    { name: t('payouts.renewal', 'Продление'), percent: 15, color: 'bg-blue-500' },
-    { name: t('payouts.crossSell', 'Кросс-продажи'), percent: 10, color: 'bg-indigo-500' },
-    { name: t('payouts.planBonus', 'Бонус за план'), percent: 10, color: 'bg-purple-500' },
-    { name: t('payouts.retention', 'Удержание (> 90 дней)'), percent: 10, color: 'bg-[#B8860B]' },
-    { name: t('payouts.annual', 'Годовой бонус'), percent: 5, color: 'bg-green-500' },
-  ];
+    try {
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({ agent_id: selectedAgentId })
+        .eq('id', id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setContract({ ...contract!, agent_id: selectedAgentId });
+      setShowAgentDropdown(false);
+      setSuccess('Агент назначен');
+    } catch (err) {
+      setError('Ошибка при назначении агента');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFundEscrow = async () => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const escrowAmount = Math.round((contract?.kpi_revenue || 0) * 0.12);
+
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({
+          status: 'PENDING_PAYMENT',
+          escrow_status: 'FUNDED',
+          escrow_amount: escrowAmount,
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      setContract({
+        ...contract!,
+        status: 'PENDING_PAYMENT',
+        escrow_status: 'FUNDED',
+        escrow_amount: escrowAmount,
+      });
+      setShowEscrowModal(false);
+      setSuccess('Эскроу пополнен');
+    } catch (err) {
+      setError('Ошибка при пополнении эскроу');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const formatCurrency = (amount: number | undefined) => {
+    return new Intl.NumberFormat('ru-RU').format(amount || 0);
+  };
+
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Не указано';
+    return new Date(dateStr).toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const getStreamStatus = (stream: PaymentStream | any) => {
+    if (!contract?.escrow_status || contract.escrow_status === 'PENDING') return 'locked';
+    if (contract.escrow_status === 'FUNDED') return 'unlocked';
+    if (contract.escrow_status === 'RELEASED') return 'released';
+    if (contract.escrow_status === 'FROZEN') return 'frozen';
+    return 'locked';
+  };
+
+  const selectedAgent = agents.find((a) => a.id === contract?.agent_id);
+  const escrowAmount = Math.round((contract?.kpi_revenue || 0) * 0.12);
+  const paymentStreams = contract?.payment_streams || DEFAULT_PAYMENT_STREAMS;
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">Загрузка...</div>;
+  }
+
+  if (!contract) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <p className="text-[#000052] mb-4">Контракт не найден</p>
+        <button onClick={() => navigate('/ceo/contracts')} className="bg-[#000052] text-white px-4 py-2 rounded-lg">
+          Вернуться к списку
+        </button>
+      </div>
+    );
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      'DRAFT': 'Черновик',
+      'PENDING_APPROVAL': 'Ожидает подтверждения',
+      'ACTIVE': 'Активен',
+      'IN_PROGRESS': 'В работе',
+      'COMPLETED': 'Завершен',
+      'DISPUTED': 'Оспорен',
+    };
+    return labels[status] || status;
+  };
+
+  const getEscrowStatusLabel = (status: string | undefined) => {
+    if (!status) return 'Ожидает';
+    const labels: Record<string, string> = {
+      'PENDING': 'Ожидает оплаты',
+      'FUNDED': 'Пополнен',
+      'RELEASED': 'Выплачен',
+      'FROZEN': 'Заморожен',
+    };
+    return labels[status] || status;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-gray-200">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-[#000052]">{t('contractModal.title', 'Создать смарт-контракт')}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
+    <div>
+      <div className="flex items-center gap-4 mb-8">
+        <button
+          onClick={() => navigate('/ceo/contracts')}
+          className="p-2 text-gray-500 hover:text-[#000052] hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">
+            {contract.title}
+          </h1>
+          <p className="text-gray-600 mt-1">{contract.description}</p>
+        </div>
+        {contract.status === 'DRAFT' && (
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="bg-[#000052] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#000066]"
+          >
+            <Edit className="w-5 h-5" />
+            Редактировать
           </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-6">
+          <AlertCircle className="w-5 h-5" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 mb-6">
+          <CheckCircle className="w-5 h-5" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <p className="text-gray-600 text-sm mb-1">Статус</p>
+              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                {getStatusLabel(contract.status)}
+              </span>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <p className="text-gray-600 text-sm mb-1">Эскроу</p>
+              <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                {getEscrowStatusLabel(contract.escrow_status)}
+              </span>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <p className="text-gray-600 text-sm mb-1">Дедлайн</p>
+              <div className="flex items-center gap-2 text-[#000052]">
+                <Calendar className="w-4 h-4" />
+                {formatDate(contract.deadline)}
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <p className="text-gray-600 text-sm mb-1">Выручка</p>
+              <div className="flex items-center gap-2 text-[#B8860B]">
+                <DollarSign className="w-4 h-4" />
+                ${formatCurrency(contract.kpi_revenue)}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h2 className="text-lg font-bold text-[#000052] mb-4">KPI контракта</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-gray-600 text-sm">Звонки</p>
+                <p className="text-2xl font-bold text-[#000052]">{contract.kpi_calls || 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Встречи</p>
+                <p className="text-2xl font-bold text-[#000052]">{contract.kpi_meetings || 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Коммерческие предложения</p>
+                <p className="text-2xl font-bold text-[#000052]">{contract.kpi_proposals || 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Выручка ($)</p>
+                <p className="text-2xl font-bold text-[#B8860B]">${formatCurrency(contract.kpi_revenue)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Минимальный чек ($)</p>
+                <p className="text-2xl font-bold text-[#000052]">${formatCurrency(contract.min_check)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Целевая конверсия (%)</p>
+                <p className="text-2xl font-bold text-[#000052]">{contract.target_conversion || 0}%</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Средний чек ($)</p>
+                <p className="text-2xl font-bold text-[#000052]">${formatCurrency(contract.avg_check)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Целевые клиенты</p>
+                <p className="text-2xl font-bold text-[#000052]">{contract.target_clients || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <h2 className="text-lg font-bold text-[#000052] mb-4">Потоки выплат</h2>
+            <div className="space-y-3">
+              {paymentStreams.map((stream: PaymentStream | any, index: number) => {
+                const status = getStreamStatus(stream);
+                const StatusIcon = status === 'locked' ? Lock : Unlock;
+                const statusColor = status === 'locked' ? 'text-gray-400' :
+                  status === 'released' ? 'text-[#B8860B]' : 'text-green-600';
+
+                return (
+                  <div
+                    key={stream.id || index}
+                    className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <StatusIcon className={'w-5 h-5 ' + statusColor} />
+                      <span className="text-[#000052]">{stream.name || 'Поток'}</span>
+                      {stream.clawback && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">
+                          Clawback
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[#B8860B] font-medium">
+                        {stream.percent ? stream.percent + '%' :
+                         stream.amount ? '$' + formatCurrency(stream.amount) :
+                         stream.release || '—'}
+                      </span>
+                      <span className={'text-xs px-2 py-1 rounded ' + (
+                        status === 'locked' ? 'bg-gray-100 text-gray-600' :
+                        status === 'released' ? 'bg-[#B8860B]/20 text-[#B8860B]' :
+                        status === 'frozen' ? 'bg-red-100 text-red-600' :
+                        'bg-green-100 text-green-600'
+                      )}>
+                        {status === 'locked' ? 'Заблокировано' :
+                         status === 'released' ? 'Выплачено' :
+                         status === 'frozen' ? 'Заморожено' : 'Разблокировано'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.goal', 'Цель контракта')} *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                placeholder={t('contractModal.goalPlaceholder', 'Например: Привлечение 10 корпоративных клиентов в сегменте B2B')}
-                required
-              />
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-[#B8860B]/20 rounded-lg">
+                <Users className="w-5 h-5 text-[#B8860B]" />
+              </div>
+              <h3 className="text-lg font-bold text-[#000052]">
+                Агент исполнителя
+              </h3>
             </div>
 
-            <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center gap-2 mb-4">
-                <Target className="w-5 h-5 text-[#000052]" />
-                <h3 className="text-sm font-bold text-[#000052]">{t('contractModal.kpiTitle', 'KPI контракта')}</h3>
-                <span className="text-xs text-gray-500 ml-auto">{t('contractModal.kpiOptional', 'Не обязательно — система подскажет')}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    <Phone className="w-3 h-3 inline mr-1" />
-                    {t('contractModal.calls', 'Звонки')}
-                  </label>
-                  <input
-                    type="number"
-                    value={kpiCalls}
-                    onChange={(e) => setKpiCalls(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={String(kpiSuggestions.calls)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    <Handshake className="w-3 h-3 inline mr-1" />
-                    {t('contractModal.meetings', 'Встречи')}
-                  </label>
-                  <input
-                    type="number"
-                    value={kpiMeetings}
-                    onChange={(e) => setKpiMeetings(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={String(kpiSuggestions.meetings)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    <FileText className="w-3 h-3 inline mr-1" />
-                    {t('contractModal.proposals', 'Коммерческие предложения')}
-                  </label>
-                  <input
-                    type="number"
-                    value={kpiProposals}
-                    onChange={(e) => setKpiProposals(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={String(kpiSuggestions.proposals)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    <Users className="w-3 h-3 inline mr-1" />
-                    {t('contractModal.targetClients', 'Целевые клиенты')}
-                  </label>
-                  <input
-                    type="number"
-                    value={targetClients}
-                    onChange={(e) => setTargetClients(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={String(kpiSuggestions.clients)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    <TrendingUp className="w-3 h-3 inline mr-1" />
-                    {t('contractModal.avgCheck', 'Средний чек ($)')}
-                  </label>
-                  <input
-                    type="number"
-                    value={avgCheck}
-                    onChange={(e) => setAvgCheck(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder="500000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('contractModal.targetConversion', 'Целевая конверсия (%)')}</label>
-                  <input
-                    type="number"
-                    value={targetConversion}
-                    onChange={(e) => setTargetConversion(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder="20"
-                    min="1"
-                    max="100"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('contractModal.minCheck', 'Минимальный чек ($)')}</label>
-                  <input
-                    type="number"
-                    value={minCheck}
-                    onChange={(e) => setMinCheck(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder="100000"
-                  />
+            {selectedAgent ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-10 h-10 rounded-full bg-[#B8860B]/20 flex items-center justify-center">
+                    <span className="text-[#B8860B] font-medium">
+                      {(selectedAgent.full_name || 'A').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-[#000052]">{selectedAgent.full_name}</p>
+                    <p className="text-sm text-gray-600">{selectedAgent.phone}</p>
+                    {selectedAgent.email && (
+                      <p className="text-sm text-gray-600">{selectedAgent.email}</p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                {agents.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600 mb-3">Нет агентов</p>
+                    <button
+                      onClick={() => navigate('/ceo/agents')}
+                      className="border border-[#000052] text-[#000052] px-4 py-2 rounded-lg text-sm hover:bg-[#000052] hover:text-white transition-colors"
+                    >
+                      <UserPlus className="w-4 h-4 inline mr-2" />
+                      Перейти к агентам
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+                      className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg text-gray-600 hover:text-[#000052] transition-colors"
+                    >
+                      <span>Выбрать агента</span>
+                      <ChevronDown className="w-5 h-5" />
+                    </button>
 
-            <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent', 'Назначить агента')}</label>
-              <div className="relative">
-                <select
-                  value={selectedAgentId}
-                  onChange={(e) => setSelectedAgentId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052] appearance-none"
-                >
-                  <option value="">{t('contractModal.selectAgentPlaceholder', '-- Выберите исполнителя (или сохраните как черновик) --')}</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.full_name} {agent.specialization ? '(' + agent.specialization + ')' : ''}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.plannedRevenue', 'Плановая выручка ($)')} *</label>
-                <input
-                  type="number"
-                  value={revenue}
-                  onChange={(e) => setRevenue(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="5000000"
-                  min="0"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.deadline', 'Срок исполнения')} *</label>
-                <input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-            <div className="flex items-center gap-2 mb-6">
-              <Calculator className="w-5 h-5 text-[#B8860B]" />
-              <h3 className="text-lg font-bold text-[#000052]">{t('contractModal.unitEconomics', 'Unit-экономика контракта')}</h3>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.escrowAvailable', 'Доступно в Эскроу (для выплат агенту)')}</span>
-                <span className="font-bold text-[#000052] text-lg">
-                  {formatMoney(economics.escrow)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.retentionBonus', 'Бонус за удержание (10% от эскроу)')}</span>
-                <span className="font-semibold text-[#B8860B]">
-                  {formatMoney(economics.retentionBonus)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.otherPayouts', 'Остальные выплаты (90% от эскроу)')}</span>
-                <span className="font-semibold text-[#000052]">
-                  {formatMoney(economics.otherPayouts)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.companyProfit', 'Прибыль компании')}</span>
-                <span className="font-bold text-green-600 text-lg">
-                  {formatMoney(economics.companyProfit)}
-                </span>
-              </div>
-            </div>
-
-            {rev > 0 && (
-              <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-                <p className="text-xs font-bold text-[#000052] uppercase mb-3">{t('contractModal.streamsTitle', 'Структура выплат из эскроу')}</p>
-                <div className="space-y-2">
-                  {streams.map((stream) => (
-                    <div key={stream.name} className="flex items-center gap-2 text-xs">
-                      <div className={'w-2 h-2 rounded-full ' + stream.color}></div>
-                      <span className="flex-1 text-gray-700">{stream.name}</span>
-                      <span className="font-semibold text-[#000052]">{stream.percent}%</span>
-                    </div>
-                  ))}
-                </div>
+                    {showAgentDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg overflow-hidden z-10 shadow-lg">
+                        {agents.map((agent) => (
+                          <button
+                            key={agent.id}
+                            onClick={() => {
+                              setSelectedAgentId(agent.id);
+                            }}
+                            className={'w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors ' + (
+                              selectedAgentId === agent.id ? 'bg-[#B8860B]/10' : ''
+                            )}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-[#B8860B]/20 flex items-center justify-center">
+                              <span className="text-[#B8860B] text-sm font-medium">
+                                {(agent.full_name || 'A').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                              </span>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-[#000052]">{agent.full_name}</p>
+                              <p className="text-sm text-gray-600">{agent.phone}</p>
+                            </div>
+                          </button>
+                        ))}
+                        {selectedAgentId && (
+                          <div className="p-3 border-t border-gray-200">
+                            <button
+                              onClick={handleAssignAgent}
+                              disabled={saving}
+                              className="w-full bg-[#000052] text-white py-2 rounded-lg hover:bg-[#000066] disabled:opacity-50"
+                            >
+                              {saving ? 'Сохранение...' : 'Назначить агента'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
+          </div>
 
-            <div className="mb-6 p-4 bg-[#B8860B]/10 border border-[#B8860B]/30 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-[#B8860B] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-[#000052]">{t('contractModal.clawbackTitle', 'Clawback: Защита от фрода')}</p>
-                  <p className="text-xs text-gray-700 mt-1">
-                    {t('contractModal.clawbackDesc', 'Бонус за удержание')} ({formatMoney(economics.retentionBonus)}) {t('contractModal.clawbackDesc2', 'выплачивается агенту ТОЛЬКО если клиент остается с компанией более 90 дней.')}
-                  </p>
+          <div className="bg-white p-6 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Wallet className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold text-[#000052]">
+                Оплата эскроу
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Сумма эскроу (12%)</span>
+                <span className="text-xl font-bold text-[#B8860B]">${formatCurrency(escrowAmount)}</span>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-gray-400" />
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600">Статус эскроу</p>
+                  <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
+                    {getEscrowStatusLabel(contract.escrow_status)}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div className="mb-6 text-center">
-              <p className="text-[10px] text-gray-400">
-                {t('contractModal.platformFee', 'Комиссия платформы')}: {formatMoney(economics.platformFee)} (12%)
-              </p>
+              {contract.status === 'DRAFT' && (
+                <button
+                  onClick={() => {
+                    if (!contract.agent_id) {
+                      setError('Сначала назначьте агента');
+                      return;
+                    }
+                    setShowEscrowModal(true);
+                  }}
+                  className="w-full bg-[#000052] text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-[#000066]"
+                >
+                  <Wallet className="w-5 h-5" />
+                  Оплатить эскроу
+                </button>
+              )}
+              {contract.status === 'DRAFT' && !contract.agent_id && (
+                <p className="text-xs text-gray-500 text-center">
+                  Сначала назначьте агента для оплаты эскроу
+                </p>
+              )}
             </div>
-
-            <button
-              type="submit"
-              disabled={!isProfitable || loading || !title || !deadline}
-              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isProfitable ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
-            >
-              {loading ? t('contractModal.creating', 'Создание...') : t('contractModal.publish', 'Опубликовать смарт-контракт')}
-            </button>
           </div>
-        </form>
+        </div>
       </div>
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-[#000052]">
+                Редактировать контракт
+              </h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-gray-500 hover:text-[#000052]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditContract} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#000052] mb-1.5">Название *</label>
+                    <input
+                      type="text"
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#000052] mb-1.5">Описание *</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10 min-h-[100px]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#000052] mb-1.5">Дедлайн *</label>
+                    <input
+                      type="date"
+                      value={editForm.deadline}
+                      onChange={(e) => setEditForm({ ...editForm, deadline: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-sm font-bold text-[#000052] mb-4">KPI</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Звонки</label>
+                        <input
+                          type="number"
+                          value={editForm.kpi_calls || ''}
+                          onChange={(e) => setEditForm({ ...editForm, kpi_calls: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Встречи</label>
+                        <input
+                          type="number"
+                          value={editForm.kpi_meetings || ''}
+                          onChange={(e) => setEditForm({ ...editForm, kpi_meetings: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Коммерческие предложения</label>
+                        <input
+                          type="number"
+                          value={editForm.kpi_proposals || ''}
+                          onChange={(e) => setEditForm({ ...editForm, kpi_proposals: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Выручка ($)</label>
+                        <input
+                          type="number"
+                          value={editForm.kpi_revenue || ''}
+                          onChange={(e) => setEditForm({ ...editForm, kpi_revenue: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Минимальный чек ($)</label>
+                        <input
+                          type="number"
+                          value={editForm.min_check || ''}
+                          onChange={(e) => setEditForm({ ...editForm, min_check: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Целевая конверсия (%)</label>
+                        <input
+                          type="number"
+                          value={editForm.target_conversion}
+                          onChange={(e) => setEditForm({ ...editForm, target_conversion: parseInt(e.target.value) || 20 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={1}
+                          max={100}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Средний чек ($)</label>
+                        <input
+                          type="number"
+                          value={editForm.avg_check || ''}
+                          onChange={(e) => setEditForm({ ...editForm, avg_check: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Целевые клиенты</label>
+                        <input
+                          type="number"
+                          value={editForm.target_clients || ''}
+                          onChange={(e) => setEditForm({ ...editForm, target_clients: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
+                          min={0}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Отмена
+                </button>
+                <button type="submit" disabled={saving} className="px-4 py-2 bg-[#000052] text-white rounded-lg hover:bg-[#000066] disabled:opacity-50">
+                  {saving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEscrowModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-[#000052]">
+                Оплата эскроу
+              </h2>
+              <button
+                onClick={() => setShowEscrowModal(false)}
+                className="p-2 text-gray-500 hover:text-[#000052]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="text-center mb-6">
+                <p className="text-gray-600 mb-2">Сумма к оплате:</p>
+                <p className="text-4xl font-bold text-[#B8860B]">${formatCurrency(escrowAmount)}</p>
+                <p className="text-gray-500 text-sm mt-2">12% от выручки ${formatCurrency(contract.kpi_revenue)}</p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg text-sm">
+                <p className="text-gray-600 mb-2">Реквизиты для оплаты:</p>
+                <p className="text-[#000052] font-medium">{company?.company_name || 'Не указано'}</p>
+                <p className="text-gray-600 mt-2">ИНН: {company?.inn || 'Не указано'}</p>
+                <p className="text-gray-600">Расч. счет: {company?.settlement_account || 'Не указано'}</p>
+                <p className="text-gray-600">Банк: {company?.bank_name || 'Не указано'}</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowEscrowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Отмена
+                </button>
+                <button
+                  onClick={handleFundEscrow}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2 bg-[#000052] text-white rounded-lg hover:bg-[#000066] disabled:opacity-50"
+                >
+                  {saving ? 'Обработка...' : 'Подтвердить оплату'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
