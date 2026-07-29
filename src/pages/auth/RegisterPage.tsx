@@ -10,7 +10,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'CEO' | 'AGENT'>('CEO');
+  const [role, setRole] = useState<'ceo' | 'agent'>('ceo');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,13 +37,12 @@ export function RegisterPage() {
 
     setLoading(true);
     try {
-      // Регистрируем пользователя через Supabase напрямую
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            role: role,
+            role: role, // Сохраняем строго в нижнем регистре: 'ceo' или 'agent'
           },
         },
       });
@@ -51,9 +50,8 @@ export function RegisterPage() {
       if (signUpError) throw signUpError;
 
       if (data.user) {
-        // Создаем запись в соответствующей таблице в зависимости от роли
-        if (role === 'CEO') {
-          await supabase.from('companies').insert({
+        if (role === 'ceo') {
+          const { error: companyError } = await supabase.from('companies').insert({
             user_id: data.user.id,
             company_type: 'ООО',
             full_name: '',
@@ -66,9 +64,12 @@ export function RegisterPage() {
             ogrn: '',
             legal_address: '',
           });
+          if (companyError) throw new Error('Не удалось создать профиль компании: ' + companyError.message);
         } else {
-          await supabase.from('agents').insert({
+          // БЕЗОПАСНАЯ ВСТАВКА АГЕНТА: явно указываем company_id: null, если он не привязан к компании при регистрации
+          const { error: agentError } = await supabase.from('agents').insert({
             user_id: data.user.id,
+            company_id: null, // Явно указываем null, чтобы избежать ошибок NOT NULL, если поле необязательно
             full_name: '',
             email: email,
             phone: '',
@@ -82,12 +83,13 @@ export function RegisterPage() {
             settlement_account: '',
             status: 'ACTIVE',
           });
+          if (agentError) throw new Error('Не удалось создать профиль агента: ' + agentError.message);
         }
       }
 
-      // Перенаправляем на страницу входа
       navigate('/login');
     } catch (err: any) {
+      console.error('Register error:', err);
       setError(err.message || 'Ошибка регистрации');
     } finally {
       setLoading(false);
@@ -96,7 +98,6 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Переключатель языков */}
       <div className="flex justify-end p-4">
         <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200">
           <Globe className="w-4 h-4 text-gray-600" />
@@ -130,75 +131,25 @@ export function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                  {t('auth.email')} *
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="example@company.com"
-                  required
-                />
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.email')} *</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]" placeholder="example@company.com" required />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                  {t('auth.password')} *
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="Минимум 6 символов"
-                  required
-                />
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.password')} *</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]" placeholder="Минимум 6 символов" required />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                  {t('auth.confirmPassword') || 'Подтвердите пароль'} *
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="Повторите пароль"
-                  required
-                />
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.confirmPassword') || 'Подтвердите пароль'} *</label>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]" placeholder="Повторите пароль" required />
               </div>
 
-              {/* Выбор роли */}
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                  {t('auth.role') || 'Роль'} *
-                </label>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('auth.role') || 'Роль'} *</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRole('CEO')}
-                    className={`p-3 rounded-lg border-2 transition-all font-medium ${
-                      role === 'CEO'
-                        ? 'border-[#000052] bg-[#000052]/5 text-[#000052]'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    CEO
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('AGENT')}
-                    className={`p-3 rounded-lg border-2 transition-all font-medium ${
-                      role === 'AGENT'
-                        ? 'border-[#000052] bg-[#000052]/5 text-[#000052]'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    {t('auth.agentRole') || 'Агент'}
-                  </button>
+                  <button type="button" onClick={() => setRole('ceo')} className={`p-3 rounded-lg border-2 transition-all font-medium ${role === 'ceo' ? 'border-[#000052] bg-[#000052]/5 text-[#000052]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>CEO</button>
+                  <button type="button" onClick={() => setRole('agent')} className={`p-3 rounded-lg border-2 transition-all font-medium ${role === 'agent' ? 'border-[#000052] bg-[#000052]/5 text-[#000052]' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>{t('auth.agentRole') || 'Агент'}</button>
                 </div>
               </div>
 
@@ -208,19 +159,13 @@ export function RegisterPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#000052] text-white font-medium py-3 rounded-lg border border-[#000052] hover:bg-[#000066] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} className="w-full bg-[#000052] text-white font-medium py-3 rounded-lg border border-[#000052] hover:bg-[#000066] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                 {loading ? t('common.loading') : t('auth.register') || 'Зарегистрироваться'}
               </button>
 
               <div className="text-center">
                 <span className="text-gray-600">{t('auth.noAccount') || 'Уже есть аккаунт?'} </span>
-                <Link to="/login" className="text-[#000052] font-medium hover:underline">
-                  {t('auth.login')}
-                </Link>
+                <Link to="/login" className="text-[#000052] font-medium hover:underline">{t('auth.login')}</Link>
               </div>
             </form>
           </div>
