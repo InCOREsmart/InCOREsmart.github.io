@@ -31,7 +31,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const [kpiCalls, setKpiCalls] = useState<number | ''>('');
   const [kpiMeetings, setKpiMeetings] = useState<number | ''>('');
   const [kpiProposals, setKpiProposals] = useState<number | ''>('');
-  const [kpiRevenue, setKpiRevenue] = useState<number | ''>('');
   const [minCheck, setMinCheck] = useState<number | ''>('');
   const [targetConversion, setTargetConversion] = useState<number | ''>('');
   const [avgCheck, setAvgCheck] = useState<number | ''>('');
@@ -91,11 +90,12 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     });
   }, [revenue, avgCheck, targetConversion]);
 
-  // Unit-экономика
+  // Unit-экономика (ИСПРАВЛЕННАЯ ЛОГИКА)
   const [economics, setEconomics] = useState({
     platformFee: 0,
-    netEscrow: 0,
-    agentPayouts: 0,
+    escrow: 0,
+    retentionBonus: 0,
+    otherPayouts: 0,
     companyProfit: 0,
     roi: 0,
   });
@@ -103,14 +103,25 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
     
-    // Комиссия платформы: 12%
+    // Комиссия платформы: 12% от выручки
     const platformFee = rev * 0.12;
-    const netEscrow = rev - platformFee;
-    const agentPayouts = netEscrow * 0.15; // 15% от чистого эскроу
-    const companyProfit = netEscrow - agentPayouts;
-    const roi = agentPayouts > 0 ? (companyProfit / agentPayouts) * 100 : 0;
+    
+    // Эскроу: 13.2% от выручки (сумма, которую CEO блокирует для выплат агенту)
+    const escrow = rev * 0.132;
+    
+    // Бонус за удержание: 10% от эскроу (тоже в эскроу)
+    const retentionBonus = escrow * 0.10;
+    
+    // Остальные выплаты: 90% от эскроу
+    const otherPayouts = escrow * 0.90;
+    
+    // Прибыль компании = Выручка - Эскроу - Комиссия платформы
+    const companyProfit = rev - escrow - platformFee;
+    
+    // ROI = (Прибыль / Эскроу) * 100
+    const roi = escrow > 0 ? (companyProfit / escrow) * 100 : 0;
 
-    setEconomics({ platformFee, netEscrow, agentPayouts, companyProfit, roi });
+    setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit, roi });
   }, [revenue]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,8 +155,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         target_conversion: typeof targetConversion === 'number' ? targetConversion : 20,
         avg_check: typeof avgCheck === 'number' ? avgCheck : 500000,
         target_clients: typeof targetClients === 'number' ? targetClients : kpiSuggestions.clients,
-        escrow_amount: economics.netEscrow,
-        agent_payouts_total: economics.agentPayouts,
+        escrow_amount: economics.escrow,
+        agent_payouts_total: economics.escrow,
         company_profit: economics.companyProfit,
         roi_percentage: economics.roi,
         deadline,
@@ -158,7 +169,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       onCreated();
       onClose();
       setTitle(''); setRevenue(''); setDeadline(''); setSelectedAgentId('');
-      setKpiCalls(''); setKpiMeetings(''); setKpiProposals(''); setKpiRevenue('');
+      setKpiCalls(''); setKpiMeetings(''); setKpiProposals('');
       setMinCheck(''); setTargetConversion(''); setAvgCheck(''); setTargetClients('');
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
@@ -173,18 +184,15 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const isProfitable = economics.roi > 0 && typeof revenue === 'number' && revenue > 0;
   const rev = typeof revenue === 'number' ? revenue : 0;
 
-  // Пример расчета из PDF
-  const exampleCalc = {
-    total: 1500,
-    salesCommission: 400,
-    planCompletion: 200,
-    renewals: 150,
-    crossSell: 100,
-    retention: 50,
-    annual: 50,
-    totalPayout: 950,
-    retentionBonus: 500,
-  };
+  // 6 потоков выплат (из эскроу)
+  const streams = [
+    { name: 'Новые продажи', percent: 50, color: 'bg-[#000052]' },
+    { name: 'Продление', percent: 15, color: 'bg-blue-500' },
+    { name: 'Кросс-продажи', percent: 10, color: 'bg-indigo-500' },
+    { name: 'Бонус за план', percent: 10, color: 'bg-purple-500' },
+    { name: 'Удержание (> 90 дней)', percent: 10, color: 'bg-[#B8860B]' },
+    { name: 'Годовой бонус', percent: 5, color: 'bg-green-500' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -221,7 +229,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-5 h-5 text-[#000052]" />
                 <h3 className="text-sm font-bold text-[#000052]">KPI контракта</h3>
-                <span className="text-xs text-gray-500 ml-auto">Не обязательно — платформа подскажет</span>
+                <span className="text-xs text-gray-500 ml-auto">Не обязательно — система подскажет</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -235,7 +243,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     value={kpiCalls}
                     onChange={(e) => setKpiCalls(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={`Платформа: ${kpiSuggestions.calls}`}
+                    placeholder={`${kpiSuggestions.calls}`}
                   />
                 </div>
                 <div>
@@ -248,7 +256,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     value={kpiMeetings}
                     onChange={(e) => setKpiMeetings(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={`Платформа: ${kpiSuggestions.meetings}`}
+                    placeholder={`${kpiSuggestions.meetings}`}
                   />
                 </div>
                 <div>
@@ -261,7 +269,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     value={kpiProposals}
                     onChange={(e) => setKpiProposals(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={`Платформа: ${kpiSuggestions.proposals}`}
+                    placeholder={`${kpiSuggestions.proposals}`}
                   />
                 </div>
                 <div>
@@ -274,7 +282,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     value={targetClients}
                     onChange={(e) => setTargetClients(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={`Платформа: ${kpiSuggestions.clients}`}
+                    placeholder={`${kpiSuggestions.clients}`}
                   />
                 </div>
                 <div>
@@ -304,7 +312,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     max="100"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Минимальный чек (₽)
                   </label>
@@ -314,18 +322,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                     onChange={(e) => setMinCheck(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
                     placeholder="100000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Плановая выручка KPI (₽)
-                  </label>
-                  <input
-                    type="number"
-                    value={kpiRevenue}
-                    onChange={(e) => setKpiRevenue(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10"
-                    placeholder={typeof revenue === 'number' ? revenue.toString() : '0'}
                   />
                 </div>
               </div>
@@ -384,7 +380,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
             </div>
           </div>
 
-          {/* ПРАВАЯ КОЛОНКА: Unit-экономика и пример расчета */}
+          {/* ПРАВАЯ КОЛОНКА: Unit-экономика */}
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <div className="flex items-center gap-2 mb-6">
               <Calculator className="w-5 h-5 text-[#B8860B]" />
@@ -395,17 +391,24 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
             {/* Основные метрики */}
             <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">Доступно в Эскроу (для выплат)</span>
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <span className="text-sm font-semibold text-[#000052]">Доступно в Эскроу (для выплат агенту)</span>
                 <span className="font-bold text-[#000052] text-lg">
-                  {economics.netEscrow.toLocaleString('ru-RU')} ₽
+                  {economics.escrow.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">Фонд выплат агенту (15%)</span>
+                <span className="text-sm text-gray-600">Бонус за удержание (10% от эскроу)</span>
+                <span className="font-semibold text-[#B8860B]">
+                  {economics.retentionBonus.toLocaleString('ru-RU')} ₽
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
+                <span className="text-sm text-gray-600">Остальные выплаты (90% от эскроу)</span>
                 <span className="font-semibold text-[#000052]">
-                  {economics.agentPayouts.toLocaleString('ru-RU')} ₽
+                  {economics.otherPayouts.toLocaleString('ru-RU')} ₽
                 </span>
               </div>
 
@@ -417,66 +420,20 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               </div>
             </div>
 
-            {/* Пример расчета смарт-контракта */}
+            {/* 6 потоков выплат */}
             {rev > 0 && (
-              <div className="mb-6 p-4 bg-[#000052]/5 rounded-lg border border-[#000052]/20">
+              <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
                 <p className="text-xs font-bold text-[#000052] uppercase mb-3">
-                  Пример расчета смарт-контракта
+                  Структура выплат из эскроу
                 </p>
-                
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                    <span className="text-gray-600">Прогнозная сумма заблокирована</span>
-                    <span className="font-bold text-[#000052]">{economics.netEscrow.toLocaleString('ru-RU')} ₽</span>
-                  </div>
-                  <p className="text-gray-500 italic text-[10px]">но еще не принадлежит исполнителю</p>
-                  
-                  <div className="pt-2">
-                    <p className="font-semibold text-[#000052] mb-2">ВЫПОЛНЕНИЕ РАБОТЫ → СМАРТ-КОНТРАКТ:</p>
-                    <div className="space-y-1 ml-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• Комиссия с продаж (50%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.5).toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• 100% выполнение плана (10%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.1).toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• Продления (15%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.15).toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• Кросс-продажи (10%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.1).toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• Удержание &gt; 90 дней (10%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.1).toLocaleString('ru-RU')} ₽</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">• Годовой бонус (5%)</span>
-                        <span className="font-medium">{(economics.agentPayouts * 0.05).toLocaleString('ru-RU')} ₽</span>
-                      </div>
+                <div className="space-y-2">
+                  {streams.map((stream) => (
+                    <div key={stream.name} className="flex items-center gap-2 text-xs">
+                      <div className={`w-2 h-2 rounded-full ${stream.color}`}></div>
+                      <span className="flex-1 text-gray-700">{stream.name}</span>
+                      <span className="font-semibold text-[#000052]">{stream.percent}%</span>
                     </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-[#000052]">Выплата сейчас:</span>
-                      <span className="font-bold text-green-600 text-sm">{economics.agentPayouts.toLocaleString('ru-RU')} ₽</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="font-bold text-[#000052]">+ Бонус за удержание через 30 дней:</span>
-                      <span className="font-bold text-[#B8860B] text-sm">{(economics.agentPayouts * 0.1).toLocaleString('ru-RU')} ₽</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-200 text-[10px] text-gray-500 space-y-1">
-                    <p>• Разблокирует средства</p>
-                    <p>• Переводит через Банк</p>
-                    <p>• Остаток (если есть) → возврат заказчику</p>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -488,7 +445,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div>
                   <p className="text-sm font-bold text-[#000052]">Clawback: Защита от фрода</p>
                   <p className="text-xs text-gray-700 mt-1">
-                    Бонус за удержание (10%) выплачивается агенту <strong>ТОЛЬКО</strong> если клиент остается с компанией более 90 дней.
+                    Бонус за удержание ({economics.retentionBonus.toLocaleString('ru-RU')} ₽) выплачивается агенту <strong>ТОЛЬКО</strong> если клиент остается с компанией более 90 дней.
                   </p>
                 </div>
               </div>
