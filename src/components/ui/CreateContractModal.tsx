@@ -88,8 +88,9 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
+    // ИЗМЕНЕНО: 12% платформе, 88% агенту (эскроу)
     const platformFee = rev * 0.12;
-    const escrow = rev * 0.132;
+    const escrow = rev * 0.88;
     const retentionBonus = escrow * 0.10;
     const otherPayouts = escrow * 0.90;
     const companyProfit = rev - escrow - platformFee;
