@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Calculator, Users, AlertCircle, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +17,7 @@ interface CreateContractModalProps {
 }
 
 export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContractModalProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   const [title, setTitle] = useState('');
@@ -109,7 +111,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         .maybeSingle();
 
       if (!companyData) {
-        alert('Ошибка: Компания не найдена. Заполните данные в настройках.');
+        alert(t('contractModal.errorNoCompany'));
         setLoading(false);
         return;
       }
@@ -119,7 +121,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       const finalProposals = typeof kpiProposals === 'number' ? kpiProposals : kpiSuggestions.proposals;
       const finalClients = typeof targetClients === 'number' ? targetClients : kpiSuggestions.clients;
 
-      const generatedDescription = title + ' | KPI: ' + finalCalls + ' звонков, ' + finalMeetings + ' встреч, ' + finalProposals + ' КП, ' + finalClients + ' клиентов';
+      const generatedDescription = title + ' | KPI: ' + finalCalls + ' ' + t('contractModal.kpiCallsLabel') + ', ' + finalMeetings + ' ' + t('contractModal.kpiMeetingsLabel') + ', ' + finalProposals + ' ' + t('contractModal.kpiProposalsLabel') + ', ' + finalClients + ' ' + t('contractModal.kpiClientsLabel');
 
       const { error } = await supabase.from('contracts').insert({
         company_id: companyData.id,
@@ -161,7 +163,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       setTargetClients('');
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
-      alert('Ошибка: ' + (err as Error).message);
+      alert(t('common.error') + ': ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -173,19 +175,19 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const rev = typeof revenue === 'number' ? revenue : 0;
 
   const streams = [
-    { name: 'Новые продажи', percent: 50, color: 'bg-[#000052]' },
-    { name: 'Продление', percent: 15, color: 'bg-blue-500' },
-    { name: 'Кросс-продажи', percent: 10, color: 'bg-indigo-500' },
-    { name: 'Бонус за план', percent: 10, color: 'bg-purple-500' },
-    { name: 'Удержание (> 90 дней)', percent: 10, color: 'bg-[#B8860B]' },
-    { name: 'Годовой бонус', percent: 5, color: 'bg-green-500' },
+    { name: t('streams.newSales'), percent: 50, color: 'bg-[#000052]' },
+    { name: t('streams.renewal'), percent: 15, color: 'bg-blue-500' },
+    { name: t('streams.crossSell'), percent: 10, color: 'bg-indigo-500' },
+    { name: t('streams.planBonus'), percent: 10, color: 'bg-purple-500' },
+    { name: t('streams.retention'), percent: 10, color: 'bg-[#B8860B]' },
+    { name: t('streams.annual'), percent: 5, color: 'bg-green-500' },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-gray-200">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-[#000052]">Создать смарт-контракт</h2>
+          <h2 className="text-2xl font-bold text-[#000052]">{t('contractModal.title')}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -194,13 +196,13 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">Цель контракта *</label>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.goal')} *</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                placeholder="Например: Привлечение 10 корпоративных клиентов в сегменте B2B"
+                placeholder={t('contractModal.goalPlaceholder')}
                 required
               />
             </div>
@@ -208,15 +210,15 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-200">
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-5 h-5 text-[#000052]" />
-                <h3 className="text-sm font-bold text-[#000052]">KPI контракта</h3>
-                <span className="text-xs text-gray-500 ml-auto">Не обязательно — система подскажет</span>
+                <h3 className="text-sm font-bold text-[#000052]">{t('contractModal.kpiTitle')}</h3>
+                <span className="text-xs text-gray-500 ml-auto">{t('contractModal.kpiOptional')}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     <Phone className="w-3 h-3 inline mr-1" />
-                    Звонки
+                    {t('contractModal.calls')}
                   </label>
                   <input
                     type="number"
@@ -229,7 +231,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     <Handshake className="w-3 h-3 inline mr-1" />
-                    Встречи
+                    {t('contractModal.meetings')}
                   </label>
                   <input
                     type="number"
@@ -242,7 +244,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     <FileText className="w-3 h-3 inline mr-1" />
-                    Коммерческие предложения
+                    {t('contractModal.proposals')}
                   </label>
                   <input
                     type="number"
@@ -255,7 +257,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     <Users className="w-3 h-3 inline mr-1" />
-                    Целевые клиенты
+                    {t('contractModal.targetClients')}
                   </label>
                   <input
                     type="number"
@@ -268,7 +270,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     <TrendingUp className="w-3 h-3 inline mr-1" />
-                    Средний чек (₽)
+                    {t('contractModal.avgCheck')}
                   </label>
                   <input
                     type="number"
@@ -279,7 +281,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Целевая конверсия (%)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('contractModal.targetConversion')}</label>
                   <input
                     type="number"
                     value={targetConversion}
@@ -291,7 +293,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Минимальный чек (₽)</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('contractModal.minCheck')}</label>
                   <input
                     type="number"
                     value={minCheck}
@@ -304,14 +306,14 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">Назначить агента</label>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent')}</label>
               <div className="relative">
                 <select
                   value={selectedAgentId}
                   onChange={(e) => setSelectedAgentId(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052] appearance-none"
                 >
-                  <option value="">-- Выберите исполнителя (или сохраните как черновик) --</option>
+                  <option value="">{t('contractModal.selectAgentPlaceholder')}</option>
                   {agents.map((agent) => (
                     <option key={agent.id} value={agent.id}>
                       {agent.full_name} {agent.specialization ? '(' + agent.specialization + ')' : ''}
@@ -324,7 +326,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">Плановая выручка (₽) *</label>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.plannedRevenue')} *</label>
                 <input
                   type="number"
                   value={revenue}
@@ -336,7 +338,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">Срок исполнения *</label>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.deadline')} *</label>
                 <input
                   type="date"
                   value={deadline}
@@ -351,42 +353,42 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
             <div className="flex items-center gap-2 mb-6">
               <Calculator className="w-5 h-5 text-[#B8860B]" />
-              <h3 className="text-lg font-bold text-[#000052]">Unit-экономика контракта</h3>
+              <h3 className="text-lg font-bold text-[#000052]">{t('contractModal.unitEconomics')}</h3>
             </div>
 
             <div className="space-y-3 mb-6">
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-semibold text-[#000052]">Доступно в Эскроу (для выплат агенту)</span>
+                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.escrowAvailable')}</span>
                 <span className="font-bold text-[#000052] text-lg">
-                  {economics.escrow.toLocaleString('ru-RU')} ₽
+                  ${economics.escrow.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">Бонус за удержание (10% от эскроу)</span>
+                <span className="text-sm text-gray-600">{t('contractModal.retentionBonus')}</span>
                 <span className="font-semibold text-[#B8860B]">
-                  {economics.retentionBonus.toLocaleString('ru-RU')} ₽
+                  ${economics.retentionBonus.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">Остальные выплаты (90% от эскроу)</span>
+                <span className="text-sm text-gray-600">{t('contractModal.otherPayouts')}</span>
                 <span className="font-semibold text-[#000052]">
-                  {economics.otherPayouts.toLocaleString('ru-RU')} ₽
+                  ${economics.otherPayouts.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">Прибыль компании</span>
+                <span className="text-sm text-gray-600">{t('contractModal.companyProfit')}</span>
                 <span className="font-bold text-green-600 text-lg">
-                  {economics.companyProfit.toLocaleString('ru-RU')} ₽
+                  ${economics.companyProfit.toLocaleString()}
                 </span>
               </div>
             </div>
 
             {rev > 0 && (
               <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-                <p className="text-xs font-bold text-[#000052] uppercase mb-3">Структура выплат из эскроу</p>
+                <p className="text-xs font-bold text-[#000052] uppercase mb-3">{t('contractModal.streamsTitle')}</p>
                 <div className="space-y-2">
                   {streams.map((stream) => (
                     <div key={stream.name} className="flex items-center gap-2 text-xs">
@@ -403,9 +405,9 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-[#B8860B] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-[#000052]">Clawback: Защита от фрода</p>
+                  <p className="text-sm font-bold text-[#000052]">{t('contractModal.clawbackTitle')}</p>
                   <p className="text-xs text-gray-700 mt-1">
-                    Бонус за удержание ({economics.retentionBonus.toLocaleString('ru-RU')} ₽) выплачивается агенту <strong>ТОЛЬКО</strong> если клиент остается с компанией более 90 дней.
+                    {t('contractModal.clawbackDesc')} (${economics.retentionBonus.toLocaleString()}) {t('contractModal.clawbackDesc2')}
                   </p>
                 </div>
               </div>
@@ -413,7 +415,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
             <div className="mb-6 text-center">
               <p className="text-[10px] text-gray-400">
-                Комиссия платформы: {economics.platformFee.toLocaleString('ru-RU')} ₽ (12%)
+                {t('contractModal.platformFee')}: ${economics.platformFee.toLocaleString()} (12%)
               </p>
             </div>
 
@@ -422,7 +424,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               disabled={!isProfitable || loading || !title || !deadline}
               className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isProfitable ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
             >
-              {loading ? 'Создание...' : 'Опубликовать смарт-контракт'}
+              {loading ? t('contractModal.creating') : t('contractModal.publish')}
             </button>
           </div>
         </form>

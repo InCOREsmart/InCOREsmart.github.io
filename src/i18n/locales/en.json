@@ -23,12 +23,15 @@
     "title": "Financial Core",
     "totalRevenue": "Total Revenue",
     "frozenEscrow": "Frozen Escrow",
+    "platformFee": "InCORE Commission",
     "paidToAgents": "Paid to Agents",
     "netProfit": "Net Profit",
     "avgRoi": "Average ROI",
     "budgetDistribution": "Budget Distribution",
     "activeContracts": "Active Contracts",
-    "pendingPayouts": "Pending Payouts"
+    "pendingPayouts": "Pending Payouts",
+    "clawbackDescription": "If the client leaves within 90 days, the retention bonus (10%) is not paid and returns to the company pool.",
+    "riskHedgingDescription": "Funds are locked in a smart contract. Payment occurs automatically upon result verification via CRM and Oracle."
   },
   "dashboard": {
     "activeContracts": "Active Contracts",
@@ -52,6 +55,8 @@
     "companyProfit": "Company Profit",
     "publish": "Publish",
     "unprofitableWarning": "Deal is unprofitable. Change parameters.",
+    "noContracts": "No contracts",
+    "createFirst": "Create your first smart contract",
     "statuses": {
       "ACTIVE": "Active",
       "IN_PROGRESS": "In Progress",
@@ -61,6 +66,16 @@
       "DISPUTED": "Disputed",
       "PENDING_PAYMENT": "Pending Payment"
     }
+  },
+  "contracts": {
+    "title": "Contracts",
+    "createNew": "Create new contract",
+    "plannedRevenue": "Planned Revenue",
+    "rewardType": "Reward Type",
+    "unitEconomics": "Contract Unit Economics",
+    "agentPayouts": "Agent Payouts",
+    "companyProfit": "Company Profit",
+    "publish": "Publish smart contract"
   },
   "agent": {
     "dashboardTitle": "Agent Dashboard",
@@ -89,7 +104,10 @@
     "addAgent": "Add Agent",
     "noAgents": "No agents",
     "myActiveContracts": "My Active Contracts",
-    "noActiveContracts": "No active contracts"
+    "noActiveContracts": "No active contracts",
+    "activeContracts": "Active Contracts",
+    "completedContracts": "Completed Contracts",
+    "specialization": "Specialization"
   },
   "payouts": {
     "title": "Payouts",
@@ -143,7 +161,8 @@
     "error": "Error",
     "save": "Save",
     "cancel": "Cancel",
-    "success": "Success"
+    "success": "Success",
+    "back": "Back"
   },
   "contractModal": {
     "title": "Create Smart Contract",

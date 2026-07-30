@@ -52,6 +52,8 @@
     "companyProfit": "Прибыль компании",
     "publish": "Опубликовать",
     "unprofitableWarning": "Сделка убыточна. Измените параметры.",
+    "noContracts": "Нет контрактов",
+    "createFirst": "Создайте первый смарт-контракт",
     "statuses": {
       "ACTIVE": "Активен",
       "IN_PROGRESS": "В работе",

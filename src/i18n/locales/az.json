@@ -23,12 +23,15 @@
     "title": "Maliyyə nüvəsi",
     "totalRevenue": "Ümumi gəlir",
     "frozenEscrow": "Dondurulmuş eskrou",
+    "platformFee": "InCORE komissiyası",
     "paidToAgents": "Agentlərə ödənilib",
     "netProfit": "Xalis mənfəət",
     "avgRoi": "Orta ROI",
     "budgetDistribution": "Büdcənin bölüşdürülməsi",
     "activeContracts": "Aktiv müqavilələr",
-    "pendingPayouts": "Gözləyən ödənişlər"
+    "pendingPayouts": "Gözləyən ödənişlər",
+    "clawbackDescription": "Müştəri 90 gündən az qalarsa, saxlama bonusu (10%) ödənilmir və şirkət hovuzuna qaytarılır.",
+    "riskHedgingDescription": "Vəsait smart müqavilədə bloklanıb. Ödəniş CRM və Oracle vasitəsilə nəticə təsdiqləndikdə avtomatik olaraq həyata keçirilir."
   },
   "dashboard": {
     "activeContracts": "Aktiv müqavilələr",
@@ -52,6 +55,8 @@
     "companyProfit": "Şirkət mənfəəti",
     "publish": "Dərc et",
     "unprofitableWarning": "Əməliyyat səmərəsizdir. Parametrləri dəyişdirin.",
+    "noContracts": "Müqavilə yoxdur",
+    "createFirst": "İlk smart müqavilənizi yaradın",
     "statuses": {
       "ACTIVE": "Aktiv",
       "IN_PROGRESS": "Davam edir",
@@ -61,6 +66,16 @@
       "DISPUTED": "Mübahisəli",
       "PENDING_PAYMENT": "Ödəniş gözləyir"
     }
+  },
+  "contracts": {
+    "title": "Müqavilələr",
+    "createNew": "Yeni müqavilə yarat",
+    "plannedRevenue": "Planlaşdırılan gəlir",
+    "rewardType": "Mükafat növü",
+    "unitEconomics": "Müqavilənin unit-iqtisadiyyatı",
+    "agentPayouts": "Agent ödənişləri",
+    "companyProfit": "Şirkət mənfəəti",
+    "publish": "Smart müqaviləni dərc et"
   },
   "agent": {
     "dashboardTitle": "Agentin iş sahəsi",
@@ -89,7 +104,10 @@
     "addAgent": "Agent əlavə et",
     "noAgents": "Agent yoxdur",
     "myActiveContracts": "Mənim aktiv müqavilələrim",
-    "noActiveContracts": "Aktiv müqavilə yoxdur"
+    "noActiveContracts": "Aktiv müqavilə yoxdur",
+    "activeContracts": "Aktiv müqavilələr",
+    "completedContracts": "Tamamlanmış müqavilələr",
+    "specialization": "İxtisas"
   },
   "payouts": {
     "title": "Ödənişlər",
@@ -143,7 +161,8 @@
     "error": "Xəta",
     "save": "Saxla",
     "cancel": "Ləğv et",
-    "success": "Uğurlu"
+    "success": "Uğurlu",
+    "back": "Geri"
   },
   "contractModal": {
     "title": "Smart müqavilə yarat",
