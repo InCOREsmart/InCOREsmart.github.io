@@ -42,6 +42,16 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     clients: 0,
   });
 
+  // Редактируемые проценты потоков выплат
+  const [streamPercents, setStreamPercents] = useState({
+    newSales: 50,
+    renewal: 15,
+    crossSell: 10,
+    planBonus: 10,
+    retention: 10,
+    annual: 5,
+  });
+
   useEffect(() => {
     if (isOpen && user) {
       const fetchAgents = async () => {
@@ -64,6 +74,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     }
   }, [isOpen, user]);
 
+  // Автоматический расчет KPI из плановой выручки
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
     const avg = typeof avgCheck === 'number' && avgCheck > 0 ? avgCheck : 500000;
@@ -88,16 +99,22 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
-    // ИЗМЕНЕНО: 12% платформе, 88% агенту (эскроу)
-    const platformFee = rev * 0.12;
-    const escrow = rev * 0.88;
-    const retentionBonus = escrow * 0.10;
-    const otherPayouts = escrow * 0.90;
-    const companyProfit = rev - escrow - platformFee;
+    const platformFee = rev * 0.12; // 12% платформе
+    const escrow = rev * 0.88; // 88% агенту
+    const retentionBonus = escrow * (streamPercents.retention / 100);
+    const otherPayouts = escrow - retentionBonus;
+    const companyProfit = rev - escrow; // Прибыль компании = выручка - выплаты агенту
     const roi = escrow > 0 ? (companyProfit / escrow) * 100 : 0;
 
     setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit, roi });
-  }, [revenue]);
+  }, [revenue, streamPercents.retention]);
+
+  const handleStreamPercentChange = (stream: keyof typeof streamPercents, value: number) => {
+    const newPercents = { ...streamPercents, [stream]: value };
+    setStreamPercents(newPercents);
+  };
+
+  const totalStreamPercent = Object.values(streamPercents).reduce((sum, val) => sum + val, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,6 +179,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       setTargetConversion('');
       setAvgCheck('');
       setTargetClients('');
+      setStreamPercents({ newSales: 50, renewal: 15, crossSell: 10, planBonus: 10, retention: 10, annual: 5 });
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
@@ -172,16 +190,16 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
   if (!isOpen) return null;
 
-  const isProfitable = economics.roi > 0 && typeof revenue === 'number' && revenue > 0;
+  const isProfitable = economics.companyProfit > 0 && typeof revenue === 'number' && revenue > 0;
   const rev = typeof revenue === 'number' ? revenue : 0;
 
   const streams = [
-    { name: t('streams.newSales'), percent: 50, color: 'bg-[#000052]' },
-    { name: t('streams.renewal'), percent: 15, color: 'bg-blue-500' },
-    { name: t('streams.crossSell'), percent: 10, color: 'bg-indigo-500' },
-    { name: t('streams.planBonus'), percent: 10, color: 'bg-purple-500' },
-    { name: t('streams.retention'), percent: 10, color: 'bg-[#B8860B]' },
-    { name: t('streams.annual'), percent: 5, color: 'bg-green-500' },
+    { key: 'newSales' as const, name: t('streams.newSales'), percent: streamPercents.newSales, color: 'bg-[#000052]' },
+    { key: 'renewal' as const, name: t('streams.renewal'), percent: streamPercents.renewal, color: 'bg-blue-500' },
+    { key: 'crossSell' as const, name: t('streams.crossSell'), percent: streamPercents.crossSell, color: 'bg-indigo-500' },
+    { key: 'planBonus' as const, name: t('streams.planBonus'), percent: streamPercents.planBonus, color: 'bg-purple-500' },
+    { key: 'retention' as const, name: t('streams.retention'), percent: streamPercents.retention, color: 'bg-[#B8860B]' },
+    { key: 'annual' as const, name: t('streams.annual'), percent: streamPercents.annual, color: 'bg-green-500' },
   ];
 
   return (
@@ -206,6 +224,51 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 placeholder={t('contractModal.goalPlaceholder')}
                 required
               />
+            </div>
+
+            {/* Блок: Назначить агента, Плановая выручка, Срок исполнения — подняты вверх */}
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent')}</label>
+              <div className="relative">
+                <select
+                  value={selectedAgentId}
+                  onChange={(e) => setSelectedAgentId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052] appearance-none"
+                >
+                  <option value="">{t('contractModal.selectAgentPlaceholder')}</option>
+                  {agents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.full_name} {agent.specialization ? '(' + agent.specialization + ')' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.plannedRevenue')} *</label>
+                <input
+                  type="number"
+                  value={revenue}
+                  onChange={(e) => setRevenue(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                  placeholder="5000000"
+                  min="0"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.deadline')} *</label>
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                  required
+                />
+              </div>
             </div>
 
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-200">
@@ -305,50 +368,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 </div>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent')}</label>
-              <div className="relative">
-                <select
-                  value={selectedAgentId}
-                  onChange={(e) => setSelectedAgentId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052] appearance-none"
-                >
-                  <option value="">{t('contractModal.selectAgentPlaceholder')}</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.full_name} {agent.specialization ? '(' + agent.specialization + ')' : ''}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.plannedRevenue')} *</label>
-                <input
-                  type="number"
-                  value={revenue}
-                  onChange={(e) => setRevenue(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="5000000"
-                  min="0"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.deadline')} *</label>
-                <input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  required
-                />
-              </div>
-            </div>
           </div>
 
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
@@ -379,8 +398,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.companyProfit')}</span>
+              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.companyProfit')}</span>
                 <span className="font-bold text-green-600 text-lg">
                   ${economics.companyProfit.toLocaleString()}
                 </span>
@@ -392,13 +411,26 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <p className="text-xs font-bold text-[#000052] uppercase mb-3">{t('contractModal.streamsTitle')}</p>
                 <div className="space-y-2">
                   {streams.map((stream) => (
-                    <div key={stream.name} className="flex items-center gap-2 text-xs">
+                    <div key={stream.key} className="flex items-center gap-2 text-xs">
                       <div className={'w-2 h-2 rounded-full ' + stream.color}></div>
                       <span className="flex-1 text-gray-700">{stream.name}</span>
-                      <span className="font-semibold text-[#000052]">{stream.percent}%</span>
+                      <input
+                        type="number"
+                        value={stream.percent}
+                        onChange={(e) => handleStreamPercentChange(stream.key, Number(e.target.value) || 0)}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-right text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
+                        min="0"
+                        max="100"
+                      />
+                      <span className="font-semibold text-[#000052] w-8">%</span>
                     </div>
                   ))}
                 </div>
+                {totalStreamPercent !== 100 && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                    ⚠️ Сумма процентов: {totalStreamPercent}% (должна быть 100%)
+                  </div>
+                )}
               </div>
             )}
 
@@ -422,8 +454,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
             <button
               type="submit"
-              disabled={!isProfitable || loading || !title || !deadline}
-              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isProfitable ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
+              disabled={!isProfitable || loading || !title || !deadline || totalStreamPercent !== 100}
+              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isProfitable && totalStreamPercent === 100 ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
             >
               {loading ? t('contractModal.creating') : t('contractModal.publish')}
             </button>
