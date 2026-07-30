@@ -94,19 +94,19 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     retentionBonus: 0,
     otherPayouts: 0,
     companyProfit: 0,
-    roi: 0,
   });
 
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
-    const platformFee = rev * 0.12; // 12% платформе
-    const escrow = rev * 0.88; // 88% агенту
+    // СТРОГАЯ ЛОГИКА INCORE: 12% платформе, 88% агенту
+    const platformFee = rev * 0.12;
+    const escrow = rev * 0.88;
     const retentionBonus = escrow * (streamPercents.retention / 100);
     const otherPayouts = escrow - retentionBonus;
-    const companyProfit = rev - escrow; // Прибыль компании = выручка - выплаты агенту
-    const roi = escrow > 0 ? (companyProfit / escrow) * 100 : 0;
+    // Прибыль компании = GMV - Эскроу - Комиссия платформы = 0 (так как 88+12=100)
+    const companyProfit = rev - escrow - platformFee;
 
-    setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit, roi });
+    setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit });
   }, [revenue, streamPercents.retention]);
 
   const handleStreamPercentChange = (stream: keyof typeof streamPercents, value: number) => {
@@ -158,7 +158,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         escrow_amount: economics.escrow,
         agent_payouts_total: economics.escrow,
         company_profit: economics.companyProfit,
-        roi_percentage: economics.roi,
+        roi_percentage: 0, // ROI считается от маржи платформы, для MVP ставим 0
         deadline: deadline,
         status: selectedAgentId ? 'PENDING_APPROVAL' : 'DRAFT',
         created_at: new Date().toISOString(),
@@ -190,7 +190,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
   if (!isOpen) return null;
 
-  const isProfitable = economics.companyProfit > 0 && typeof revenue === 'number' && revenue > 0;
+  // Кнопка активна, если заполнены обязательные поля и сумма потоков = 100%
+  const isFormValid = typeof revenue === 'number' && revenue > 0 && title && deadline && totalStreamPercent === 100;
   const rev = typeof revenue === 'number' ? revenue : 0;
 
   const streams = [
@@ -226,7 +227,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               />
             </div>
 
-            {/* Блок: Назначить агента, Плановая выручка, Срок исполнения — подняты вверх */}
+            {/* Блок: Назначить агента, Плановая выручка, Срок исполнения */}
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent')}</label>
               <div className="relative">
@@ -254,7 +255,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                   value={revenue}
                   onChange={(e) => setRevenue(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
-                  placeholder="5000000"
+                  placeholder="1000000"
                   min="0"
                   required
                 />
@@ -398,9 +399,9 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 </span>
               </div>
 
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.companyProfit')}</span>
-                <span className="font-bold text-green-600 text-lg">
+              <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
+                <span className="text-sm text-gray-600">{t('contractModal.companyProfit')}</span>
+                <span className="font-bold text-gray-500 text-lg">
                   ${economics.companyProfit.toLocaleString()}
                 </span>
               </div>
@@ -454,8 +455,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
             <button
               type="submit"
-              disabled={!isProfitable || loading || !title || !deadline || totalStreamPercent !== 100}
-              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isProfitable && totalStreamPercent === 100 ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
+              disabled={!isFormValid || loading}
+              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isFormValid ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
             >
               {loading ? t('contractModal.creating') : t('contractModal.publish')}
             </button>
