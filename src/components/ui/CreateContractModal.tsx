@@ -42,15 +42,11 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     clients: 0,
   });
 
-  // Редактируемые проценты потоков выплат
-  const [streamPercents, setStreamPercents] = useState({
-    newSales: 50,
-    renewal: 15,
-    crossSell: 10,
-    planBonus: 10,
-    retention: 10,
-    annual: 5,
-  });
+  // Поля для расчета потоков выплат
+  const [renewalAmount, setRenewalAmount] = useState<number | ''>('');
+  const [crossSellAmount, setCrossSellAmount] = useState<number | ''>('');
+  const [planBonus, setPlanBonus] = useState<number | ''>(200);
+  const [annualBonus, setAnnualBonus] = useState<number | ''>('');
 
   useEffect(() => {
     if (isOpen && user) {
@@ -91,30 +87,52 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const [economics, setEconomics] = useState({
     platformFee: 0,
     escrow: 0,
-    retentionBonus: 0,
-    otherPayouts: 0,
+    newSalesPayout: 0,
+    renewalPayout: 0,
+    crossSellPayout: 0,
+    planBonusPayout: 0,
+    annualBonusMonthly: 0,
+    totalAgentPayouts: 0,
+    escrowRemainder: 0,
     companyProfit: 0,
   });
 
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
-    // СТРОГАЯ ЛОГИКА INCORE: 12% платформе, 88% агенту
+    
+    // СТРОГАЯ ЛОГИКА INCORE: 12% платформе, 88% в эскроу (максимальный бюджет на выплаты агенту)
     const platformFee = rev * 0.12;
     const escrow = rev * 0.88;
-    const retentionBonus = escrow * (streamPercents.retention / 100);
-    const otherPayouts = escrow - retentionBonus;
-    // Прибыль компании = GMV - Эскроу - Комиссия платформы = 0 (так как 88+12=100)
-    const companyProfit = rev - escrow - platformFee;
+    
+    // Расчет потоков выплат агенту
+    const newSalesPayout = rev * 0.10; // 10% от суммы контракта
+    const renewalPayout = (typeof renewalAmount === 'number' ? renewalAmount : 0) * 0.03; // 3% от суммы продления
+    const crossSellPayout = (typeof crossSellAmount === 'number' ? crossSellAmount : 0) * 0.07; // 7% от суммы кросс-продажи
+    const planBonusPayout = typeof planBonus === 'number' ? planBonus : 0; // Фиксированная сумма за KPI
+    const annualBonusMonthly = (typeof annualBonus === 'number' ? annualBonus : 0) / 12; // 1/12 в месяц
+    
+    // Итого выплат агенту
+    const totalAgentPayouts = newSalesPayout + renewalPayout + crossSellPayout + planBonusPayout + annualBonusMonthly;
+    
+    // Остаток эскроу (вернется компании, если агент не выполнит все KPI)
+    const escrowRemainder = escrow - totalAgentPayouts;
+    
+    // Прибыль компании = GMV - комиссия платформы - фактические выплаты агенту
+    const companyProfit = rev - platformFee - totalAgentPayouts;
 
-    setEconomics({ platformFee, escrow, retentionBonus, otherPayouts, companyProfit });
-  }, [revenue, streamPercents.retention]);
-
-  const handleStreamPercentChange = (stream: keyof typeof streamPercents, value: number) => {
-    const newPercents = { ...streamPercents, [stream]: value };
-    setStreamPercents(newPercents);
-  };
-
-  const totalStreamPercent = Object.values(streamPercents).reduce((sum, val) => sum + val, 0);
+    setEconomics({
+      platformFee,
+      escrow,
+      newSalesPayout,
+      renewalPayout,
+      crossSellPayout,
+      planBonusPayout,
+      annualBonusMonthly,
+      totalAgentPayouts,
+      escrowRemainder,
+      companyProfit,
+    });
+  }, [revenue, renewalAmount, crossSellAmount, planBonus, annualBonus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,9 +174,9 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         avg_check: typeof avgCheck === 'number' ? avgCheck : 500000,
         target_clients: finalClients,
         escrow_amount: economics.escrow,
-        agent_payouts_total: economics.escrow,
+        agent_payouts_total: economics.totalAgentPayouts,
         company_profit: economics.companyProfit,
-        roi_percentage: 0, // ROI считается от маржи платформы, для MVP ставим 0
+        roi_percentage: 0,
         deadline: deadline,
         status: selectedAgentId ? 'PENDING_APPROVAL' : 'DRAFT',
         created_at: new Date().toISOString(),
@@ -179,7 +197,10 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       setTargetConversion('');
       setAvgCheck('');
       setTargetClients('');
-      setStreamPercents({ newSales: 50, renewal: 15, crossSell: 10, planBonus: 10, retention: 10, annual: 5 });
+      setRenewalAmount('');
+      setCrossSellAmount('');
+      setPlanBonus(200);
+      setAnnualBonus('');
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
@@ -190,18 +211,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
   if (!isOpen) return null;
 
-  // Кнопка активна, если заполнены обязательные поля и сумма потоков = 100%
-  const isFormValid = typeof revenue === 'number' && revenue > 0 && title && deadline && totalStreamPercent === 100;
+  const isFormValid = typeof revenue === 'number' && revenue > 0 && title && deadline;
   const rev = typeof revenue === 'number' ? revenue : 0;
-
-  const streams = [
-    { key: 'newSales' as const, name: t('streams.newSales'), percent: streamPercents.newSales, color: 'bg-[#000052]' },
-    { key: 'renewal' as const, name: t('streams.renewal'), percent: streamPercents.renewal, color: 'bg-blue-500' },
-    { key: 'crossSell' as const, name: t('streams.crossSell'), percent: streamPercents.crossSell, color: 'bg-indigo-500' },
-    { key: 'planBonus' as const, name: t('streams.planBonus'), percent: streamPercents.planBonus, color: 'bg-purple-500' },
-    { key: 'retention' as const, name: t('streams.retention'), percent: streamPercents.retention, color: 'bg-[#B8860B]' },
-    { key: 'annual' as const, name: t('streams.annual'), percent: streamPercents.annual, color: 'bg-green-500' },
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -227,7 +238,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               />
             </div>
 
-            {/* Блок: Назначить агента, Плановая выручка, Срок исполнения */}
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.assignAgent')}</label>
               <div className="relative">
@@ -377,80 +387,146 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               <h3 className="text-lg font-bold text-[#000052]">{t('contractModal.unitEconomics')}</h3>
             </div>
 
+            {/* Распределение GMV */}
             <div className="space-y-3 mb-6">
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.escrowAvailable')}</span>
+                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.escrowAvailable')} (88%)</span>
                 <span className="font-bold text-[#000052] text-lg">
                   ${economics.escrow.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.retentionBonus')}</span>
-                <span className="font-semibold text-[#B8860B]">
-                  ${economics.retentionBonus.toLocaleString()}
+                <span className="text-sm text-gray-600">{t('contractModal.platformFee')} (12%)</span>
+                <span className="font-semibold text-gray-500">
+                  ${economics.platformFee.toLocaleString()}
                 </span>
               </div>
+            </div>
 
-              <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.otherPayouts')}</span>
-                <span className="font-semibold text-[#000052]">
-                  ${economics.otherPayouts.toLocaleString()}
-                </span>
+            {/* 6 потоков выплат */}
+            {rev > 0 && (
+              <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+                <p className="text-xs font-bold text-[#000052] uppercase mb-3">{t('contractModal.streamsTitle')}</p>
+                <div className="space-y-3">
+                  {/* Новые продажи */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-[#000052]"></div>
+                    <span className="flex-1 text-gray-700">Новые продажи (10% от контракта)</span>
+                    <span className="font-semibold text-[#000052]">${economics.newSalesPayout.toLocaleString()}</span>
+                  </div>
+
+                  {/* Продление */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span className="flex-1 text-gray-700">Продление (3% от суммы)</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={renewalAmount}
+                      onChange={(e) => setRenewalAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
+                      placeholder="Сумма продления"
+                      min="0"
+                    />
+                    <div className="text-right text-xs font-semibold text-[#000052]">${economics.renewalPayout.toLocaleString()}</div>
+                  </div>
+
+                  {/* Кросс-продажи */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                      <span className="flex-1 text-gray-700">Кросс-продажи (7% от суммы)</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={crossSellAmount}
+                      onChange={(e) => setCrossSellAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
+                      placeholder="Сумма кросс-продажи"
+                      min="0"
+                    />
+                    <div className="text-right text-xs font-semibold text-[#000052]">${economics.crossSellPayout.toLocaleString()}</div>
+                  </div>
+
+                  {/* Бонус за план */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="flex-1 text-gray-700">Бонус за выполнение плана (фиксированная сумма)</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={planBonus}
+                      onChange={(e) => setPlanBonus(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
+                      placeholder="200"
+                      min="0"
+                    />
+                    <div className="text-right text-xs font-semibold text-[#000052]">${economics.planBonusPayout.toLocaleString()}</div>
+                  </div>
+
+                  {/* Удержание */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-[#B8860B]"></div>
+                    <span className="flex-1 text-gray-700">Удержание (клиент {">"} 90 дней)</span>
+                    <span className="font-semibold text-[#B8860B]">Clawback</span>
+                  </div>
+
+                  {/* Годовой бонус */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="flex-1 text-gray-700">Годовой бонус (1/12 в месяц)</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={annualBonus}
+                      onChange={(e) => setAnnualBonus(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
+                      placeholder="Годовая сумма"
+                      min="0"
+                    />
+                    <div className="text-right text-xs font-semibold text-[#000052]">${economics.annualBonusMonthly.toLocaleString()}/мес</div>
+                  </div>
+                </div>
+
+                {/* Итого */}
+                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-[#000052]">Итого выплат агенту:</span>
+                    <span className="font-bold text-[#000052]">${economics.totalAgentPayouts.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-600">Остаток эскроу (вернется компании):</span>
+                    <span className="font-semibold text-green-600">${economics.escrowRemainder.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
+            )}
 
-              <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
-                <span className="text-sm text-gray-600">{t('contractModal.companyProfit')}</span>
-                <span className="font-bold text-gray-500 text-lg">
+            {/* Прибыль компании */}
+            <div className="mb-6 p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-semibold text-[#000052]">{t('contractModal.companyProfit')}</span>
+                <span className="font-bold text-green-600 text-lg">
                   ${economics.companyProfit.toLocaleString()}
                 </span>
               </div>
             </div>
 
-            {rev > 0 && (
-              <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
-                <p className="text-xs font-bold text-[#000052] uppercase mb-3">{t('contractModal.streamsTitle')}</p>
-                <div className="space-y-2">
-                  {streams.map((stream) => (
-                    <div key={stream.key} className="flex items-center gap-2 text-xs">
-                      <div className={'w-2 h-2 rounded-full ' + stream.color}></div>
-                      <span className="flex-1 text-gray-700">{stream.name}</span>
-                      <input
-                        type="number"
-                        value={stream.percent}
-                        onChange={(e) => handleStreamPercentChange(stream.key, Number(e.target.value) || 0)}
-                        className="w-16 px-2 py-1 border border-gray-300 rounded text-right text-[#000052] focus:outline-none focus:ring-1 focus:ring-[#000052]/20"
-                        min="0"
-                        max="100"
-                      />
-                      <span className="font-semibold text-[#000052] w-8">%</span>
-                    </div>
-                  ))}
-                </div>
-                {totalStreamPercent !== 100 && (
-                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                    ⚠️ Сумма процентов: {totalStreamPercent}% (должна быть 100%)
-                  </div>
-                )}
-              </div>
-            )}
-
+            {/* Clawback */}
             <div className="mb-6 p-4 bg-[#B8860B]/10 border border-[#B8860B]/30 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-[#B8860B] flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-bold text-[#000052]">{t('contractModal.clawbackTitle')}</p>
                   <p className="text-xs text-gray-700 mt-1">
-                    {t('contractModal.clawbackDesc')} (${economics.retentionBonus.toLocaleString()}) {t('contractModal.clawbackDesc2')}
+                    {t('contractModal.clawbackDesc')} {t('contractModal.clawbackDesc2')}
                   </p>
                 </div>
               </div>
-            </div>
-
-            <div className="mb-6 text-center">
-              <p className="text-[10px] text-gray-400">
-                {t('contractModal.platformFee')}: ${economics.platformFee.toLocaleString()} (12%)
-              </p>
             </div>
 
             <button
