@@ -1,94 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Инициализация переменных окружения
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://utsuzqmzawunqpiguuhk.supabase.co';
+// ВНИМАНИЕ: Замените текст ниже на ваш реальный anon ключ из настроек Supabase!
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0c3V6cW16YXd1bnFwaWd1dWhrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NjYxODUsImV4cCI6MjA5OTQ0MjE4NX0._GC9VYIpmpd-64nvM-vPJvhMR1ixsd6Yn9ztrTDd8Uw'; 
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ CRITICAL: Missing Supabase environment variables! Check your .env file.');
-}
-
-// 2. Создание клиента Supabase
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-});
-
-// ==========================================
-// 3. ТИПЫ ДАННЫХ (Database Types)
-// ==========================================
-
-export interface Company {
-  id: string;
-  user_id: string;
-  name: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: any;
-}
-
-export interface Agent {
-  id: string;
-  user_id: string;
-  full_name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: any;
-}
-
-export interface AgentWithUser {
-  id: string;
-  user_id: string;
-  email: string | null;
-  full_name: string | null;
-  phone: string | null;
-  specialization?: string | null;
-  status?: string;
-  created_at?: string;
-  updated_at?: string;
-  user?: {
-    id: string;
-    email: string;
-  };
-  [key: string]: any;
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface Contract {
   id: string;
   company_id: string;
   agent_id: string | null;
   title: string;
-  description?: string;
-  status: string;
-  escrow_amount?: number;
-  revenue?: number;
-  kpi_revenue?: number;
-  agent_payouts_total?: number;
-  company_profit?: number;
-  roi_percentage?: number;
-  reward_type?: string;
-  deadline?: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: any;
+  description: string;
+  status: 'ACTIVE' | 'IN_PROGRESS' | 'PENDING_APPROVAL' | 'COMPLETED' | 'DRAFT' | 'DISPUTED' | 'PENDING_PAYMENT';
+  escrow_amount: number;
+  revenue: number;
+  kpi_revenue: number;
+  agent_payouts_total: number;
+  company_profit: number;
+  roi_percentage: number;
+  deadline: string;
+  created_at: string;
+  kpi_calls?: number;
+  kpi_meetings?: number;
+  kpi_proposals?: number;
+  target_clients?: number;
 }
-
-export interface PaymentStream {
-  id: string;
-  contract_id: string;
-  amount: number;
-  status: string;
-  created_at?: string;
-  [key: string]: any;
-}
-
-export const DEFAULT_PAYMENT_STREAMS = [
-  { id: '1', name: '100% предоплата', value: 100 },
-  { id: '2', name: '50% предоплата, 50% по факту', value: 50 },
-  { id: '3', name: 'Постоплата', value: 0 }
-];
