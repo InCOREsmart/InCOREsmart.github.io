@@ -12,6 +12,7 @@ import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
+import { DashboardLayout } from './components/layouts/DashboardLayout';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -35,19 +36,19 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           
-          {/* Маршруты CEO */}
-          <Route path="/ceo" element={<ProtectedRoute><CEODashboard /></ProtectedRoute>} />
-          <Route path="/ceo/settings" element={<ProtectedRoute><CEOSettings /></ProtectedRoute>} />
-          <Route path="/ceo/contracts" element={<ProtectedRoute><CEOContractsPage /></ProtectedRoute>} />
-          <Route path="/ceo/contracts/:id" element={<ProtectedRoute><CEOContractDetailPage /></ProtectedRoute>} />
-          <Route path="/ceo/disputes" element={<ProtectedRoute><CEODisputesPage /></ProtectedRoute>} />
-          <Route path="/ceo/agents" element={<ProtectedRoute><CEOAgentsPage /></ProtectedRoute>} />
+          {/* Маршруты CEO с DashboardLayout */}
+          <Route path="/ceo" element={<ProtectedRoute><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/settings" element={<ProtectedRoute><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/contracts" element={<ProtectedRoute><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/contracts/:id" element={<ProtectedRoute><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
           
-          {/* Маршруты Агента */}
-          <Route path="/agent" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
-          <Route path="/agent/settings" element={<ProtectedRoute><AgentSettings /></ProtectedRoute>} />
-          <Route path="/agent/contracts" element={<ProtectedRoute><AgentContractsPage /></ProtectedRoute>} />
-          <Route path="/agent/contracts/:id" element={<ProtectedRoute><AgentContractDetailPage /></ProtectedRoute>} />
+          {/* Маршруты Агента с DashboardLayout */}
+          <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/agent/contracts" element={<ProtectedRoute><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractDetailPage /></DashboardLayout></ProtectedRoute>} />
           
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
