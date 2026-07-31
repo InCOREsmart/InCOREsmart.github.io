@@ -1,7 +1,5 @@
-import { ReactNode } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { CEODashboard } from './pages/ceo/CEODashboard';
@@ -13,86 +11,48 @@ import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
+import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
 
-function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles: string[] }) {
-  const { user, role, loading } = useAuth();
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#000052] mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка...</p>
-        </div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen text-[#000052]">Загрузка...</div>;
   }
 
-  if (!user) return <Navigate to="/login" replace />;
-
-  if (role && !allowedRoles.includes(role)) {
-    if (role === 'ceo') return <Navigate to="/ceo/dashboard" replace />;
-    if (role === 'agent') return <Navigate to="/agent/dashboard" replace />;
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
-}
-
-function PublicRoute({ children }: { children: ReactNode }) {
-  const { user, role, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#000052] mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user && role) {
-    if (role === 'ceo') return <Navigate to="/ceo/dashboard" replace />;
-    if (role === 'agent') return <Navigate to="/agent/dashboard" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-
-      {/* CEO Routes */}
-      <Route path="/ceo/dashboard" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/contracts" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/contracts/:id" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/agents" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/disputes" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/ceo/settings" element={<ProtectedRoute allowedRoles={['ceo']}><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
-
-      {/* Agent Routes */}
-      <Route path="/agent/dashboard" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/agent/contracts" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
-      <Route path="/agent/settings" element={<ProtectedRoute allowedRoles={['agent']}><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
-
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
-  );
+  return children;
 }
 
 function App() {
   return (
-    <HashRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </HashRouter>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Маршруты CEO */}
+          <Route path="/ceo" element={<ProtectedRoute><CEODashboard /></ProtectedRoute>} />
+          <Route path="/ceo/settings" element={<ProtectedRoute><CEOSettings /></ProtectedRoute>} />
+          <Route path="/ceo/contracts" element={<ProtectedRoute><CEOContractsPage /></ProtectedRoute>} />
+          <Route path="/ceo/contracts/:id" element={<ProtectedRoute><CEOContractDetailPage /></ProtectedRoute>} />
+          <Route path="/ceo/disputes" element={<ProtectedRoute><CEODisputesPage /></ProtectedRoute>} />
+          <Route path="/ceo/agents" element={<ProtectedRoute><CEOAgentsPage /></ProtectedRoute>} />
+          
+          {/* Маршруты Агента */}
+          <Route path="/agent" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
+          <Route path="/agent/settings" element={<ProtectedRoute><AgentSettings /></ProtectedRoute>} />
+          <Route path="/agent/contracts" element={<ProtectedRoute><AgentContractsPage /></ProtectedRoute>} />
+          <Route path="/agent/contracts/:id" element={<ProtectedRoute><AgentContractDetailPage /></ProtectedRoute>} />
+          
+          <Route path="/" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
