@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { DollarSign, TrendingUp, FileText, Target, Briefcase, AlertCircle } from 'lucide-react';
+import { DollarSign, Briefcase, TrendingUp, AlertCircle } from 'lucide-react';
 
 export function AgentDashboard() {
   const { t } = useTranslation();
@@ -11,7 +11,6 @@ export function AgentDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [contracts, setContracts] = useState<any[]>([]);
-  const [agentData, setAgentData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export function AgentDashboard() {
       }
 
       try {
-        // 1. Получаем данные агента
         const { data: agent, error: agentError } = await supabase
           .from('agents')
           .select('*')
@@ -42,9 +40,6 @@ export function AgentDashboard() {
           return;
         }
 
-        setAgentData(agent);
-
-        // 2. Получаем контракты, назначенные этому агенту (ТОЛЬКО ЧТЕНИЕ)
         const { data: contractsData, error: contractsError } = await supabase
           .from('contracts')
           .select('*')
@@ -98,23 +93,29 @@ export function AgentDashboard() {
     );
   }
 
-  const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL');
+  const activeContracts = contracts.filter(c => 
+    c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL'
+  );
   const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-  const totalPayouts = contracts.reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
+
+  // Расчет прогресса годового бонуса (1/12 каждый месяц)
+  const totalAnnualBonus = contracts.reduce((sum, c) => {
+    const createdAt = new Date(c.created_at);
+    const now = new Date();
+    const monthsPassed = Math.min(12, Math.max(0, 
+      (now.getFullYear() - createdAt.getFullYear()) * 12 + (now.getMonth() - createdAt.getMonth()) + 1
+    ));
+    const annualBonus = c.annual_bonus || 0;
+    const monthlyPayout = annualBonus / 12;
+    return sum + (monthlyPayout * monthsPassed);
+  }, 0);
+  const maxAnnualBonus = contracts.reduce((sum, c) => sum + (c.annual_bonus || 0), 0);
+  const annualProgress = maxAnnualBonus > 0 ? Math.min(100, (totalAnnualBonus / maxAnnualBonus) * 100) : 0;
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[#000052]">{t('agent.dashboardTitle')}</h1>
-          {agentData && (
-            <p className="text-gray-600 mt-1">{agentData.full_name}</p>
-          )}
-        </div>
-      </div>
-
       {/* KPI карточки */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold opacity-90">{t('agent.activeContracts')}</h3>
@@ -131,38 +132,36 @@ export function AgentDashboard() {
           <p className="text-3xl font-bold">${totalEscrow.toLocaleString()}</p>
         </div>
 
-        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
+        <div className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-6 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold opacity-90">{t('agent.pendingPayouts')}</h3>
+            <h3 className="text-lg font-semibold opacity-90">Годовой бонус</h3>
             <TrendingUp className="w-8 h-8 opacity-80" />
           </div>
-          <p className="text-3xl font-bold">${totalPayouts.toLocaleString()}</p>
-        </div>
-
-        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold opacity-90">{t('agent.paymentStreams')}</h3>
-            <Target className="w-8 h-8 opacity-80" />
+          <p className="text-2xl font-bold mb-2">${totalAnnualBonus.toLocaleString()}</p>
+          <div className="w-full bg-white/20 rounded-full h-2 mb-1">
+            <div 
+              className="bg-white h-2 rounded-full transition-all duration-500"
+              style={{ width: `${annualProgress}%` }}
+            ></div>
           </div>
-          <p className="text-3xl font-bold">6</p>
+          <p className="text-xs opacity-80">
+            {annualProgress.toFixed(0)}% от ${maxAnnualBonus.toLocaleString()}
+          </p>
         </div>
       </div>
 
-      {/* Список контрактов или заглушка */}
+      {/* Список контрактов */}
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
         <h2 className="text-xl font-bold text-[#000052] mb-4">{t('agent.myActiveContracts')}</h2>
         {activeContracts.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <p className="text-lg font-medium mb-2">{t('agent.noActiveContracts')}</p>
-            <p className="text-sm">{t('agent.contractWillAppear') || 'Контракты появятся здесь, когда CEO назначит вас исполнителем.'}</p>
+            <p className="text-sm">Контракты появятся здесь, когда CEO назначит вас исполнителем.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {activeContracts.map((contract) => {
-              const gmv = contract.revenue || contract.kpi_revenue || 0;
-              const platformFee = gmv * 0.12;
-              const agentViewAmount = gmv - platformFee;
               const escrow = contract.escrow_amount || 0;
 
               return (
@@ -177,13 +176,9 @@ export function AgentDashboard() {
                       {t(`contract.statuses.${contract.status}`)}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Сумма (за вычетом 12% платформы)</p>
-                      <p className="font-semibold text-[#000052]">${agentViewAmount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Эскроу (ваши бонусы)</p>
+                      <p className="text-gray-500">Эскроу</p>
                       <p className="font-semibold text-[#B8860B]">${escrow.toLocaleString()}</p>
                     </div>
                     <div>
@@ -191,7 +186,7 @@ export function AgentDashboard() {
                       <p className="font-semibold text-[#000052]">{new Date(contract.deadline).toLocaleDateString()}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">KPI подсказки</p>
+                      <p className="text-gray-500">KPI</p>
                       <p className="font-semibold text-[#000052]">
                         {contract.kpi_calls || 0} звонков, {contract.kpi_meetings || 0} встреч
                       </p>
