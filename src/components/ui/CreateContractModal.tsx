@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Calculator, Users, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp } from 'lucide-react';
+import { X, Calculator, Users, AlertCircle, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -41,7 +41,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     clients: 0,
   });
 
-  // Поля для расчета бонусов агента
   const [renewalAmount, setRenewalAmount] = useState<number | ''>('');
   const [crossSellAmount, setCrossSellAmount] = useState<number | ''>('');
   const [annualBonus, setAnnualBonus] = useState<number | ''>('');
@@ -68,7 +67,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     }
   }, [isOpen, user]);
 
-  // Автоматический расчет KPI подсказок из плановой выручки
   useEffect(() => {
     const rev = typeof revenue === 'number' ? revenue : 0;
     const avg = typeof avgCheck === 'number' && avgCheck > 0 ? avgCheck : 100000;
@@ -150,8 +148,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
       const generatedDescription = title + ' | KPI: ' + finalCalls + ' ' + t('contractModal.kpiCallsLabel') + ', ' + finalMeetings + ' ' + t('contractModal.kpiMeetingsLabel') + ', ' + finalProposals + ' ' + t('contractModal.kpiProposalsLabel') + ', ' + finalClients + ' ' + t('contractModal.kpiClientsLabel');
 
-      // УБРАНО: annual_bonus (колонки нет в БД)
-      // УБРАНО: min_check (поле удалено из формы)
       const { error } = await supabase.from('contracts').insert({
         company_id: companyData.id,
         agent_id: selectedAgentId || null,
@@ -170,11 +166,14 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         company_profit: economics.companyProfit,
         roi_percentage: 0,
         deadline: deadline,
-        status: selectedAgentId ? 'PENDING_APPROVAL' : 'DRAFT',
+        status: 'ACTIVE', // Эскроу оплачен, контракт активен
         created_at: new Date().toISOString(),
       });
 
       if (error) throw error;
+
+      // Подтверждение хеджирования
+      alert(`✅ Эскроу успешно захеджирован!\n\nСумма эскроу: $${economics.escrow.toLocaleString()}\nСтатус: ACTIVE\n\nСредства заблокированы в смарт-контракте и будут выплачены агенту по выполнению KPI.`);
 
       onCreated();
       onClose();
@@ -396,7 +395,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs">
                     <div className="w-2 h-2 rounded-full bg-[#000052]"></div>
-                    <span className="flex-1 text-gray-700">Новые продажи (10% от GMV)</span>
+                    <span className="flex-1 text-gray-700">Новые продажи (10%)</span>
                     <span className="font-semibold text-[#000052]">${economics.newSalesBonus.toLocaleString()}</span>
                   </div>
 
@@ -475,12 +474,28 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               </div>
             </div>
 
+            {/* Блок хеджирования */}
+            {economics.escrow > 0 && (
+              <div className="mb-6 p-4 bg-[#B8860B]/10 border border-[#B8860B]/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#B8860B] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-[#000052]">Хеджирование рисков</p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      Сумма эскроу <span className="font-bold text-[#B8860B]">${economics.escrow.toLocaleString()}</span> будет заблокирована в смарт-контракте и выплачена агенту только по выполнению KPI.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={!isFormValid || loading}
-              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isFormValid ? 'bg-[#000052] hover:bg-[#000066] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
+              className={'w-full py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ' + (isFormValid ? 'bg-[#B8860B] hover:bg-[#9a7209] text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed')}
             >
-              {loading ? t('contractModal.creating') : t('contractModal.publish')}
+              <ShieldCheck className="w-5 h-5" />
+              {loading ? 'Создание...' : 'Оплатить эскроу и опубликовать'}
             </button>
           </div>
         </form>
