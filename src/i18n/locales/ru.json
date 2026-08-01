@@ -10,9 +10,10 @@
   "auth": {
     "login": "Войти",
     "logout": "Выйти",
+    "register": "Зарегистрироваться",
     "email": "Email",
     "password": "Пароль",
-    "noAccount": "Нет аккаунта?",
+    "noAccount": "Уже есть аккаунт?",
     "registerNow": "Зарегистрироваться",
     "subtitle": "Платформа смарт-контрактов для найма",
     "role": "Роль",
@@ -103,10 +104,12 @@
     "myActiveContracts": "Мои активные контракты",
     "noActiveContracts": "Нет активных контрактов",
     "activeContracts": "Активные контракты",
-    "completedContracts": "Завершенные контракты"
+    "completedContracts": "Завершенные контракты",
+    "contractWillAppear": "Контракты появятся здесь, когда CEO назначит вас исполнителем"
   },
   "payouts": {
     "title": "Выплаты",
+    "subtitle": "Детализация ваших бонусов и эскроу",
     "newSales": "Новые продажи",
     "renewal": "Продление",
     "crossSell": "Кросс-продажи",
@@ -157,7 +160,8 @@
     "error": "Ошибка",
     "save": "Сохранить",
     "cancel": "Отмена",
-    "success": "Успешно"
+    "success": "Успешно",
+    "back": "Назад"
   },
   "contractModal": {
     "title": "Создать смарт-контракт",
