@@ -22,6 +22,7 @@ export function AgentDashboard() {
       }
 
       try {
+        // 1. Получаем данные агента
         const { data: agent, error: agentError } = await supabase
           .from('agents')
           .select('*')
@@ -30,11 +31,7 @@ export function AgentDashboard() {
 
         if (agentError) {
           console.error('Ошибка при получении данных агента:', agentError);
-          if (agentError.code === 'PGRST303' || agentError.message?.includes('JWT issued at future')) {
-            setError('Синхронизируйте время на компьютере: Настройки → Дата и время → Синхронизировать');
-          } else {
-            setError(agentError.message);
-          }
+          setError(agentError.message);
           setLoading(false);
           return;
         }
@@ -47,6 +44,7 @@ export function AgentDashboard() {
 
         setAgentData(agent);
 
+        // 2. Получаем контракты, назначенные этому агенту (ТОЛЬКО ЧТЕНИЕ)
         const { data: contractsData, error: contractsError } = await supabase
           .from('contracts')
           .select('*')
@@ -100,7 +98,7 @@ export function AgentDashboard() {
     );
   }
 
-  const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS');
+  const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL');
   const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
   const totalPayouts = contracts.reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
 
@@ -115,6 +113,7 @@ export function AgentDashboard() {
         </div>
       </div>
 
+      {/* KPI карточки */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -149,12 +148,14 @@ export function AgentDashboard() {
         </div>
       </div>
 
+      {/* Список контрактов или заглушка */}
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
         <h2 className="text-xl font-bold text-[#000052] mb-4">{t('agent.myActiveContracts')}</h2>
         {activeContracts.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>{t('agent.noActiveContracts')}</p>
+          <div className="text-center py-12 text-gray-500">
+            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <p className="text-lg font-medium mb-2">{t('agent.noActiveContracts')}</p>
+            <p className="text-sm">{t('agent.contractWillAppear') || 'Контракты появятся здесь, когда CEO назначит вас исполнителем.'}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -178,11 +179,11 @@ export function AgentDashboard() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Сумма контракта (за вычетом 12% платформы)</p>
+                      <p className="text-gray-500">Сумма (за вычетом 12% платформы)</p>
                       <p className="font-semibold text-[#000052]">${agentViewAmount.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Эскроу (бонусы)</p>
+                      <p className="text-gray-500">Эскроу (ваши бонусы)</p>
                       <p className="font-semibold text-[#B8860B]">${escrow.toLocaleString()}</p>
                     </div>
                     <div>
