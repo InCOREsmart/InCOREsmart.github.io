@@ -1,208 +1,257 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DollarSign, TrendingUp, Shield, Users, Briefcase, BarChart3, CheckCircle, Clock, ArrowUpRight, Activity, Plus, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, Contract } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateContractModal } from '../../components/ui/CreateContractModal';
+import { DollarSign, TrendingUp, Users, Target, Briefcase, ShieldCheck, Percent, ArrowRight } from 'lucide-react';
 
 export function CEODashboard() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  
-  const [metrics, setMetrics] = useState({ totalRevenue: 0, frozenEscrow: 0, paidToAgents: 0, netProfit: 0, avgRoi: 0, activeDealsCount: 0, pendingPayouts: 0 });
-  const [activeContracts, setActiveContracts] = useState<Contract[]>([]);
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showCompanyAlert, setShowCompanyAlert] = useState(false);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState({
+    totalRevenue: 0,
+    frozenEscrow: 0,
+    paidToAgents: 0,
+    netProfit: 0,
+    avgRoi: 0,
+    activeContracts: 0,
+    pendingPayouts: 0,
+    salesGoalAchievement: 0,
+    funnelConversion: 0,
+    revenuePerAgent: 0,
+  });
+  const [agents, setAgents] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
+    const fetchMetrics = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-        if (companyData) {
-          setCompanyId(companyData.id);
-          const { data: contracts } = await supabase.from('contracts').select('*').eq('company_id', companyData.id).order('created_at', { ascending: false });
-          if (contracts) {
-            calculateMetrics(contracts);
-            setActiveContracts(contracts.filter(c => ['ACTIVE', 'IN_PROGRESS', 'PENDING_APPROVAL', 'PENDING_MANUAL_APPROVAL'].includes(c.status)).slice(0, 5));
-          }
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!companyData) {
+          setLoading(false);
+          return;
         }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+
+        // Получаем контракты компании
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .eq('company_id', companyData.id);
+
+        setContracts(contractsData || []);
+
+        // Получаем агентов компании
+        const { data: agentsData } = await supabase
+          .from('agents')
+          .select('*')
+          .eq('company_id', companyData.id)
+          .eq('status', 'ACTIVE');
+
+        setAgents(agentsData || []);
+
+        // Расчет метрик
+        const totalRevenue = (contractsData || []).reduce((sum, c) => sum + (c.revenue || c.kpi_revenue || 0), 0);
+        const frozenEscrow = (contractsData || []).reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
+        const paidToAgents = (contractsData || []).reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
+        const netProfit = (contractsData || []).reduce((sum, c) => sum + (c.company_profit || 0), 0);
+        const avgRoi = contractsData && contractsData.length > 0
+          ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 0), 0) / contractsData.length
+          : 0;
+        const activeContracts = (contractsData || []).filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+        const pendingPayouts = (contractsData || []).filter(c => c.status === 'PENDING_PAYMENT').length;
+
+        // Новые метрики
+        // 1. Процент достижения целей по продажам
+        const totalPlannedRevenue = (contractsData || []).reduce((sum, c) => sum + (c.kpi_revenue || 0), 0);
+        const actualRevenue = (contractsData || []).filter(c => c.status === 'COMPLETED').reduce((sum, c) => sum + (c.revenue || 0), 0);
+        const salesGoalAchievement = totalPlannedRevenue > 0 ? (actualRevenue / totalPlannedRevenue) * 100 : 0;
+
+        // 2. Конверсия воронки продаж (от первого контакта до сделки)
+        const totalCalls = (contractsData || []).reduce((sum, c) => sum + (c.kpi_calls || 0), 0);
+        const completedDeals = (contractsData || []).filter(c => c.status === 'COMPLETED').length;
+        const funnelConversion = totalCalls > 0 ? (completedDeals / totalCalls) * 100 : 0;
+
+        // 3. Выручка на каждого агента
+        const revenuePerAgent = agentsData && agentsData.length > 0 ? totalRevenue / agentsData.length : 0;
+
+        setMetrics({
+          totalRevenue,
+          frozenEscrow,
+          paidToAgents,
+          netProfit,
+          avgRoi,
+          activeContracts,
+          pendingPayouts,
+          salesGoalAchievement,
+          funnelConversion,
+          revenuePerAgent,
+        });
+      } catch (err) {
+        console.error('Ошибка загрузки метрик:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchData();
+
+    fetchMetrics();
   }, [user]);
 
-  const calculateMetrics = (contracts: Contract[]) => {
-    let revenue = 0, escrow = 0, paid = 0, profit = 0, roiSum = 0, roiCount = 0, activeCount = 0, pendingPayouts = 0;
-    contracts.forEach((c) => {
-      const rev = c.revenue || c.kpi_revenue || 0;
-      if (c.status === 'COMPLETED') {
-        revenue += rev; paid += (c.agent_payouts_total || 0); profit += (c.company_profit || 0);
-        if ((c.roi_percentage || 0) > 0) { roiSum += (c.roi_percentage || 0); roiCount++; }
-      } else if (['ACTIVE', 'IN_PROGRESS', 'PENDING_APPROVAL', 'PENDING_MANUAL_APPROVAL'].includes(c.status)) {
-        escrow += (c.escrow_amount || 0); activeCount++;
-      } else if (c.status === 'PENDING_PAYMENT') {
-        pendingPayouts += (c.agent_payouts_total || 0);
-      }
-    });
-    setMetrics({ totalRevenue: revenue, frozenEscrow: escrow, paidToAgents: paid, netProfit: profit, avgRoi: roiCount > 0 ? roiSum / roiCount : 0, activeDealsCount: activeCount, pendingPayouts });
-  };
-
-  const formatCurrency = (amount: number) => '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
-
-  const handleCreateClick = () => {
-    if (companyId) {
-      setIsModalOpen(true);
-    } else {
-      setShowCompanyAlert(true);
-    }
-  };
-
-  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
-
-  const chartData = [
-    { label: t('dashboard.totalRevenue'), value: metrics.totalRevenue, color: 'bg-[#000052]', width: metrics.totalRevenue > 0 ? '100%' : '5%' },
-    { label: t('dashboard.escrowBalance'), value: metrics.frozenEscrow, color: 'bg-[#B8860B]', width: metrics.frozenEscrow > 0 ? `${(metrics.frozenEscrow / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
-    { label: t('ceoDashboard.paidToAgents'), value: metrics.paidToAgents, color: 'bg-blue-500', width: metrics.paidToAgents > 0 ? `${(metrics.paidToAgents / Math.max(metrics.totalRevenue, 1)) * 100}%` : '5%' },
-  ];
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-[#000052]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div>
+        <p className="mt-2">{t('common.loading')}</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-8 flex items-center justify-between">
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
-        <button onClick={handleCreateClick} className="bg-[#000052] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#000066]">
-          <Plus className="w-4 h-4" /> {t('contracts.createNew')}
-        </button>
       </div>
 
-      {showCompanyAlert && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600" />
-            <span className="text-sm font-medium text-yellow-800">Для создания контракта сначала заполните данные компании в настройках.</span>
+      {/* KPI карточки */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">{t('ceoDashboard.totalRevenue')}</h3>
+            <DollarSign className="w-8 h-8 opacity-80" />
           </div>
-          <button onClick={() => navigate('/ceo/settings')} className="text-sm font-semibold text-[#000052] underline">Перейти в настройки</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
-          <div className="flex items-center justify-between mb-3"><DollarSign className="w-5 h-5 text-[#B8860B]" /><ArrowUpRight className="w-4 h-4 text-green-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.totalRevenue)}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('dashboard.totalRevenue')}</p>
+          <p className="text-3xl font-bold">${metrics.totalRevenue.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
-          <div className="flex items-center justify-between mb-3"><Shield className="w-5 h-5 text-[#B8860B]" /><Activity className="w-4 h-4 text-[#B8860B]" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.frozenEscrow)}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('dashboard.escrowBalance')}</p>
+        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">{t('ceoDashboard.frozenEscrow')}</h3>
+            <ShieldCheck className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${metrics.frozenEscrow.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-[#B8860B]/30 bg-gradient-to-br from-[#B8860B]/10 to-[#B8860B]/5">
-          <div className="flex items-center justify-between mb-3"><Users className="w-5 h-5 text-[#B8860B]" /><CheckCircle className="w-4 h-4 text-[#B8860B]" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.paidToAgents)}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.paidToAgents')}</p>
+        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">{t('ceoDashboard.paidToAgents')}</h3>
+            <TrendingUp className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${metrics.paidToAgents.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="flex items-center justify-between mb-3"><TrendingUp className="w-5 h-5 text-purple-600" /><ArrowUpRight className="w-4 h-4 text-purple-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{formatCurrency(metrics.netProfit)}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.netProfit')}</p>
+        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">{t('ceoDashboard.netProfit')}</h3>
+            <DollarSign className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${metrics.netProfit.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100">
-          <div className="flex items-center justify-between mb-3"><BarChart3 className="w-5 h-5 text-indigo-600" /><TrendingUp className="w-4 h-4 text-indigo-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{metrics.avgRoi.toFixed(1)}%</p>
-          <p className="text-xs text-gray-600 mt-1">{t('ceoDashboard.avgRoi')}</p>
+        {/* Новые метрики */}
+        <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">Достижение целей</h3>
+            <Target className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{metrics.salesGoalAchievement.toFixed(1)}%</p>
+          <p className="text-xs opacity-80 mt-1">Плановая выручка выполнена</p>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex items-center justify-between mb-3"><Briefcase className="w-5 h-5 text-orange-600" /><Clock className="w-4 h-4 text-orange-600" /></div>
-          <p className="text-2xl font-bold text-[#000052]">{metrics.activeDealsCount}</p>
-          <p className="text-xs text-gray-600 mt-1">{t('dashboard.activeContracts')}</p>
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">Конверсия воронки</h3>
+            <ArrowRight className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{metrics.funnelConversion.toFixed(1)}%</p>
+          <p className="text-xs opacity-80 mt-1">От контакта до сделки</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">Выручка на агента</h3>
+            <Users className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">${metrics.revenuePerAgent.toLocaleString()}</p>
+          <p className="text-xs opacity-80 mt-1">Средняя на {agents.length} агентов</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold opacity-90">Средний ROI</h3>
+            <Percent className="w-8 h-8 opacity-80" />
+          </div>
+          <p className="text-3xl font-bold">{metrics.avgRoi.toFixed(1)}%</p>
+          <p className="text-xs opacity-80 mt-1">Возврат инвестиций</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <h2 className="text-lg font-semibold text-[#000052] mb-6 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.budgetDistribution')}
-          </h2>
-          <div className="space-y-6">
-            {chartData.map((item) => (
-              <div key={item.label}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                  <span className="text-sm font-bold text-[#000052]">{formatCurrency(item.value)}</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div className={`h-full ${item.color} rounded-full transition-all duration-500`} style={{ width: item.width }} />
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Активные контракты */}
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-[#000052]">{t('ceoDashboard.activeContracts')}</h2>
+          <button
+            onClick={() => navigate('/ceo/contracts')}
+            className="text-[#B8860B] hover:underline text-sm font-medium"
+          >
+            {t('common.viewAll')}
+          </button>
         </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-[#000052] flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.activeContracts')}
-            </h2>
-            <button onClick={() => navigate('/ceo/contracts')} className="text-sm font-semibold text-[#000052] hover:underline">
-              {t('common.viewAll')}
-            </button>
+        {contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Briefcase className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <p>{t('dashboard.noActiveContracts')}</p>
           </div>
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.title')}</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.status')}</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#000052] uppercase">{t('contract.escrowAmount')}</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-[#000052] uppercase">ROI</th>
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Название</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Агент</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Эскроу</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Дедлайн</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Статус</th>
                 </tr>
               </thead>
               <tbody>
-                {activeContracts.length === 0 ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-gray-500">{t('dashboard.noActiveContracts')}</td></tr>
-                ) : (
-                  activeContracts.map((contract) => (
-                    <tr key={contract.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4"><p className="font-medium text-[#000052]">{contract.title}</p></td>
-                      <td className="py-3 px-4"><span className="inline-block px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">{t(`contract.statuses.${contract.status}`) || contract.status}</span></td>
-                      <td className="py-3 px-4 text-right font-semibold text-[#000052]">{formatCurrency(contract.escrow_amount || 0)}</td>
-                      <td className="py-3 px-4 text-right font-semibold text-green-600">{contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}</td>
-                    </tr>
-                  ))
-                )}
+                {contracts
+                  .filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS')
+                  .slice(0, 5)
+                  .map((contract) => {
+                    const agent = agents.find(a => a.id === contract.agent_id);
+                    return (
+                      <tr
+                        key={contract.id}
+                        onClick={() => navigate(`/ceo/contracts/${contract.id}`)}
+                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+                      >
+                        <td className="py-3 px-4 text-sm text-[#000052] font-medium">{contract.title}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{agent?.full_name || 'Не назначен'}</td>
+                        <td className="py-3 px-4 text-sm text-[#B8860B] font-semibold">${(contract.escrow_amount || 0).toLocaleString()}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600">{new Date(contract.deadline).toLocaleDateString()}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            {t(`contract.statuses.${contract.status}`)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <h2 className="text-lg font-semibold text-[#000052] mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-gray-600" /> {t('ceoDashboard.pendingPayouts')}
-        </h2>
-        {metrics.pendingPayouts > 0 ? (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-            <span className="text-sm font-medium text-yellow-800">{t('ceoDashboard.totalPending')}</span>
-            <span className="text-xl font-bold text-[#B8860B]">{formatCurrency(metrics.pendingPayouts)}</span>
-          </div>
-        ) : (
-          <div className="text-center py-6 text-gray-500 flex items-center justify-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-500" /> {t('ceoDashboard.noPendingPayouts')}
-          </div>
         )}
       </div>
-
-      <CreateContractModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={() => { setIsModalOpen(false); window.location.reload(); }} />
     </div>
   );
 }
