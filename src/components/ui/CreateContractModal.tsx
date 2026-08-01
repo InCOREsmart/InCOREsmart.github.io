@@ -44,6 +44,9 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const [renewalAmount, setRenewalAmount] = useState<number | ''>('');
   const [crossSellAmount, setCrossSellAmount] = useState<number | ''>('');
   const [annualBonus, setAnnualBonus] = useState<number | ''>('');
+  
+  // Новое поле для интеграции с Битрикс24
+  const [bitrixDealId, setBitrixDealId] = useState('');
 
   useEffect(() => {
     if (isOpen && user) {
@@ -166,17 +169,20 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         company_profit: economics.companyProfit,
         roi_percentage: 0,
         deadline: deadline,
-        status: 'ACTIVE', // Эскроу оплачен, контракт активен
+        status: 'ACTIVE',
         created_at: new Date().toISOString(),
+        // Добавлено поле для связи с Битрикс24
+        bitrix_deal_id: bitrixDealId || null,
       });
 
       if (error) throw error;
 
-      // Подтверждение хеджирования
       alert(`✅ Эскроу успешно захеджирован!\n\nСумма эскроу: $${economics.escrow.toLocaleString()}\nСтатус: ACTIVE\n\nСредства заблокированы в смарт-контракте и будут выплачены агенту по выполнению KPI.`);
 
       onCreated();
       onClose();
+      
+      // Очистка формы
       setTitle('');
       setRevenue('');
       setDeadline('');
@@ -190,6 +196,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       setRenewalAmount('');
       setCrossSellAmount('');
       setAnnualBonus('');
+      setBitrixDealId(''); // Очистка нового поля
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
@@ -244,6 +251,21 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
               </div>
+            </div>
+
+            {/* Новое поле для ID сделки в Битрикс24 */}
+            <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
+                ID сделки в Битрикс24 (опционально)
+              </label>
+              <input
+                type="text"
+                value={bitrixDealId}
+                onChange={(e) => setBitrixDealId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#000052]/10 focus:border-[#000052]"
+                placeholder="Например: 456"
+              />
+              <p className="text-xs text-gray-500 mt-1">Укажите ID сделки, чтобы KPI обновлялись автоматически из CRM</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
