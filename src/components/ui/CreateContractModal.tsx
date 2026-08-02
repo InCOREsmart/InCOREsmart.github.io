@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Calculator, Users, AlertCircle, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { notifyContractCreated } from '../../lib/notifications';
 
 interface Agent {
   id: string;
@@ -45,7 +46,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const [crossSellAmount, setCrossSellAmount] = useState<number | ''>('');
   const [annualBonus, setAnnualBonus] = useState<number | ''>('');
   
-  // Новое поле для интеграции с Битрикс24
   const [bitrixDealId, setBitrixDealId] = useState('');
 
   useEffect(() => {
@@ -151,7 +151,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
       const generatedDescription = title + ' | KPI: ' + finalCalls + ' ' + t('contractModal.kpiCallsLabel') + ', ' + finalMeetings + ' ' + t('contractModal.kpiMeetingsLabel') + ', ' + finalProposals + ' ' + t('contractModal.kpiProposalsLabel') + ', ' + finalClients + ' ' + t('contractModal.kpiClientsLabel');
 
-      const { error } = await supabase.from('contracts').insert({
+      // Добавлено .select().single() чтобы получить ID созданного контракта для уведомления
+      const { data: newContract, error } = await supabase.from('contracts').insert({
         company_id: companyData.id,
         agent_id: selectedAgentId || null,
         title: title,
@@ -171,18 +172,34 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         deadline: deadline,
         status: 'ACTIVE',
         created_at: new Date().toISOString(),
-        // Добавлено поле для связи с Битрикс24
         bitrix_deal_id: bitrixDealId || null,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Отправка уведомления агенту, если он выбран
+      if (selectedAgentId && newContract) {
+        try {
+          const { data: agentData } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', selectedAgentId)
+            .maybeSingle();
+          
+          if (agentData?.user_id) {
+            await notifyContractCreated(agentData.user_id, title, newContract.id);
+          }
+        } catch (notifErr) {
+          console.error('Ошибка отправки уведомления:', notifErr);
+          // Не прерываем основной процесс, если уведомление не ушло
+        }
+      }
 
       alert(`✅ Эскроу успешно захеджирован!\n\nСумма эскроу: $${economics.escrow.toLocaleString()}\nСтатус: ACTIVE\n\nСредства заблокированы в смарт-контракте и будут выплачены агенту по выполнению KPI.`);
 
       onCreated();
       onClose();
       
-      // Очистка формы
       setTitle('');
       setRevenue('');
       setDeadline('');
@@ -196,7 +213,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       setRenewalAmount('');
       setCrossSellAmount('');
       setAnnualBonus('');
-      setBitrixDealId(''); // Очистка нового поля
+      setBitrixDealId('');
     } catch (err) {
       console.error('Ошибка создания контракта:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
@@ -253,7 +270,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               </div>
             </div>
 
-            {/* Новое поле для ID сделки в Битрикс24 */}
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">
                 ID сделки в Битрикс24 (опционально)
@@ -496,7 +512,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               </div>
             </div>
 
-            {/* Блок хеджирования */}
             {economics.escrow > 0 && (
               <div className="mb-6 p-4 bg-[#B8860B]/10 border border-[#B8860B]/30 rounded-lg">
                 <div className="flex items-start gap-2">
