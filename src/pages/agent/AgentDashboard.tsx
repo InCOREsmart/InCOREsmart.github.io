@@ -1,207 +1,124 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { DollarSign, Briefcase, TrendingUp, AlertCircle } from 'lucide-react';
+import { DollarSign, ShieldCheck, Target, FileText, Clock } from 'lucide-react';
 
 export function AgentDashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({ totalEarned: 0, pendingPayouts: 0, escrowBalance: 0, activeContracts: 0 });
+  const [recentContracts, setRecentContracts] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchAgentData = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+    const fetchData = async () => {
+      if (!user) { setLoading(false); return; }
       try {
-        const { data: agent, error: agentError } = await supabase
-          .from('agents')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (agentError) {
-          console.error('Ошибка при получении данных агента:', agentError);
-          setError(agentError.message);
-          setLoading(false);
-          return;
+        const { data: agentData } = await supabase.from('agents').select('id').eq('user_id', user.id).maybeSingle();
+        if (agentData) {
+          const { data: contractsData } = await supabase.from('contracts').select('*').eq('agent_id', agentData.id).order('created_at', { ascending: false });
+          const active = (contractsData || []).filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL');
+          const completed = (contractsData || []).filter(c => c.status === 'COMPLETED');
+          
+          setMetrics({
+            totalEarned: completed.reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0),
+            pendingPayouts: active.reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0),
+            escrowBalance: active.reduce((sum, c) => sum + (c.escrow_amount || 0), 0),
+            activeContracts: active.length,
+          });
+          setRecentContracts((contractsData || []).slice(0, 5));
         }
-
-        if (!agent) {
-          setError('Ваш профиль агента не создан. Обратитесь к CEO для назначения.');
-          setLoading(false);
-          return;
-        }
-
-        const { data: contractsData, error: contractsError } = await supabase
-          .from('contracts')
-          .select('*')
-          .eq('agent_id', agent.id)
-          .order('created_at', { ascending: false });
-
-        if (contractsError) {
-          console.error('Ошибка при получении контрактов:', contractsError);
-        }
-
-        setContracts(contractsData || []);
-      } catch (err) {
-        console.error('Критическая ошибка:', err);
-        setError('Произошла непредвиденная ошибка');
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error('Ошибка:', err); } finally { setLoading(false); }
     };
-
-    fetchAgentData();
+    fetchData();
   }, [user]);
 
-  if (loading) {
-    return (
-      <div className="p-8 text-center text-[#000052]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div>
-        <p className="mt-2">{t('common.loading')}</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="text-lg font-bold text-red-800 mb-2">Ошибка загрузки данных</h3>
-              <p className="text-red-700 text-sm mb-4">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
-              >
-                Повторить попытку
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const activeContracts = contracts.filter(c => 
-    c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL'
-  );
-  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-
-  // Расчет прогресса годового бонуса (1/12 каждый месяц)
-  const totalAnnualBonus = contracts.reduce((sum, c) => {
-    const createdAt = new Date(c.created_at);
-    const now = new Date();
-    const monthsPassed = Math.min(12, Math.max(0, 
-      (now.getFullYear() - createdAt.getFullYear()) * 12 + (now.getMonth() - createdAt.getMonth()) + 1
-    ));
-    const annualBonus = c.annual_bonus || 0;
-    const monthlyPayout = annualBonus / 12;
-    return sum + (monthlyPayout * monthsPassed);
-  }, 0);
-  const maxAnnualBonus = contracts.reduce((sum, c) => sum + (c.annual_bonus || 0), 0);
-  const annualProgress = maxAnnualBonus > 0 ? Math.min(100, (totalAnnualBonus / maxAnnualBonus) * 100) : 0;
+  if (loading) return <div className="p-8 text-center text-[#000052]"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div><p className="mt-2">{t('common.loading')}</p></div>;
 
   return (
     <div className="p-6 space-y-6">
-      {/* KPI карточки */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold opacity-90">{t('agent.activeContracts')}</h3>
-            <Briefcase className="w-8 h-8 opacity-80" />
+      <div>
+        <h1 className="text-3xl font-bold text-[#000052]">{t('agent.dashboardTitle')}</h1>
+        <p className="text-[#000052]/60 mt-1">Ваши показатели и активные задачи</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#000052] text-white p-5 rounded-xl shadow-sm border border-[#000052]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">{t('agent.totalEarned')}</h3>
+            <DollarSign className="w-5 h-5 opacity-80" />
           </div>
-          <p className="text-3xl font-bold">{activeContracts.length}</p>
+          <p className="text-2xl font-bold">${metrics.totalEarned.toLocaleString()}</p>
         </div>
 
-        <div className="bg-[#B8860B] text-white p-6 rounded-xl shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold opacity-90">{t('agent.escrowBalance')}</h3>
-            <DollarSign className="w-8 h-8 opacity-80" />
+        <div className="bg-[#B8860B] text-white p-5 rounded-xl shadow-sm border border-[#B8860B]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">{t('agent.escrowBalance')}</h3>
+            <ShieldCheck className="w-5 h-5 opacity-80" />
           </div>
-          <p className="text-3xl font-bold">${totalEscrow.toLocaleString()}</p>
+          <p className="text-2xl font-bold">${metrics.escrowBalance.toLocaleString()}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-6 rounded-xl shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold opacity-90">Годовой бонус</h3>
-            <TrendingUp className="w-8 h-8 opacity-80" />
+        <div className="bg-white text-[#000052] p-5 rounded-xl shadow-sm border border-[#000052]/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-[#000052]/70">{t('agent.pendingPayouts')}</h3>
+            <Target className="w-5 h-5 text-[#B8860B]" />
           </div>
-          <p className="text-2xl font-bold mb-2">${totalAnnualBonus.toLocaleString()}</p>
-          <div className="w-full bg-white/20 rounded-full h-2 mb-1">
-            <div 
-              className="bg-white h-2 rounded-full transition-all duration-500"
-              style={{ width: `${annualProgress}%` }}
-            ></div>
+          <p className="text-2xl font-bold text-[#000052]">${metrics.pendingPayouts.toLocaleString()}</p>
+        </div>
+
+        <div className="bg-white text-[#000052] p-5 rounded-xl shadow-sm border border-[#000052]/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-[#000052]/70">{t('agent.activeContracts')}</h3>
+            <FileText className="w-5 h-5 text-[#B8860B]" />
           </div>
-          <p className="text-xs opacity-80">
-            {annualProgress.toFixed(0)}% от ${maxAnnualBonus.toLocaleString()}
-          </p>
+          <p className="text-2xl font-bold text-[#000052]">{metrics.activeContracts}</p>
         </div>
       </div>
 
-      {/* Список контрактов */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-        <h2 className="text-xl font-bold text-[#000052] mb-4">{t('agent.myActiveContracts')}</h2>
-        {activeContracts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Briefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">{t('agent.noActiveContracts')}</p>
-            <p className="text-sm">Контракты появятся здесь, когда CEO назначит вас исполнителем.</p>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-[#000052]/10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-[#000052]">{t('agent.myActiveContracts')}</h2>
+          <button onClick={() => navigate('/agent/contracts')} className="text-sm text-[#B8860B] hover:underline font-medium">{t('common.viewAll')}</button>
+        </div>
+        
+        {recentContracts.length === 0 ? (
+          <div className="text-center py-12 text-[#000052]/60">
+            <Clock className="w-12 h-12 mx-auto mb-4 text-[#000052]/20" />
+            <p>{t('agent.noActiveContracts')}</p>
+            <p className="text-sm mt-1">{t('agent.contractWillAppear')}</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {activeContracts.map((contract) => {
-              const escrow = contract.escrow_amount || 0;
-
-              return (
-                <div
-                  key={contract.id}
-                  onClick={() => navigate(`/agent/contracts/${contract.id}`)}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-[#000052]">{contract.title}</h3>
-                    <span className="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                      {t(`contract.statuses.${contract.status}`)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Эскроу</p>
-                      <p className="font-semibold text-[#B8860B]">${escrow.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Дедлайн</p>
-                      <p className="font-semibold text-[#000052]">{new Date(contract.deadline).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">KPI</p>
-                      <p className="font-semibold text-[#000052]">
-                        {contract.kpi_calls || 0} звонков, {contract.kpi_meetings || 0} встреч
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#000052]/10">
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('contract.title')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('contract.status')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('contract.escrowAmount')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('contract.deadline')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#000052]/5">
+                {recentContracts.map((contract) => (
+                  <tr key={contract.id} onClick={() => navigate(`/agent/contracts/${contract.id}`)} className="hover:bg-[#000052]/5 cursor-pointer transition">
+                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{contract.title}</td>
+                    <td className="py-4 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${contract.status === 'ACTIVE' ? 'bg-[#B8860B]/10 text-[#B8860B]' : 'bg-[#000052]/5 text-[#000052]'}`}>
+                        {t(`contract.statuses.${contract.status}`)}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-sm text-[#000052]">${(contract.escrow_amount || 0).toLocaleString()}</td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70">{new Date(contract.deadline).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-        <h3 className="text-lg font-bold text-[#000052] mb-2">{t('agent.smartContractStatus')}</h3>
-        <p className="text-blue-700">{t('agent.fundsVerified')}</p>
       </div>
     </div>
   );

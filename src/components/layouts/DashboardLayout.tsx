@@ -29,38 +29,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchUserName = async () => {
       if (!user) return;
-
       try {
         if (role === 'ceo') {
-          const { data } = await supabase
-            .from('companies')
-            .select('display_name, company_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (data) {
-            setUserName(data.display_name || data.company_name || 'CEO');
-          }
+          const { data } = await supabase.from('companies').select('display_name, company_name').eq('user_id', user.id).maybeSingle();
+          if (data) setUserName(data.display_name || data.company_name || 'CEO');
         } else if (role === 'agent') {
-          const { data } = await supabase
-            .from('agents')
-            .select('full_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (data) {
-            setUserName(data.full_name || 'Agent');
-          }
+          const { data } = await supabase.from('agents').select('full_name').eq('user_id', user.id).maybeSingle();
+          if (data) setUserName(data.full_name || 'Agent');
         }
       } catch (err) {
-        console.error('Ошибка загрузки имени пользователя:', err);
+        console.error('Ошибка загрузки имени:', err);
       }
     };
-
     fetchUserName();
   }, [user, role]);
 
-  // Закрывать мобильное меню при смене маршрута
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -95,9 +78,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const menuContent = (
     <>
-      {/* Только логотип, без подписи */}
-      <div className="p-6 border-b border-gray-100 flex justify-center md:justify-start">
-        <img src="/logo.png" alt="InCORE" className="w-12 h-12" />
+      <div className="p-6 border-b border-gray-100 flex justify-center items-center w-full">
+        <img src="/logo.png" alt="InCORE" className="w-16 h-16 object-contain" />
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
@@ -130,7 +112,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               className={`flex-1 px-2 py-1 rounded text-xs font-medium transition ${
                 i18n.language === lang
                   ? 'bg-[#000052] text-white'
-                  : 'bg-gray-100 text-[#000052] hover:bg-gray-200'
+                  : 'bg-[#B8860B]/20 text-[#000052] hover:bg-[#B8860B]/30'
               }`}
             >
               {lang.toUpperCase()}
@@ -150,23 +132,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Десктопное левое меню — белое */}
       <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 text-[#000052] flex-col">
         {menuContent}
       </aside>
 
-      {/* Мобильное меню (overlay) */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div 
-            className="absolute inset-0 bg-black/50" 
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
           <aside className="absolute left-0 top-0 h-full w-64 bg-white text-[#000052] flex flex-col shadow-xl">
-            <button 
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg z-10"
-            >
+            <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg z-10">
               <X className="w-5 h-5 text-[#000052]" />
             </button>
             {menuContent}
@@ -174,16 +148,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Основная область */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Верхняя панель */}
         <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Кнопка бургера для мобильных */}
-            <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-            >
+            <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 hover:bg-gray-100 rounded-lg">
               <Menu className="w-6 h-6 text-[#000052]" />
             </button>
             <div>
@@ -193,8 +161,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
           <NotificationBell />
         </header>
-
-        {/* Контент */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
