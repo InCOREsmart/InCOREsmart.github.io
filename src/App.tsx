@@ -8,10 +8,12 @@ import { CEOContractsPage } from './pages/ceo/CEOContractsPage';
 import { CEOContractDetailPage } from './pages/ceo/CEOContractDetailPage';
 import { CEODisputesPage } from './pages/ceo/CEODisputesPage';
 import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
+import { CEOIntegrationsPage } from './pages/ceo/CEOIntegrationsPage';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
+import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -43,12 +45,14 @@ function App() {
           <Route path="/ceo/contracts/:id" element={<ProtectedRoute><DashboardLayout><CEOContractDetailPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/ceo/integrations" element={<ProtectedRoute><DashboardLayout><CEOIntegrationsPage /></DashboardLayout></ProtectedRoute>} />
           
           {/* Маршруты Агента с DashboardLayout */}
           <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
           <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
           <Route path="/agent/contracts" element={<ProtectedRoute><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractDetailPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/agent/payouts" element={<ProtectedRoute><DashboardLayout><AgentPayoutsPage /></DashboardLayout></ProtectedRoute>} />
           
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

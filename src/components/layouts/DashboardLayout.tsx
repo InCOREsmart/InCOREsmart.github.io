@@ -10,7 +10,8 @@ import {
   Settings, 
   Scale,
   LogOut,
-  DollarSign
+  DollarSign,
+  Globe
 } from 'lucide-react';
 import { NotificationBell } from '../ui/NotificationBell';
 
@@ -69,6 +70,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { path: '/ceo', icon: LayoutDashboard, label: t('nav.dashboard') },
     { path: '/ceo/contracts', icon: FileText, label: t('nav.contracts') },
     { path: '/ceo/agents', icon: Users, label: t('nav.agents') },
+    { path: '/ceo/integrations', icon: Globe, label: 'Интеграции' },
     { path: '/ceo/disputes', icon: Scale, label: t('nav.disputes') },
     { path: '/ceo/settings', icon: Settings, label: t('nav.settings') },
   ];
