@@ -1,137 +1,279 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, DollarSign, AlertCircle, TrendingUp } from 'lucide-react';
-import { supabase, Contract } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
+import { Plus, Search, Filter, DollarSign, Clock, Users, ShieldCheck, FileText } from 'lucide-react';
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
+
+// Демо-данные для питча (если в БД нет контрактов)
+const DEMO_CONTRACTS = [
+  { id: 'demo-1', title: 'Привлечение 10 корпоративных клиентов B2B', agent_id: 'demo-agent-1', agent_name: 'Александр С.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-08-31', created_at: '2026-01-15', kpi_calls: 120, kpi_meetings: 45, target_clients: 10 },
+  { id: 'demo-2', title: 'Расширение портфеля страхования в сегменте МСБ', agent_id: 'demo-agent-2', agent_name: 'Мария К.', revenue: 1000000, escrow_amount: 880000, status: 'IN_PROGRESS', deadline: '2026-09-15', created_at: '2026-02-01', kpi_calls: 150, kpi_meetings: 60, target_clients: 12 },
+  { id: 'demo-3', title: 'Пролонгация ключевых корпоративных договоров', agent_id: 'demo-agent-3', agent_name: 'Дмитрий В.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-07-30', created_at: '2026-01-20', kpi_calls: 90, kpi_meetings: 30, target_clients: 8 },
+  { id: 'demo-4', title: 'Кросс-продажи продуктов страхования жизни', agent_id: 'demo-agent-4', agent_name: 'Елена П.', revenue: 1000000, escrow_amount: 880000, status: 'PENDING_APPROVAL', deadline: '2026-10-01', created_at: '2026-03-10', kpi_calls: 130, kpi_meetings: 50, target_clients: 9 },
+  { id: 'demo-5', title: 'Выполнение квартального плана по новым продажам', agent_id: 'demo-agent-5', agent_name: 'Иван Т.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-08-15', created_at: '2026-02-15', kpi_calls: 80, kpi_meetings: 25, target_clients: 5 },
+  { id: 'demo-6', title: 'Удержание клиентов и снижение оттока', agent_id: 'demo-agent-6', agent_name: 'Ольга М.', revenue: 1000000, escrow_amount: 880000, status: 'COMPLETED', deadline: '2026-06-30', created_at: '2026-01-05', kpi_calls: 160, kpi_meetings: 65, target_clients: 14 },
+  { id: 'demo-7', title: 'Развитие партнерской сети в регионах', agent_id: 'demo-agent-7', agent_name: 'Сергей Н.', revenue: 1000000, escrow_amount: 880000, status: 'IN_PROGRESS', deadline: '2026-09-30', created_at: '2026-02-20', kpi_calls: 110, kpi_meetings: 40, target_clients: 7 },
+];
 
 export function CEOContractsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contracts, setContracts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [showNoCompanyAlert, setShowNoCompanyAlert] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     const fetchContracts = async () => {
-      if (!user) return;
-      setLoading(true);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
         if (companyData) {
-          setCompanyId(companyData.id);
-          const { data: contractsData } = await supabase.from('contracts').select('*').eq('company_id', companyData.id).order('created_at', { ascending: false });
-          setContracts(contractsData || []);
+          const { data: contractsData } = await supabase
+            .from('contracts')
+            .select('*')
+            .eq('company_id', companyData.id)
+            .order('created_at', { ascending: false });
+
+          if (contractsData && contractsData.length > 0) {
+            // Получаем имена агентов
+            const agentIds = [...new Set(contractsData.map(c => c.agent_id).filter(Boolean))];
+            const { data: agentsData } = await supabase
+              .from('agents')
+              .select('id, full_name')
+              .in('id', agentIds);
+
+            const contractsWithAgents = contractsData.map(c => ({
+              ...c,
+              agent_name: agentsData?.find(a => a.id === c.agent_id)?.full_name || 'Не назначен',
+            }));
+
+            setContracts(contractsWithAgents);
+          } else {
+            // Если контрактов нет — показываем демо-данные для питча
+            setContracts(DEMO_CONTRACTS);
+          }
+        } else {
+          setContracts(DEMO_CONTRACTS);
         }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error('Ошибка загрузки контрактов:', err);
+        setContracts(DEMO_CONTRACTS);
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchContracts();
   }, [user]);
 
-  const handleContractCreated = () => { setIsModalOpen(false); window.location.reload(); };
-  
-  const formatCurrency = (amount: number | undefined) => '$' + new Intl.NumberFormat('en-US').format(amount || 0);
-  
-  const formatDate = (dateStr: string | undefined) => {
-    if (!dateStr) return 'Не указано';
-    return new Date(dateStr).toLocaleDateString('ru-RU');
+  const handleContractCreated = () => {
+    window.location.reload();
   };
 
-  const activeContracts = contracts.filter(c => !['COMPLETED', 'DISPUTED', 'DISPUTED_REJECTED'].includes(c.status)).length;
-  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-  const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || c.kpi_revenue || 0), 0);
+  // Фильтрация и поиск
+  const filteredContracts = contracts.filter(c => {
+    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         c.agent_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  if (loading) return <div className="p-8 text-[#000052]">{t('common.loading')}</div>;
+  // Статистика
+  const totalGMV = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
+  const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
+      ACTIVE: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: 'Активен' },
+      IN_PROGRESS: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: 'В работе' },
+      PENDING_APPROVAL: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/70', label: 'Ожидает подтверждения' },
+      COMPLETED: { bg: 'bg-[#B8860B]/20', text: 'text-[#B8860B]', label: 'Завершен' },
+      DRAFT: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/60', label: 'Черновик' },
+      DISPUTED: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: 'Оспорен' },
+      PENDING_PAYMENT: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: 'Ожидает оплаты' },
+    };
+    const badge = badges[status] || badges.DRAFT;
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-[#000052]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div>
+        <p className="mt-2">{t('common.loading')}</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Шапка */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
-          <p className="text-gray-600 mt-1">{activeContracts} {t('dashboard.activeContracts').toLowerCase()}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
+          <p className="text-sm text-[#000052]/70 mt-1">Управление смарт-контрактами и хеджирование рисков</p>
         </div>
-        <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="bg-[#000052] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#000066]">
-          <Plus className="w-5 h-5" /> {t('contracts.createNew')}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-lg hover:bg-[#9a7209] transition text-sm font-semibold"
+        >
+          <Plus className="w-4 h-4" />
+          {t('contracts.createNew')}
         </button>
-        {showNoCompanyAlert && (
-          <div className="absolute top-20 right-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm z-50 shadow-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" /> Сначала заполните данные компании в настройках
-          </div>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#000052]/10 rounded-lg"><FileText className="w-5 h-5 text-[#000052]" /></div>
-            <div><p className="text-xs text-gray-600">{t('dashboard.activeContracts')}</p><p className="text-2xl font-bold text-[#000052]">{activeContracts}</p></div>
+      {/* 3 ключевые метрики */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">Общий GMV</h3>
+            <DollarSign className="w-5 h-5 opacity-80" />
           </div>
+          <p className="text-2xl font-bold">${totalGMV.toLocaleString()}</p>
+          <p className="text-xs opacity-70 mt-1">{contracts.length} контрактов</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg"><DollarSign className="w-5 h-5 text-yellow-600" /></div>
-            <div><p className="text-xs text-gray-600">{t('dashboard.escrowBalance')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalEscrow)}</p></div>
+
+        <div className="bg-[#B8860B] text-white p-5 rounded-xl border border-[#B8860B]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">Заморожено в эскроу</h3>
+            <ShieldCheck className="w-5 h-5 opacity-80" />
           </div>
+          <p className="text-2xl font-bold">${totalEscrow.toLocaleString()}</p>
+          <p className="text-xs opacity-70 mt-1">Защита от рисков</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-            <div><p className="text-xs text-gray-600">{t('dashboard.totalRevenue')}</p><p className="text-2xl font-bold text-[#000052]">{formatCurrency(totalRevenue)}</p></div>
+
+        <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-[#000052]/70">Активные контракты</h3>
+            <Users className="w-5 h-5 text-[#B8860B]" />
+          </div>
+          <p className="text-2xl font-bold text-[#000052]">{activeCount}</p>
+          <p className="text-xs text-[#000052]/60 mt-1">В работе у агентов</p>
+        </div>
+      </div>
+
+      {/* Фильтры и поиск */}
+      <div className="bg-white p-4 rounded-xl border border-[#000052]/10">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#000052]/40" />
+            <input
+              type="text"
+              placeholder="Поиск по названию или агенту..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#000052]/40" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="pl-10 pr-8 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30 appearance-none cursor-pointer"
+            >
+              <option value="all">Все статусы</option>
+              <option value="ACTIVE">Активен</option>
+              <option value="IN_PROGRESS">В работе</option>
+              <option value="PENDING_APPROVAL">Ожидает подтверждения</option>
+              <option value="COMPLETED">Завершен</option>
+              <option value="DRAFT">Черновик</option>
+            </select>
           </div>
         </div>
       </div>
 
-      {contracts.length === 0 ? (
-        <div className="bg-white p-6 rounded-lg border border-gray-200 text-center py-12">
-          <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-[#000052] mb-2">{t('contract.noContracts')}</h3>
-          <p className="text-gray-600 mb-6">{t('contract.createFirst')}</p>
-          <button onClick={() => companyId ? setIsModalOpen(true) : setShowNoCompanyAlert(true)} className="bg-[#000052] text-white px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-[#000066]">
-            <Plus className="w-5 h-5" /> {t('contracts.createNew')}
-          </button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Таблица контрактов */}
+      <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
+        {filteredContracts.length === 0 ? (
+          <div className="text-center py-12 text-[#000052]/60">
+            <FileText className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" />
+            <p className="text-lg font-medium mb-2">{t('contract.noContracts')}</p>
+            <p className="text-sm">{t('contract.createFirst')}</p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-[#000052]/5">
                 <tr>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">{t('contract.title')}</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">{t('contract.status')}</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">{t('contract.deadline')}</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">{t('contracts.plannedRevenue')}</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">{t('contract.escrowAmount')}</th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">ROI</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Название</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">GMV</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Эскроу</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дедлайн</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Статус</th>
                 </tr>
               </thead>
-              <tbody>
-                {contracts.map((contract) => (
-                  <tr 
-                    key={contract.id} 
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+              <tbody className="divide-y divide-[#000052]/5">
+                {filteredContracts.map((contract) => (
+                  <tr
+                    key={contract.id}
                     onClick={() => navigate(`/ceo/contracts/${contract.id}`)}
+                    className="hover:bg-[#000052]/5 cursor-pointer transition"
                   >
-                    <td className="py-4 px-4"><p className="font-medium text-[#000052]">{contract.title}</p><p className="text-sm text-gray-600 truncate max-w-xs">{contract.description}</p></td>
-                    <td className="py-4 px-4"><ContractStatusBadge status={contract.status} /></td>
-                    <td className="py-4 px-4 text-sm text-gray-600">{formatDate(contract.deadline)}</td>
-                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.revenue || contract.kpi_revenue || 0)}</td>
-                    <td className="py-4 px-4 text-right font-medium text-[#000052]">{formatCurrency(contract.escrow_amount || 0)}</td>
-                    <td className="py-4 px-4 text-right font-semibold text-green-600">{contract.roi_percentage ? `${contract.roi_percentage.toFixed(1)}%` : '-'}</td>
+                    <td className="py-4 px-4">
+                      <div className="font-semibold text-[#000052] text-sm">{contract.title}</div>
+                      <div className="text-xs text-[#000052]/60 mt-1">
+                        Создан: {new Date(contract.created_at).toLocaleDateString('ru-RU')}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[#B8860B]/10 flex items-center justify-center">
+                          <Users className="w-4 h-4 text-[#B8860B]" />
+                        </div>
+                        <span className="text-sm text-[#000052]">{contract.agent_name || 'Не назначен'}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="text-sm font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="text-sm font-bold text-[#B8860B]">${(contract.escrow_amount || 0).toLocaleString()}</div>
+                      <div className="text-xs text-[#000052]/60">Заблокировано</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-1 text-sm text-[#000052]">
+                        <Clock className="w-3 h-3" />
+                        {new Date(contract.deadline).toLocaleDateString('ru-RU')}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      {getStatusBadge(contract.status)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-      <CreateContractModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={handleContractCreated} />
+        )}
+      </div>
+
+      {/* Модалка создания контракта */}
+      <CreateContractModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreated={handleContractCreated}
+      />
     </div>
   );
 }
