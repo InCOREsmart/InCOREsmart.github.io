@@ -94,15 +94,15 @@ export function CEOIntegrationsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#000052]">Интеграции</h1>
-          <p className="text-gray-600 mt-1">Подключение внешних систем для автоматизации KPI</p>
+          <h1 className="text-3xl font-bold text-[#000052]">{t('integrations.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('integrations.subtitle')}</p>
         </div>
         <button
           onClick={handleRefresh}
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
         >
           <RefreshCw className="w-4 h-4" />
-          Обновить
+          {t('integrations.refresh')}
         </button>
       </div>
 
@@ -113,11 +113,11 @@ export function CEOIntegrationsPage() {
               <Globe className="w-8 h-8 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#000052]">Битрикс24</h2>
-              <p className="text-gray-600">Автоматический подсчет KPI из CRM</p>
+              <h2 className="text-2xl font-bold text-[#000052]">{t('integrations.bitrixTitle')}</h2>
+              <p className="text-gray-600">{t('integrations.bitrixDescription')}</p>
               <div className="flex items-center gap-2 mt-2">
                 <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-sm font-semibold text-green-600">Edge Function задеплоена</span>
+                <span className="text-sm font-semibold text-green-600">{t('integrations.edgeFunctionDeployed')}</span>
               </div>
             </div>
           </div>
@@ -125,22 +125,22 @@ export function CEOIntegrationsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-500 mb-1">Всего контрактов</p>
+            <p className="text-xs text-gray-500 mb-1">{t('integrations.totalContracts')}</p>
             <p className="text-2xl font-bold text-[#000052]">{contractsCount}</p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <p className="text-xs text-gray-500 mb-1">Привязано к Битрикс24</p>
+            <p className="text-xs text-gray-500 mb-1">{t('integrations.linkedToBitrix')}</p>
             <p className="text-2xl font-bold text-green-600">{linkedContractsCount}</p>
           </div>
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <p className="text-xs text-gray-500 mb-1">Получено вебхуков</p>
+            <p className="text-xs text-gray-500 mb-1">{t('integrations.receivedWebhooks')}</p>
             <p className="text-2xl font-bold text-blue-600">{logs.length}</p>
           </div>
         </div>
 
         <div className="mb-6">
           <label className="block text-sm font-semibold text-[#000052] mb-2">
-            URL вебхука для Битрикс24
+            {t('integrations.webhookUrl')}
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -154,69 +154,69 @@ export function CEOIntegrationsPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg transition"
             >
               <Copy className="w-4 h-4" />
-              {copied ? 'Скопировано!' : 'Копировать'}
+              {copied ? t('integrations.copied') : t('integrations.copy')}
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Вставьте этот URL в настройки входящего вебхука Битрикс24
+            {t('integrations.webhookHint')}
           </p>
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-[#000052] mb-3 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-blue-600" />
-            Как настроить интеграцию
+            {t('integrations.howToSetup')}
           </h3>
           <ol className="space-y-2 text-sm text-gray-700">
             <li className="flex gap-2">
               <span className="font-bold text-blue-600">1.</span>
-              <span>Откройте Битрикс24 → Приложения → Разработчикам → Другое → Входящий вебхук</span>
+              <span>{t('integrations.step1')}</span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-blue-600">2.</span>
-              <span>Название: <code className="bg-white px-2 py-0.5 rounded">InCORE KPI Sync</code></span>
+              <span>{t('integrations.step2')}: <code className="bg-white px-2 py-0.5 rounded">InCORE KPI Sync</code></span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-blue-600">3.</span>
-              <span>URL: вставьте скопированный выше URL</span>
+              <span>{t('integrations.step3')}</span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-blue-600">4.</span>
-              <span>События: выберите <code className="bg-white px-2 py-0.5 rounded">ONCRMDEALUPDATE</code></span>
+              <span>{t('integrations.step4')}</span>
             </li>
             <li className="flex gap-2">
               <span className="font-bold text-blue-600">5.</span>
-              <span>Нажмите "Сохранить"</span>
+              <span>{t('integrations.step5')}</span>
             </li>
           </ol>
         </div>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="font-semibold text-[#000052] mb-3">Как работают KPI</h3>
+          <h3 className="font-semibold text-[#000052] mb-3">{t('integrations.howKpiWork')}</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <span className="text-gray-700">Стадия содержит <code className="bg-white px-2 py-0.5 rounded">call</code> → +1 к "Звонки"</span>
+              <span className="text-gray-700">{t('integrations.kpiCall')}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span className="text-gray-700">Стадия содержит <code className="bg-white px-2 py-0.5 rounded">meeting</code> → +1 к "Встречи"</span>
+              <span className="text-gray-700">{t('integrations.kpiMeeting')}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-              <span className="text-gray-700">Стадия содержит <code className="bg-white px-2 py-0.5 rounded">won</code> или <code className="bg-white px-2 py-0.5 rounded">complete</code> → +1 к "Клиенты"</span>
+              <span className="text-gray-700">{t('integrations.kpiWon')}</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-        <h2 className="text-xl font-bold text-[#000052] mb-4">Последние вебхуки</h2>
+        <h2 className="text-xl font-bold text-[#000052] mb-4">{t('integrations.recentWebhooks')}</h2>
         {logs.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <XCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">Вебхуки еще не получены</p>
-            <p className="text-sm">Настройте вебхук в Битрикс24 и измените стадию сделки</p>
+            <p className="text-lg font-medium mb-2">{t('integrations.noWebhooks')}</p>
+            <p className="text-sm">{t('integrations.noWebhooksHint')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -224,8 +224,8 @@ export function CEOIntegrationsPage() {
               <div key={log.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="font-semibold text-[#000052]">Сделка #{log.deal_id}</p>
-                    <p className="text-sm text-gray-600">{log.title || 'Без названия'}</p>
+                    <p className="font-semibold text-[#000052]">{t('integrations.deal')} #{log.deal_id}</p>
+                    <p className="text-sm text-gray-600">{log.title || t('integrations.noTitle')}</p>
                   </div>
                   <p className="text-xs text-gray-500">
                     {new Date(log.created_at).toLocaleString('ru-RU')}
@@ -233,7 +233,7 @@ export function CEOIntegrationsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                    Стадия: {log.stage_id}
+                    {t('integrations.stage')}: {log.stage_id}
                   </span>
                 </div>
               </div>
@@ -249,16 +249,16 @@ export function CEOIntegrationsPage() {
               <Globe className="w-8 h-8 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#000052]">ЮKassa</h2>
-              <p className="text-gray-600 text-sm">Оплата эскроу</p>
+              <h2 className="text-xl font-bold text-[#000052]">{t('integrations.yukassa')}</h2>
+              <p className="text-gray-600 text-sm">{t('integrations.yukassaDescription')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-3">
-            Прием платежей и split-payment (12% платформе, 88% в эскроу)
+            {t('integrations.yukassaDetails')}
           </p>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <XCircle className="w-4 h-4" />
-            <span>Скоро</span>
+            <span>{t('integrations.comingSoon')}</span>
           </div>
         </div>
 
@@ -268,16 +268,16 @@ export function CEOIntegrationsPage() {
               <Globe className="w-8 h-8 text-green-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#000052]">1С-Битрикс</h2>
-              <p className="text-gray-600 text-sm">Бухгалтерский учет</p>
+              <h2 className="text-xl font-bold text-[#000052]">{t('integrations.oneC')}</h2>
+              <p className="text-gray-600 text-sm">{t('integrations.oneCDescription')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-3">
-            Автоматическая синхронизация платежей и актов
+            {t('integrations.oneCDetails')}
           </p>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <XCircle className="w-4 h-4" />
-            <span>Скоро</span>
+            <span>{t('integrations.comingSoon')}</span>
           </div>
         </div>
       </div>

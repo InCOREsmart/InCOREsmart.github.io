@@ -56,7 +56,6 @@ export function CEOAccountingExport() {
     return agent?.inn || '—';
   };
 
-  // Генерация CSV
   const generateCSV = (headers: string[], rows: string[][], filename: string) => {
     const BOM = '\uFEFF';
     const csvContent = BOM + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
@@ -69,7 +68,6 @@ export function CEOAccountingExport() {
     URL.revokeObjectURL(url);
   };
 
-  // 1. Реестр платежей
   const downloadPaymentRegistry = () => {
     const headers = ['Дата', 'Контракт', 'Агент', 'ИНН агента', 'Сумма GMV', 'Эскроу', 'Комиссия 12%', 'Выплата агенту', 'Прибыль компании', 'Статус'];
     const rows = contracts.map(c => [
@@ -87,11 +85,10 @@ export function CEOAccountingExport() {
     generateCSV(headers, rows, `Реестр_платежей_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  // 2. Акт выполненных работ
   const downloadActs = () => {
     const completedContracts = contracts.filter(c => c.status === 'COMPLETED');
     if (completedContracts.length === 0) {
-      alert('Нет завершенных контрактов для формирования актов');
+      alert(t('accounting.noCompletedContracts'));
       return;
     }
 
@@ -134,7 +131,6 @@ export function CEOAccountingExport() {
     URL.revokeObjectURL(url);
   };
 
-  // 3. Справка о доходах агентов
   const downloadIncomeStatements = () => {
     const headers = ['Агент', 'ИНН', 'Налоговый статус', 'Кол-во контрактов', 'Общий GMV', 'Общие выплаты', 'Комиссия платформы', 'Чистый доход'];
     const agentStats = agents.map(agent => {
@@ -149,14 +145,13 @@ export function CEOAccountingExport() {
         agentContracts.length.toString(),
         totalGmv.toString(),
         totalPayouts.toString(),
-        (totalGmv * 0.12).toString(), // Встроено напрямую, чтобы избежать ошибки линтера
+        (totalGmv * 0.12).toString(),
         (totalPayouts - (totalGmv * 0.12)).toString(),
       ];
     });
     generateCSV(headers, agentStats, `Справки_о_доходах_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  // 4. Скачать всё одним кликом
   const downloadAll = () => {
     downloadPaymentRegistry();
     setTimeout(() => downloadActs(), 500);
@@ -175,14 +170,14 @@ export function CEOAccountingExport() {
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-[#000052]">Бухгалтерский экспорт</h1>
-        <p className="text-gray-600 mt-1">Скачайте пакет документов для бухгалтерии</p>
+        <h1 className="text-3xl font-bold text-[#000052]">{t('accounting.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('accounting.subtitle')}</p>
       </div>
 
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-start gap-3">
         <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-[#000052]">Информация о компании</p>
+          <p className="text-sm font-semibold text-[#000052]">{t('accounting.companyInfo')}</p>
           <p className="text-sm text-gray-700">
             {company?.company_name || '—'} | ИНН: {company?.inn || '—'} | КПП: {company?.kpp || '—'}
           </p>
@@ -194,19 +189,19 @@ export function CEOAccountingExport() {
           <div className="flex items-center gap-3 mb-4">
             <FileSpreadsheet className="w-8 h-8 text-green-600" />
             <div>
-              <h3 className="font-bold text-[#000052]">Реестр платежей</h3>
-              <p className="text-xs text-gray-600">CSV со всеми транзакциями</p>
+              <h3 className="font-bold text-[#000052]">{t('accounting.paymentRegistry')}</h3>
+              <p className="text-xs text-gray-600">{t('accounting.paymentRegistryDesc')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Дата, контракт, агент, ИНН, GMV, эскроу, комиссия, выплата, прибыль, статус.
+            {t('accounting.paymentRegistryDetails')}
           </p>
           <button
             onClick={downloadPaymentRegistry}
             className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Скачать CSV
+            {t('accounting.downloadCsv')}
           </button>
         </div>
 
@@ -214,19 +209,19 @@ export function CEOAccountingExport() {
           <div className="flex items-center gap-3 mb-4">
             <FileText className="w-8 h-8 text-blue-600" />
             <div>
-              <h3 className="font-bold text-[#000052]">Акты выполненных работ</h3>
-              <p className="text-xs text-gray-600">XLS для завершенных контрактов</p>
+              <h3 className="font-bold text-[#000052]">{t('accounting.actsOfWork')}</h3>
+              <p className="text-xs text-gray-600">{t('accounting.actsOfWorkDesc')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Акты с разбивкой по 6 потокам выплат для каждого завершенного контракта.
+            {t('accounting.actsOfWorkDetails')}
           </p>
           <button
             onClick={downloadActs}
             className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Скачать XLS
+            {t('accounting.downloadXls')}
           </button>
         </div>
 
@@ -234,19 +229,19 @@ export function CEOAccountingExport() {
           <div className="flex items-center gap-3 mb-4">
             <FileText className="w-8 h-8 text-purple-600" />
             <div>
-              <h3 className="font-bold text-[#000052]">Справки о доходах</h3>
-              <p className="text-xs text-gray-600">CSV по каждому агенту</p>
+              <h3 className="font-bold text-[#000052]">{t('accounting.incomeStatements')}</h3>
+              <p className="text-xs text-gray-600">{t('accounting.incomeStatementsDesc')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Сводка по агентам: ИНН, налоговый статус, кол-во контрактов, общие выплаты.
+            {t('accounting.incomeStatementsDetails')}
           </p>
           <button
             onClick={downloadIncomeStatements}
             className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
-            Скачать CSV
+            {t('accounting.downloadCsv')}
           </button>
         </div>
 
@@ -254,19 +249,19 @@ export function CEOAccountingExport() {
           <div className="flex items-center gap-3 mb-4">
             <Archive className="w-8 h-8 text-[#B8860B]" />
             <div>
-              <h3 className="font-bold text-[#000052]">Полный пакет</h3>
-              <p className="text-xs text-gray-600">Все документы одним кликом</p>
+              <h3 className="font-bold text-[#000052]">{t('accounting.fullPackage')}</h3>
+              <p className="text-xs text-gray-600">{t('accounting.fullPackageDesc')}</p>
             </div>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Реестр + Акты + Справки. Скачиваются 3 файла последовательно.
+            {t('accounting.fullPackageDetails')}
           </p>
           <button
             onClick={downloadAll}
             className="w-full py-3 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg font-bold transition flex items-center justify-center gap-2"
           >
             <Download className="w-5 h-5" />
-            Скачать пакет для бухгалтера
+            {t('accounting.downloadPackage')}
           </button>
         </div>
       </div>

@@ -66,7 +66,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     i18n.changeLanguage(lang);
   };
 
-  // Меню для CEO
+  // Меню для CEO - ВСЕ С t()
   const ceoMenuItems = [
     { path: '/ceo', icon: LayoutDashboard, label: t('nav.dashboard') },
     { path: '/ceo/contracts', icon: FileText, label: t('nav.contracts') },
