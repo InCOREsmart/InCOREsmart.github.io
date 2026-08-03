@@ -11,7 +11,8 @@ import {
   Scale,
   LogOut,
   DollarSign,
-  Globe
+  Globe,
+  Archive
 } from 'lucide-react';
 import { NotificationBell } from '../ui/NotificationBell';
 
@@ -71,6 +72,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     { path: '/ceo/contracts', icon: FileText, label: t('nav.contracts') },
     { path: '/ceo/agents', icon: Users, label: t('nav.agents') },
     { path: '/ceo/integrations', icon: Globe, label: 'Интеграции' },
+    { path: '/ceo/accounting', icon: Archive, label: 'Бухгалтерия' },
     { path: '/ceo/disputes', icon: Scale, label: t('nav.disputes') },
     { path: '/ceo/settings', icon: Settings, label: t('nav.settings') },
   ];
@@ -87,7 +89,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Левое золотое меню */}
       <aside className="w-64 bg-[#B8860B] text-white flex flex-col">
         <div className="p-6 border-b border-[#B8860B]/20">
           <div className="flex items-center gap-3">
@@ -120,7 +121,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Переключатель языков */}
         <div className="p-4 border-t border-[#B8860B]/20">
           <div className="flex gap-1 mb-3">
             {['ru', 'en', 'kk', 'az'].map((lang) => (
@@ -147,9 +147,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Основная область */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Верхняя панель */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#000052]">{userName}</h2>
@@ -158,7 +156,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <NotificationBell />
         </header>
 
-        {/* Контент */}
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>

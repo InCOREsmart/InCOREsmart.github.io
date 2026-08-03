@@ -9,6 +9,7 @@ import { CEOContractDetailPage } from './pages/ceo/CEOContractDetailPage';
 import { CEODisputesPage } from './pages/ceo/CEODisputesPage';
 import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { CEOIntegrationsPage } from './pages/ceo/CEOIntegrationsPage';
+import { CEOAccountingExport } from './pages/ceo/CEOAccountingExport';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
@@ -46,7 +47,8 @@ function App() {
           <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
           <Route path="/ceo/integrations" element={<ProtectedRoute><DashboardLayout><CEOIntegrationsPage /></DashboardLayout></ProtectedRoute>} />
-          
+          <Route path="/ceo/accounting" element={<ProtectedRoute><DashboardLayout><CEOAccountingExport /></DashboardLayout></ProtectedRoute>} />
+
           {/* Маршруты Агента с DashboardLayout */}
           <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
           <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />

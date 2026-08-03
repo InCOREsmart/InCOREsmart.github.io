@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { CheckCircle, XCircle, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Copy, RefreshCw, AlertCircle, Globe } from 'lucide-react';
 
 interface WebhookLog {
   id: string;
@@ -106,12 +106,11 @@ export function CEOIntegrationsPage() {
         </button>
       </div>
 
-      {/* Битрикс24 */}
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center">
-              <span className="text-blue-600 font-bold text-3xl">B</span>
+              <Globe className="w-8 h-8 text-blue-600" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[#000052]">Битрикс24</h2>
@@ -124,7 +123,6 @@ export function CEOIntegrationsPage() {
           </div>
         </div>
 
-        {/* Статистика */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <p className="text-xs text-gray-500 mb-1">Всего контрактов</p>
@@ -140,7 +138,6 @@ export function CEOIntegrationsPage() {
           </div>
         </div>
 
-        {/* URL вебхука */}
         <div className="mb-6">
           <label className="block text-sm font-semibold text-[#000052] mb-2">
             URL вебхука для Битрикс24
@@ -165,7 +162,6 @@ export function CEOIntegrationsPage() {
           </p>
         </div>
 
-        {/* Инструкция */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-[#000052] mb-3 flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-blue-600" />
@@ -195,7 +191,6 @@ export function CEOIntegrationsPage() {
           </ol>
         </div>
 
-        {/* Маппинг стадий */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h3 className="font-semibold text-[#000052] mb-3">Как работают KPI</h3>
           <div className="space-y-2 text-sm">
@@ -215,7 +210,6 @@ export function CEOIntegrationsPage() {
         </div>
       </div>
 
-      {/* Логи вебхуков */}
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
         <h2 className="text-xl font-bold text-[#000052] mb-4">Последние вебхуки</h2>
         {logs.length === 0 ? (
@@ -248,12 +242,11 @@ export function CEOIntegrationsPage() {
         )}
       </div>
 
-      {/* Другие интеграции (заглушки) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 opacity-60">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center">
-              <span className="text-purple-600 font-bold text-3xl">Ю</span>
+              <Globe className="w-8 h-8 text-purple-600" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#000052]">ЮKassa</h2>
@@ -272,7 +265,7 @@ export function CEOIntegrationsPage() {
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 opacity-60">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center">
-              <span className="text-green-600 font-bold text-3xl">1</span>
+              <Globe className="w-8 h-8 text-green-600" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#000052]">1С-Битрикс</h2>

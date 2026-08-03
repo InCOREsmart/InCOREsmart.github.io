@@ -3,15 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeft, DollarSign, ShieldCheck, AlertCircle, CheckCircle } from 'lucide-react';
-import { ContractStatusBadge } from '../../components/ui/ContractStatusBadge';
+import { ArrowLeft, DollarSign, ShieldCheck, CheckCircle, Clock } from 'lucide-react';
 
 export function AgentContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
   const [contract, setContract] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +21,6 @@ export function AgentContractDetailPage() {
         setLoading(false);
         return;
       }
-
       try {
         const { data, error: fetchError } = await supabase
           .from('contracts')
@@ -32,7 +29,6 @@ export function AgentContractDetailPage() {
           .maybeSingle();
 
         if (fetchError) {
-          console.error('Ошибка загрузки контракта:', fetchError);
           setError(fetchError.message);
         } else if (!data) {
           setError('Контракт не найден');
@@ -40,17 +36,15 @@ export function AgentContractDetailPage() {
           setContract(data);
         }
       } catch (err) {
-        console.error('Критическая ошибка:', err);
-        setError('Произошла непредвиденная ошибка');
+        setError('Произошла ошибка');
       } finally {
         setLoading(false);
       }
     };
-
     fetchContract();
   }, [user, id]);
 
-  const handleAcceptContract = async () => {
+  const handleAccept = async () => {
     if (!contract) return;
     setAccepting(true);
     try {
@@ -60,12 +54,10 @@ export function AgentContractDetailPage() {
         .eq('id', contract.id);
 
       if (error) throw error;
-
       setContract({ ...contract, status: 'ACTIVE' });
-      alert('✅ Контракт принят! Смарт-контракт активирован, KPI начали считаться.');
+      alert('✅ Контракт принят! Смарт-контракт активирован.');
     } catch (err: any) {
-      console.error('Ошибка принятия контракта:', err);
-      alert('Ошибка при принятии контракта: ' + err.message);
+      alert('Ошибка: ' + err.message);
     } finally {
       setAccepting(false);
     }
@@ -84,30 +76,31 @@ export function AgentContractDetailPage() {
     return (
       <div className="p-8 max-w-2xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <h3 className="text-lg font-bold text-red-800 mb-2">{t('common.error')}</h3>
+          <h3 className="text-lg font-bold text-red-800 mb-2">Ошибка</h3>
           <p className="text-red-700 text-sm mb-4">{error || 'Контракт не найден'}</p>
-          <button onClick={() => navigate('/agent/contracts')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
-            {t('common.cancel')}
+          <button onClick={() => navigate('/agent/contracts')} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">
+            Назад
           </button>
         </div>
       </div>
     );
   }
 
-  const escrow = contract.escrow_amount || 0;
   const gmv = contract.revenue || contract.kpi_revenue || 0;
-  const newSalesBonus = gmv * 0.10; // 10% от GMV
-  const retentionBonus = 200; // Фиксированный бонус за удержание
-  const annualBonus = contract.annual_bonus || 0;
+  const escrow = contract.escrow_amount || 0;
 
-  // Расчет прогресса годового бонуса
-  const createdAt = new Date(contract.created_at);
+  const newSales = gmv * 0.50;
+  const renewal = gmv * 0.15;
+  const crossSell = gmv * 0.10;
+  const planBonus = gmv * 0.10;
+  const retention = gmv * 0.10;
+  const annual = gmv * 0.05;
+
+  const deadlineDate = new Date(contract.deadline);
   const now = new Date();
-  const monthsPassed = Math.min(12, Math.max(0, 
-    (now.getFullYear() - createdAt.getFullYear()) * 12 + (now.getMonth() - createdAt.getMonth()) + 1
-  ));
-  const annualProgress = annualBonus > 0 ? (monthsPassed / 12) * 100 : 0;
-  const annualAccumulated = (annualBonus / 12) * monthsPassed;
+  const daysLeft = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const isExpired = daysLeft <= 0;
+  const isCompleted = contract.status === 'COMPLETED';
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
@@ -117,92 +110,89 @@ export function AgentContractDetailPage() {
       </button>
 
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#000052]">{contract.title}</h1>
-        </div>
-        <ContractStatusBadge status={contract.status} />
+        <h1 className="text-2xl font-bold text-[#000052]">{contract.title}</h1>
+        <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+          isCompleted ? 'bg-green-100 text-green-800' :
+          isExpired ? 'bg-red-100 text-red-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          {isCompleted ? 'Завершен' : isExpired ? 'Дедлайн истек' : t(`contract.statuses.${contract.status}`)}
+        </span>
       </div>
 
-      {/* Финансовые показатели */}
+      {/* Блок дедлайна */}
+      <div className={`p-4 rounded-xl border ${isExpired ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+        <div className="flex items-center gap-3">
+          <Clock className={`w-6 h-6 ${isExpired ? 'text-red-600' : 'text-blue-600'}`} />
+          <div>
+            <p className="font-semibold text-[#000052]">
+              {isExpired ? 'Дедлайн истек — контракт автоматически закрыт' : `До дедлайна: ${daysLeft} дней`}
+            </p>
+            <p className="text-sm text-gray-600">
+              Дата закрытия: {deadlineDate.toLocaleDateString('ru-RU')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 карточки */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#B8860B]/10 p-4 rounded-xl border border-[#B8860B]/30 shadow-sm">
+        <div className="bg-[#B8860B]/10 p-4 rounded-xl border border-[#B8860B]/30">
           <p className="text-xs text-[#B8860B] mb-1">Эскроу</p>
           <p className="text-xl font-bold text-[#B8860B]">${escrow.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <p className="text-xs text-gray-500 mb-1">Дедлайн</p>
-          <p className="text-xl font-bold text-[#000052]">{new Date(contract.deadline).toLocaleDateString()}</p>
+        <div className="bg-white p-4 rounded-xl border border-gray-200">
+          <p className="text-xs text-gray-500 mb-1">GMV</p>
+          <p className="text-xl font-bold text-[#000052]">${gmv.toLocaleString()}</p>
         </div>
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
-          <p className="text-xs text-blue-700 mb-1">Статус смарт-контракта</p>
+        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+          <p className="text-xs text-blue-700 mb-1">Смарт-контракт</p>
           <p className="text-sm font-semibold text-blue-800 flex items-center gap-1">
             <ShieldCheck className="w-4 h-4" /> {t('agent.fundsVerified')}
           </p>
         </div>
       </div>
 
-      {/* Структура бонусов */}
-      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
+      {/* 6 потоков */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-[#B8860B]" />
-          <h3 className="text-lg font-bold text-[#000052]">Структура ваших бонусов</h3>
-        </div>
+          6 потоков выплат
+        </h3>
         <div className="space-y-3">
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-700">Новые продажи (10%)</span>
-            <span className="font-semibold text-[#000052]">${newSalesBonus.toLocaleString()}</span>
+            <span className="text-sm text-gray-700">Новые продажи (50%)</span>
+            <span className="font-semibold text-[#000052]">${newSales.toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-700">Продление (3% от суммы)</span>
-            <span className="font-semibold text-[#000052]">По факту</span>
+            <span className="text-sm text-gray-700">Продление (15%)</span>
+            <span className="font-semibold text-[#000052]">${renewal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-700">Кросс-продажи (7% от суммы)</span>
-            <span className="font-semibold text-[#000052]">По факту</span>
+            <span className="text-sm text-gray-700">Кросс-продажи (10%)</span>
+            <span className="font-semibold text-[#000052]">${crossSell.toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-700">Бонус за выполнение плана</span>
-            <span className="font-semibold text-[#000052]">$200</span>
+            <span className="text-sm text-gray-700">Бонус за план (10%)</span>
+            <span className="font-semibold text-[#000052]">${planBonus.toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-[#B8860B]/10 rounded-lg border border-[#B8860B]/30">
             <div>
-              <span className="text-sm font-semibold text-[#000052]">Бонус за удержание</span>
-              <p className="text-xs text-gray-600 mt-1">Выплачивается, если клиент остается более 90 дней</p>
+              <span className="text-sm font-semibold text-[#000052]">Удержание 90 дней (10%)</span>
+              <p className="text-xs text-gray-600 mt-1">Выплачивается только если клиент остается более 90 дней</p>
             </div>
-            <span className="font-semibold text-[#B8860B]">${retentionBonus}</span>
+            <span className="font-semibold text-[#B8860B]">${retention.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+            <span className="text-sm text-gray-700">Годовой бонус (5%)</span>
+            <span className="font-semibold text-[#000052]">${annual.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
-      {/* Годовой бонус с прогресс-баром */}
-      {annualBonus > 0 && (
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-[#000052]">Годовой бонус</h3>
-            <span className="text-sm text-purple-700">
-              {monthsPassed} из 12 месяцев
-            </span>
-          </div>
-          <div className="w-full bg-white rounded-full h-4 mb-2 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-purple-500 to-purple-700 h-4 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-              style={{ width: `${annualProgress}%` }}
-            >
-              {annualProgress > 15 && (
-                <span className="text-xs text-white font-bold">{annualProgress.toFixed(0)}%</span>
-              )}
-            </div>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Накоплено: ${annualAccumulated.toLocaleString()}</span>
-            <span className="font-semibold text-[#000052]">Максимум: ${annualBonus.toLocaleString()}</span>
-          </div>
-        </div>
-      )}
-
-      {/* KPI Подсказки */}
-      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-bold text-[#000052] mb-4">KPI подсказки для выполнения плана</h3>
+      {/* KPI */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200">
+        <h3 className="text-lg font-bold text-[#000052] mb-4">KPI</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-3 bg-gray-50 rounded-lg text-center">
             <p className="text-xs text-gray-500">Звонков</p>
@@ -223,22 +213,40 @@ export function AgentContractDetailPage() {
         </div>
       </div>
 
-      {/* Кнопка принятия контракта */}
-      {contract.status === 'PENDING_APPROVAL' && (
+      {/* Кнопка "Принять" */}
+      {contract.status === 'PENDING_APPROVAL' && !isExpired && (
         <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-[#000052] mb-1">Контракт ожидает вашего подтверждения</h3>
-              <p className="text-sm text-gray-600">Нажмите кнопку ниже, чтобы активировать смарт-контракт и начать выполнение KPI</p>
+              <h3 className="text-lg font-bold text-[#000052] mb-1">Контракт ожидает подтверждения</h3>
+              <p className="text-sm text-gray-600">Нажмите «Принять», чтобы активировать смарт-контракт</p>
             </div>
             <button
-              onClick={handleAcceptContract}
+              onClick={handleAccept}
               disabled={accepting}
-              className="px-6 py-3 bg-[#B8860B] hover:bg-[#9a7209] text-white font-semibold rounded-lg transition flex items-center gap-2 disabled:opacity-50"
+              className="px-8 py-3 bg-[#B8860B] hover:bg-[#9a7209] text-white font-semibold rounded-lg transition flex items-center gap-2 disabled:opacity-50"
             >
               <CheckCircle className="w-5 h-5" />
-              {accepting ? 'Принятие...' : 'Принять контракт'}
+              {accepting ? '...' : 'Принять'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Автоматическое закрытие */}
+      {(isExpired || isCompleted) && (
+        <div className="bg-green-50 border border-green-200 p-6 rounded-xl">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="text-lg font-bold text-[#000052] mb-2">
+                {isCompleted ? 'Контракт завершен' : 'Контракт автоматически закрыт по дедлайну'}
+              </h3>
+              <p className="text-sm text-gray-700">
+                Смарт-контракт выполнил расчет и разблокировал средства. 
+                Выплата ${escrow.toLocaleString()} будет переведена на ваши реквизиты в течение 24 часов.
+              </p>
+            </div>
           </div>
         </div>
       )}
