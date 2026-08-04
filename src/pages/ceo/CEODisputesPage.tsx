@@ -16,7 +16,7 @@ import {
   Users
 } from 'lucide-react';
 
-// Ровно 3 демо-спора для идеального питча (на основе PDF InCORE)
+// Ровно 3 демо-спора для идеального питча
 const DEMO_DISPUTES = [
   { 
     id: 'demo-1', 
@@ -34,8 +34,8 @@ const DEMO_DISPUTES = [
     id: 'demo-2', 
     type: 'kpi_dispute', 
     status: 'IN_REVIEW', 
-    title: 'Агент оспаривает расчёт KPI за Q2 2026',
-    description: 'Агент утверждает, что 3 сделки были закрыты в последний день квартала, но не учтены в расчёте бонуса за выполнение плана (10%).',
+    title: 'Агент оспаривает расчёт бонусов за 06.2026',
+    description: 'Агент утверждает, что 3 сделки были закрыты в последний день июня, но не учтены в расчёте бонуса за выполнение плана (10%) и бонуса за новые продажи (50%).',
     amount: 8800,
     agent_name: 'Мария Козлова',
     contract_title: 'Расширение портфеля страхования в сегменте МСБ',
@@ -98,7 +98,6 @@ export function CEODisputesPage() {
             .eq('company_id', companyData.id)
             .order('created_at', { ascending: false });
 
-          // Если реальных споров нет или массив пустой/мусорный, показываем 3 идеальных демо-спора
           if (!disputesData || disputesData.length === 0 || !disputesData[0].title) {
             setDisputes(DEMO_DISPUTES);
           } else {
@@ -124,7 +123,7 @@ export function CEODisputesPage() {
         }
       } catch (err) {
         console.error('Ошибка:', err);
-        setDisputes(DEMO_DISPUTES); // Фоллбэк на демо при любой ошибке
+        setDisputes(DEMO_DISPUTES);
       } finally {
         setLoading(false);
       }
@@ -199,7 +198,7 @@ export function CEODisputesPage() {
   const getTypeLabel = (type: string) => {
     const types: Record<string, { label: string; color: string }> = {
       oracle_failure: { label: 'Сбой InCORE', color: 'bg-[#B8860B]/10 text-[#B8860B]' },
-      kpi_dispute: { label: 'Спор по KPI', color: 'bg-[#000052]/10 text-[#000052]' },
+      kpi_dispute: { label: 'Спор по бонусам', color: 'bg-[#000052]/10 text-[#000052]' },
       payment_issue: { label: 'Проблема с выплатой', color: 'bg-[#000052]/5 text-[#000052]/80' },
       client_retention: { label: 'Clawback (удержание)', color: 'bg-[#B8860B]/20 text-[#B8860B]' },
     };
