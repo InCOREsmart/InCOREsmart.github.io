@@ -3,18 +3,20 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { DollarSign, Users, Target, ShieldCheck, BarChart3, Download } from 'lucide-react';
+import { DollarSign, Users, Target, ShieldCheck, BarChart3 } from 'lucide-react';
 
+// Демо-данные: 7 агентов с разными датами начала и показателями
 const DEMO_AGENTS = [
-  { id: '1', name: 'Александр С.', revenue: 1000000, kpi: 95, calls: 120, meetings: 45, deals: 8 },
-  { id: '2', name: 'Мария К.', revenue: 1000000, kpi: 110, calls: 150, meetings: 60, deals: 12 },
-  { id: '3', name: 'Дмитрий В.', revenue: 1000000, kpi: 85, calls: 90, meetings: 30, deals: 5 },
-  { id: '4', name: 'Елена П.', revenue: 1000000, kpi: 102, calls: 130, meetings: 50, deals: 9 },
-  { id: '5', name: 'Иван Т.', revenue: 1000000, kpi: 78, calls: 80, meetings: 25, deals: 4 },
-  { id: '6', name: 'Ольга М.', revenue: 1000000, kpi: 115, calls: 160, meetings: 65, deals: 14 },
-  { id: '7', name: 'Сергей Н.', revenue: 1000000, kpi: 92, calls: 110, meetings: 40, deals: 7 },
+  { id: '1', name: 'Александр С.', revenue: 1000000, kpi: 95, calls: 120, meetings: 45, deals: 8, start_date: '2026-01-15' },
+  { id: '2', name: 'Мария К.', revenue: 1000000, kpi: 110, calls: 150, meetings: 60, deals: 12, start_date: '2026-01-20' },
+  { id: '3', name: 'Дмитрий В.', revenue: 1000000, kpi: 85, calls: 90, meetings: 30, deals: 5, start_date: '2026-02-10' },
+  { id: '4', name: 'Елена П.', revenue: 1000000, kpi: 102, calls: 130, meetings: 50, deals: 9, start_date: '2026-03-05' },
+  { id: '5', name: 'Иван Т.', revenue: 1000000, kpi: 78, calls: 80, meetings: 25, deals: 4, start_date: '2026-03-12' },
+  { id: '6', name: 'Ольга М.', revenue: 1000000, kpi: 115, calls: 160, meetings: 65, deals: 14, start_date: '2026-03-18' },
+  { id: '7', name: 'Сергей Н.', revenue: 1000000, kpi: 92, calls: 110, meetings: 40, deals: 7, start_date: '2026-03-25' },
 ];
 
+// Динамика выручки (Янв - Авг 2026)
 const DEMO_REVENUE = [
   { month: 'Янв 26', value: 1200000 },
   { month: 'Фев 26', value: 1450000 },
@@ -44,20 +46,41 @@ export function CEODashboard() {
 
   useEffect(() => {
     const fetchMetrics = async () => {
-      if (!user) { setLoading(false); return; }
-      try {
-        const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-        if (!companyData) { setLoading(false); return; }
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-        const { data: contractsData } = await supabase.from('contracts').select('*').eq('company_id', companyData.id);
-        const { data: agentsData } = await supabase.from('agents').select('*').eq('company_id', companyData.id).eq('status', 'ACTIVE');
+      try {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!companyData) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .eq('company_id', companyData.id);
+
+        const { data: agentsData } = await supabase
+          .from('agents')
+          .select('*')
+          .eq('company_id', companyData.id)
+          .eq('status', 'ACTIVE');
 
         const totalRevenue = (contractsData || []).reduce((sum, c) => sum + (c.revenue || c.kpi_revenue || 0), 0);
         const frozenEscrow = (contractsData || []).reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
         const paidToAgents = (contractsData || []).reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
         const netProfit = (contractsData || []).reduce((sum, c) => sum + (c.company_profit || 0), 0);
         const avgRoi = contractsData && contractsData.length > 0
-          ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 0), 0) / contractsData.length : 0;
+          ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 0), 0) / contractsData.length
+          : 0;
         const activeContracts = (contractsData || []).filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
 
         const totalPlannedRevenue = (contractsData || []).reduce((sum, c) => sum + (c.kpi_revenue || 0), 0);
@@ -65,15 +88,25 @@ export function CEODashboard() {
         const salesGoalAchievement = totalPlannedRevenue > 0 ? (actualRevenue / totalPlannedRevenue) * 100 : 0;
         const revenuePerAgent = agentsData && agentsData.length > 0 ? totalRevenue / agentsData.length : 0;
 
-        setMetrics({ totalRevenue, frozenEscrow, paidToAgents, netProfit, avgRoi, activeContracts, salesGoalAchievement, revenuePerAgent });
-      } catch (err) { console.error('Ошибка:', err); } finally { setLoading(false); }
+        setMetrics({
+          totalRevenue,
+          frozenEscrow,
+          paidToAgents,
+          netProfit,
+          avgRoi,
+          activeContracts,
+          salesGoalAchievement,
+          revenuePerAgent,
+        });
+      } catch (err) {
+        console.error('Ошибка загрузки метрик:', err);
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchMetrics();
   }, [user]);
-
-  const handleExportPDF = () => {
-    alert('Генерация PDF-отчета для Совета Директоров...\n(В демо-режиме это имитация скачивания файла)');
-  };
 
   if (loading) {
     return (
@@ -88,20 +121,11 @@ export function CEODashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
-          <p className="text-sm text-[#000052]/70 mt-1">Демо-режим: предзаполненные метрики для питча</p>
-        </div>
-        <button
-          onClick={handleExportPDF}
-          className="flex items-center gap-2 px-4 py-2 bg-[#000052] text-white rounded-lg hover:bg-[#000052]/90 transition text-sm font-medium"
-        >
-          <Download className="w-4 h-4" />
-          Экспорт в PDF для Совета Директоров
-        </button>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
       </div>
 
+      {/* KPI карточки */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl shadow-sm border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -121,11 +145,16 @@ export function CEODashboard() {
 
         <div className="bg-white text-[#000052] p-5 rounded-xl shadow-sm border border-[#000052]/10">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-[#000052]/70">Достижение плана</h3>
+            <h3 className="text-sm font-medium text-[#000052]/70">Прогноз выполнения плана</h3>
             <Target className="w-5 h-5 text-[#B8860B]" />
           </div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.salesGoalAchievement.toFixed(1)}%</p>
-          <p className="text-xs text-[#000052]/60 mt-1">Прогноз: 98% к концу квартала</p>
+          <div className="mt-2 h-2 bg-[#000052]/10 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[#B8860B] rounded-full transition-all duration-1000"
+              style={{ width: `${Math.min(metrics.salesGoalAchievement, 100)}%` }}
+            ></div>
+          </div>
         </div>
 
         <div className="bg-white text-[#000052] p-5 rounded-xl shadow-sm border border-[#000052]/10">
@@ -134,10 +163,10 @@ export function CEODashboard() {
             <Users className="w-5 h-5 text-[#B8860B]" />
           </div>
           <p className="text-2xl font-bold text-[#000052]">${metrics.revenuePerAgent.toLocaleString()}</p>
-          <p className="text-xs text-[#000052]/60 mt-1">Средняя эффективность</p>
         </div>
       </div>
 
+      {/* Динамика выручки */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
@@ -165,21 +194,22 @@ export function CEODashboard() {
         </div>
       </div>
 
+      {/* Эффективность агентов */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#B8860B]" />
-            <h2 className="text-lg font-bold text-[#000052]">Эффективность агентов (Демо)</h2>
+            <h2 className="text-lg font-bold text-[#000052]">Эффективность агентов</h2>
           </div>
           <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-3 py-1 rounded-full font-medium">7 активных контрактов по $1,000,000</span>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-[#000052]/10">
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Контракт</th>
+                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дата начала</th>
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Выполнение KPI</th>
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Звонки</th>
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Встречи</th>
@@ -190,12 +220,12 @@ export function CEODashboard() {
               {DEMO_AGENTS.map((agent) => (
                 <tr key={agent.id} className="hover:bg-[#000052]/5 transition">
                   <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.name}</td>
-                  <td className="py-4 px-4 text-sm text-[#000052]">$1,000,000</td>
+                  <td className="py-4 px-4 text-sm text-[#000052]/70">{new Date(agent.start_date).toLocaleDateString('ru-RU')}</td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2 bg-[#000052]/10 rounded-full overflow-hidden max-w-[100px]">
                         <div 
-                          className={`h-full rounded-full ${agent.kpi >= 100 ? 'bg-[#B8860B]' : 'bg-[#000052]'}`}
+                          className={`h-full rounded-full transition-all duration-1000 ${agent.kpi >= 100 ? 'bg-[#B8860B]' : 'bg-[#000052]'}`}
                           style={{ width: `${Math.min(agent.kpi, 100)}%` }}
                         ></div>
                       </div>
