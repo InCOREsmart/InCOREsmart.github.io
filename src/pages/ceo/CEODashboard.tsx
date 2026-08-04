@@ -4,29 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { DollarSign, Users, Target, ShieldCheck, BarChart3 } from 'lucide-react';
-
-// Демо-данные: 7 агентов с разными датами начала и показателями
-const DEMO_AGENTS = [
-  { id: '1', name: 'Александр С.', revenue: 1000000, kpi: 95, calls: 120, meetings: 45, deals: 8, start_date: '2026-01-15' },
-  { id: '2', name: 'Мария К.', revenue: 1000000, kpi: 110, calls: 150, meetings: 60, deals: 12, start_date: '2026-01-20' },
-  { id: '3', name: 'Дмитрий В.', revenue: 1000000, kpi: 85, calls: 90, meetings: 30, deals: 5, start_date: '2026-02-10' },
-  { id: '4', name: 'Елена П.', revenue: 1000000, kpi: 102, calls: 130, meetings: 50, deals: 9, start_date: '2026-03-05' },
-  { id: '5', name: 'Иван Т.', revenue: 1000000, kpi: 78, calls: 80, meetings: 25, deals: 4, start_date: '2026-03-12' },
-  { id: '6', name: 'Ольга М.', revenue: 1000000, kpi: 115, calls: 160, meetings: 65, deals: 14, start_date: '2026-03-18' },
-  { id: '7', name: 'Сергей Н.', revenue: 1000000, kpi: 92, calls: 110, meetings: 40, deals: 7, start_date: '2026-03-25' },
-];
-
-// Динамика выручки (Янв - Авг 2026)
-const DEMO_REVENUE = [
-  { month: 'Янв 26', value: 1200000 },
-  { month: 'Фев 26', value: 1450000 },
-  { month: 'Мар 26', value: 1300000 },
-  { month: 'Апр 26', value: 1800000 },
-  { month: 'Май 26', value: 2100000 },
-  { month: 'Июн 26', value: 2400000 },
-  { month: 'Июл 26', value: 2800000 },
-  { month: 'Авг 26', value: 3200000 },
-];
+import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI } from '../../lib/demoData';
 
 export function CEODashboard() {
   const { t } = useTranslation();
@@ -74,26 +52,34 @@ export function CEODashboard() {
           .eq('company_id', companyData.id)
           .eq('status', 'ACTIVE');
 
-        const totalRevenue = (contractsData || []).reduce((sum, c) => sum + (c.revenue || c.kpi_revenue || 0), 0);
-        const frozenEscrow = (contractsData || []).reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-        const paidToAgents = (contractsData || []).reduce((sum, c) => sum + (c.agent_payouts_total || 0), 0);
-        const netProfit = (contractsData || []).reduce((sum, c) => sum + (c.company_profit || 0), 0);
-        const avgRoi = contractsData && contractsData.length > 0
-          ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 0), 0) / contractsData.length
-          : 0;
-        const activeContracts = (contractsData || []).filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+        // Если нет реальных данных, используем демо
+        const contracts = contractsData && contractsData.length > 0 ? contractsData : DEMO_AGENTS.flatMap(a => a.contracts);
+        const agents = agentsData && agentsData.length > 0 ? agentsData : DEMO_AGENTS;
 
-        const totalPlannedRevenue = (contractsData || []).reduce((sum, c) => sum + (c.kpi_revenue || 0), 0);
-        const actualRevenue = (contractsData || []).filter(c => c.status === 'COMPLETED').reduce((sum, c) => sum + (c.revenue || 0), 0);
-        const salesGoalAchievement = totalPlannedRevenue > 0 ? (actualRevenue / totalPlannedRevenue) * 100 : 0;
-        const revenuePerAgent = agentsData && agentsData.length > 0 ? totalRevenue / agentsData.length : 0;
+        const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+        const frozenEscrow = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
+        const paidToAgents = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
+        const netProfit = totalRevenue * 0.12;
+        const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+        const revenuePerAgent = agents.length > 0 ? totalRevenue / agents.length : 0;
+
+        // Расчет выполнения плана
+        const totalTargetRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+        const actualRevenue = contracts.reduce((sum, c) => {
+          const kpiProgress = ((c.actual_calls || 0) / (c.kpi_calls || 1) + 
+                              (c.actual_meetings || 0) / (c.kpi_meetings || 1) + 
+                              (c.actual_proposals || 0) / (c.kpi_proposals || 1) + 
+                              (c.actual_clients || 0) / (c.target_clients || 1)) / 4;
+          return sum + (c.revenue || 0) * kpiProgress;
+        }, 0);
+        const salesGoalAchievement = totalTargetRevenue > 0 ? (actualRevenue / totalTargetRevenue) * 100 : 0;
 
         setMetrics({
           totalRevenue,
           frozenEscrow,
           paidToAgents,
           netProfit,
-          avgRoi,
+          avgRoi: 0,
           activeContracts,
           salesGoalAchievement,
           revenuePerAgent,
@@ -117,7 +103,8 @@ export function CEODashboard() {
     );
   }
 
-  const maxRevenue = Math.max(...DEMO_REVENUE.map(d => d.value));
+  const revenueByMonth = calculateRevenueByMonth();
+  const maxRevenue = Math.max(...revenueByMonth.map(d => d.value));
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -173,7 +160,7 @@ export function CEODashboard() {
           <h2 className="text-lg font-bold text-[#000052]">Динамика выручки (Янв - Авг 2026)</h2>
         </div>
         <div className="flex items-end justify-between gap-2 md:gap-4 h-48 md:h-64">
-          {DEMO_REVENUE.map((data, index) => {
+          {revenueByMonth.map((data, index) => {
             const heightPercent = (data.value / maxRevenue) * 100;
             return (
               <div key={index} className="flex-1 flex flex-col items-center gap-2 group">
@@ -201,7 +188,7 @@ export function CEODashboard() {
             <Users className="w-5 h-5 text-[#B8860B]" />
             <h2 className="text-lg font-bold text-[#000052]">Эффективность агентов</h2>
           </div>
-          <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-3 py-1 rounded-full font-medium">7 активных контрактов по $1,000,000</span>
+          <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-3 py-1 rounded-full font-medium">{DEMO_AGENTS.length} активных контрактов по $1,000,000</span>
         </div>
         
         <div className="overflow-x-auto">
@@ -217,28 +204,37 @@ export function CEODashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#000052]/5">
-              {DEMO_AGENTS.map((agent) => (
-                <tr key={agent.id} className="hover:bg-[#000052]/5 transition">
-                  <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.name}</td>
-                  <td className="py-4 px-4 text-sm text-[#000052]/70">{new Date(agent.start_date).toLocaleDateString('ru-RU')}</td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-[#000052]/10 rounded-full overflow-hidden max-w-[100px]">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-1000 ${agent.kpi >= 100 ? 'bg-[#B8860B]' : 'bg-[#000052]'}`}
-                          style={{ width: `${Math.min(agent.kpi, 100)}%` }}
-                        ></div>
+              {DEMO_AGENTS.map((agent) => {
+                const kpi = calculateAgentKPI(agent);
+                const contract = agent.contracts[0];
+                
+                return (
+                  <tr 
+                    key={agent.id} 
+                    onClick={() => navigate(`/ceo/agents/${agent.id}`)}
+                    className="hover:bg-[#000052]/5 transition cursor-pointer"
+                  >
+                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.name}</td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70">{new Date(agent.start_date).toLocaleDateString('ru-RU')}</td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-2 bg-[#000052]/10 rounded-full overflow-hidden max-w-[100px]">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-1000 ${kpi >= 100 ? 'bg-[#B8860B]' : 'bg-[#000052]'}`}
+                            style={{ width: `${Math.min(kpi, 100)}%` }}
+                          ></div>
+                        </div>
+                        <span className={`text-sm font-bold ${kpi >= 100 ? 'text-[#B8860B]' : 'text-[#000052]'}`}>
+                          {kpi}%
+                        </span>
                       </div>
-                      <span className={`text-sm font-bold ${agent.kpi >= 100 ? 'text-[#B8860B]' : 'text-[#000052]'}`}>
-                        {agent.kpi}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{agent.calls}</td>
-                  <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{agent.meetings}</td>
-                  <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.deals}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{contract.actual_calls}</td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{contract.actual_meetings}</td>
+                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{contract.actual_clients}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

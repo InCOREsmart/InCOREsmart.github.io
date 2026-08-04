@@ -1,24 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Search, Users, DollarSign, Target, ShieldCheck, Mail, Phone, Award } from 'lucide-react';
 import { AddAgentModal } from '../../components/ui/AddAgentModal';
-
-// Демо-данные для питча (7 агентов с разными показателями)
-const DEMO_AGENTS = [
-  { id: 'demo-1', full_name: 'Александр Смирнов', email: 'a.smirnov@demo.com', phone: '+7 900 123-45-67', specialization: 'B2B Страхование', status: 'ACTIVE', contracts_count: 12, total_revenue: 12000000, kpi_achievement: 95, active_contracts: 3 },
-  { id: 'demo-2', full_name: 'Мария Козлова', email: 'm.kozlova@demo.com', phone: '+7 900 234-56-78', specialization: 'Корпоративные клиенты', status: 'ACTIVE', contracts_count: 15, total_revenue: 15000000, kpi_achievement: 110, active_contracts: 4 },
-  { id: 'demo-3', full_name: 'Дмитрий Волков', email: 'd.volkov@demo.com', phone: '+7 900 345-67-89', specialization: 'МСБ сегмент', status: 'ACTIVE', contracts_count: 8, total_revenue: 8000000, kpi_achievement: 85, active_contracts: 2 },
-  { id: 'demo-4', full_name: 'Елена Петрова', email: 'e.petrova@demo.com', phone: '+7 900 456-78-90', specialization: 'Страхование жизни', status: 'ACTIVE', contracts_count: 10, total_revenue: 10000000, kpi_achievement: 102, active_contracts: 3 },
-  { id: 'demo-5', full_name: 'Иван Тихонов', email: 'i.tikhonov@demo.com', phone: '+7 900 567-89-01', specialization: 'Региональные продажи', status: 'ACTIVE', contracts_count: 6, total_revenue: 6000000, kpi_achievement: 78, active_contracts: 2 },
-  { id: 'demo-6', full_name: 'Ольга Морозова', email: 'o.morozova@demo.com', phone: '+7 900 678-90-12', specialization: 'Удержание клиентов', status: 'ACTIVE', contracts_count: 18, total_revenue: 18000000, kpi_achievement: 115, active_contracts: 5 },
-  { id: 'demo-7', full_name: 'Сергей Новиков', email: 's.novikov@demo.com', phone: '+7 900 789-01-23', specialization: 'Партнерская сеть', status: 'ACTIVE', contracts_count: 9, total_revenue: 9000000, kpi_achievement: 92, active_contracts: 3 },
-];
+import { DEMO_AGENTS, calculateAgentKPI } from '../../lib/demoData';
 
 export function CEOAgentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [agents, setAgents] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,7 +39,6 @@ export function CEOAgentsPage() {
             .order('created_at', { ascending: false });
 
           if (agentsData && agentsData.length > 0) {
-            // Получаем статистику по контрактам для каждого агента
             const agentsWithStats = await Promise.all(
               agentsData.map(async (agent) => {
                 const { data: contractsData } = await supabase
@@ -75,15 +66,51 @@ export function CEOAgentsPage() {
 
             setAgents(agentsWithStats);
           } else {
-            // Если агентов нет — показываем демо-данные для питча
-            setAgents(DEMO_AGENTS);
+            // Используем демо-данные
+            setAgents(DEMO_AGENTS.map(agent => ({
+              id: agent.id,
+              full_name: agent.full_name,
+              email: agent.email,
+              phone: agent.phone,
+              specialization: agent.specialization,
+              status: 'ACTIVE',
+              contracts_count: agent.contracts.length,
+              total_revenue: agent.contracts.reduce((sum, c) => sum + c.revenue, 0),
+              kpi_achievement: calculateAgentKPI(agent),
+              active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
+              start_date: agent.start_date,
+            })));
           }
         } else {
-          setAgents(DEMO_AGENTS);
+          setAgents(DEMO_AGENTS.map(agent => ({
+            id: agent.id,
+            full_name: agent.full_name,
+            email: agent.email,
+            phone: agent.phone,
+            specialization: agent.specialization,
+            status: 'ACTIVE',
+            contracts_count: agent.contracts.length,
+            total_revenue: agent.contracts.reduce((sum, c) => sum + c.revenue, 0),
+            kpi_achievement: calculateAgentKPI(agent),
+            active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
+            start_date: agent.start_date,
+          })));
         }
       } catch (err) {
         console.error('Ошибка загрузки агентов:', err);
-        setAgents(DEMO_AGENTS);
+        setAgents(DEMO_AGENTS.map(agent => ({
+          id: agent.id,
+          full_name: agent.full_name,
+          email: agent.email,
+          phone: agent.phone,
+          specialization: agent.specialization,
+          status: 'ACTIVE',
+          contracts_count: agent.contracts.length,
+          total_revenue: agent.contracts.reduce((sum, c) => sum + c.revenue, 0),
+          kpi_achievement: calculateAgentKPI(agent),
+          active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
+          start_date: agent.start_date,
+        })));
       } finally {
         setLoading(false);
       }
@@ -96,14 +123,12 @@ export function CEOAgentsPage() {
     window.location.reload();
   };
 
-  // Фильтрация по поиску
   const filteredAgents = agents.filter(a => 
     a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Статистика
   const totalAgents = agents.length;
   const totalRevenue = agents.reduce((sum, a) => sum + (a.total_revenue || 0), 0);
   const avgKpi = agents.length > 0 
@@ -122,7 +147,6 @@ export function CEOAgentsPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Шапка */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('nav.agents')}</h1>
@@ -137,7 +161,6 @@ export function CEOAgentsPage() {
         </button>
       </div>
 
-      {/* 4 ключевые метрики */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -176,7 +199,6 @@ export function CEOAgentsPage() {
         </div>
       </div>
 
-      {/* Поиск */}
       <div className="bg-white p-4 rounded-xl border border-[#000052]/10">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#000052]/40" />
@@ -190,7 +212,6 @@ export function CEOAgentsPage() {
         </div>
       </div>
 
-      {/* Таблица агентов */}
       <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
         {filteredAgents.length === 0 ? (
           <div className="text-center py-12 text-[#000052]/60">
@@ -205,7 +226,8 @@ export function CEOAgentsPage() {
                 <tr>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Специализация</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Контактов</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дата начала</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Контрактов</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Выручка</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">KPI</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Активные</th>
@@ -213,7 +235,11 @@ export function CEOAgentsPage() {
               </thead>
               <tbody className="divide-y divide-[#000052]/5">
                 {filteredAgents.map((agent) => (
-                  <tr key={agent.id} className="hover:bg-[#000052]/5 transition">
+                  <tr 
+                    key={agent.id} 
+                    onClick={() => navigate(`/ceo/agents/${agent.id}`)}
+                    className="hover:bg-[#000052]/5 transition cursor-pointer"
+                  >
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
@@ -237,6 +263,11 @@ export function CEOAgentsPage() {
                     <td className="py-4 px-4">
                       <span className="px-3 py-1 bg-[#000052]/5 text-[#000052] rounded-full text-xs font-medium">
                         {agent.specialization || '—'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-[#000052]/70">
+                        {agent.start_date ? new Date(agent.start_date).toLocaleDateString('ru-RU') : '—'}
                       </span>
                     </td>
                     <td className="py-4 px-4">
@@ -274,7 +305,6 @@ export function CEOAgentsPage() {
         )}
       </div>
 
-      {/* Модалка добавления агента */}
       <AddAgentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
