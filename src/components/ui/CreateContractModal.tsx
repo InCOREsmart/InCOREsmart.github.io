@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Calculator, Users, ChevronDown, Target, Phone, Handshake, FileText, TrendingUp, ShieldCheck, CreditCard, CheckCircle } from 'lucide-react';
+import { X, Calculator, Users, ChevronDown, Target, Phone, Handshake, FileText, ShieldCheck, CreditCard, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { notifyContractCreated } from '../../lib/notifications';
@@ -36,8 +36,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const [targetConversion, setTargetConversion] = useState<number | ''>('');
   const [avgCheck, setAvgCheck] = useState<number | ''>('');
   const [targetClients, setTargetClients] = useState<number | ''>('');
-
   const [kpiSuggestions, setKpiSuggestions] = useState({ calls: 0, meetings: 0, proposals: 0, clients: 0 });
+
   const [renewalAmount, setRenewalAmount] = useState<number | ''>('');
   const [crossSellAmount, setCrossSellAmount] = useState<number | ''>('');
   const [bitrixDealId, setBitrixDealId] = useState('');
@@ -88,22 +88,37 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     setEconomics({ platformFee, companyProfitBeforeBonuses, newSalesBonus, renewalBonus, crossSellBonus, planBonus, retentionBonus, annualBonus, totalAgentBonuses, escrow, companyProfit });
   }, [revenue, renewalAmount, crossSellAmount]);
 
-  const handlePayAndCreate = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('🚀 Форма отправлена, показываем экран оплаты...');
     setShowPayment(true);
+    
     // Имитация обработки платежа (2 секунды)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setPaymentSuccess(true);
-    // Ещё 1 секунда на показ успеха
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await createContract();
+    setTimeout(async () => {
+      console.log('✅ Платёж успешен, показываем ledger...');
+      setPaymentSuccess(true);
+      
+      // Ещё 2 секунды на показ успеха, затем создаём контракт
+      setTimeout(async () => {
+        await createContract();
+      }, 2000);
+    }, 2000);
   };
 
   const createContract = async () => {
-    if (!user || typeof revenue !== 'number') return;
+    if (!user || typeof revenue !== 'number') {
+      console.error('❌ Нет пользователя или revenue');
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-      if (!companyData) { alert(t('contractModal.errorNoCompany')); setLoading(false); return; }
+      if (!companyData) {
+        alert(t('contractModal.errorNoCompany'));
+        setLoading(false);
+        return;
+      }
 
       const finalCalls = typeof kpiCalls === 'number' ? kpiCalls : kpiSuggestions.calls;
       const finalMeetings = typeof kpiMeetings === 'number' ? kpiMeetings : kpiSuggestions.meetings;
@@ -111,6 +126,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       const finalClients = typeof targetClients === 'number' ? targetClients : kpiSuggestions.clients;
       const generatedDescription = title + ' | KPI: ' + finalCalls + ' зв., ' + finalMeetings + ' встр., ' + finalProposals + ' КП, ' + finalClients + ' кл.';
 
+      console.log('📝 Создаём контракт в БД...');
       const { data: newContract, error } = await supabase.from('contracts').insert({
         company_id: companyData.id,
         agent_id: selectedAgentId || null,
@@ -128,7 +144,12 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         bitrix_deal_id: bitrixDealId || null,
       }).select().single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Ошибка создания контракта:', error);
+        throw error;
+      }
+
+      console.log('✅ Контракт создан:', newContract.id);
 
       if (selectedAgentId && newContract) {
         try {
@@ -141,7 +162,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
       onClose();
       resetForm();
     } catch (err) {
-      console.error('Ошибка:', err);
+      console.error('❌ Ошибка:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
     } finally {
       setLoading(false);
@@ -162,7 +183,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   const isFormValid = typeof revenue === 'number' && revenue > 0 && title && deadline;
   const rev = typeof revenue === 'number' ? revenue : 0;
 
-  // Экран оплаты (заглушка)
+  // ЭКРАН ОПЛАТЫ (заглушка)
   if (showPayment) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -176,8 +197,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               <p className="text-sm text-[#000052]/70 mb-4">Средства заблокированы в смарт-контракте</p>
               <div className="bg-[#000052]/5 p-4 rounded-lg text-left space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-[#000052]/70">Заморожено:</span><span className="font-bold text-[#B8860B]">${economics.escrow.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-[#000052]/70">Ждёт агента:</span><span className="font-bold text-[#000052]">${(economics.escrow * 0.88).toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-[#000052]/70">Комиссия InCORE:</span><span className="font-bold text-[#000052]">${economics.platformFee.toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-[#000052]/70">Ждёт агента (88%):</span><span className="font-bold text-[#000052]">${(economics.escrow * 0.88).toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-[#000052]/70">Комиссия InCORE (12%):</span><span className="font-bold text-[#000052]">${economics.platformFee.toLocaleString()}</span></div>
               </div>
             </>
           ) : (
@@ -198,6 +219,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     );
   }
 
+  // ОСНОВНАЯ ФОРМА
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-[#000052]/10">
@@ -208,7 +230,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
           </button>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); handlePayAndCreate(); }} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('contractModal.goal')} *</label>
