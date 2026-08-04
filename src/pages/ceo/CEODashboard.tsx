@@ -52,7 +52,6 @@ export function CEODashboard() {
           .eq('company_id', companyData.id)
           .eq('status', 'ACTIVE');
 
-        // Если нет реальных данных, используем демо
         const contracts = contractsData && contractsData.length > 0 ? contractsData : DEMO_AGENTS.flatMap(a => a.contracts);
         const agents = agentsData && agentsData.length > 0 ? agentsData : DEMO_AGENTS;
 
@@ -63,7 +62,6 @@ export function CEODashboard() {
         const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
         const revenuePerAgent = agents.length > 0 ? totalRevenue / agents.length : 0;
 
-        // Расчет выполнения плана
         const totalTargetRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
         const actualRevenue = contracts.reduce((sum, c) => {
           const kpiProgress = ((c.actual_calls || 0) / (c.kpi_calls || 1) + 
@@ -112,7 +110,6 @@ export function CEODashboard() {
         <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
       </div>
 
-      {/* KPI карточки */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl shadow-sm border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -153,7 +150,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Динамика выручки */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
@@ -181,7 +177,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Эффективность агентов */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
@@ -214,7 +209,7 @@ export function CEODashboard() {
                     onClick={() => navigate(`/ceo/agents/${agent.id}`)}
                     className="hover:bg-[#000052]/5 transition cursor-pointer"
                   >
-                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.name}</td>
+                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{agent.full_name}</td>
                     <td className="py-4 px-4 text-sm text-[#000052]/70">{new Date(agent.start_date).toLocaleDateString('ru-RU')}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">

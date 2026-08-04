@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Users, Mail, Phone, DollarSign, Target, ShieldCheck, Clock, CheckCircle, FileText } from 'lucide-react';
+import { ArrowLeft, Users, Mail, Phone, DollarSign, Target, ShieldCheck, Clock, FileText } from 'lucide-react';
 import { DEMO_AGENTS, calculateAgentKPI } from '../../lib/demoData';
 
 export function AgentProfilePage() {
@@ -52,7 +52,6 @@ export function AgentProfilePage() {
         Назад к агентам
       </button>
 
-      {/* Шапка профиля */}
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="w-20 h-20 rounded-full bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
@@ -70,7 +69,6 @@ export function AgentProfilePage() {
         </div>
       </div>
 
-      {/* KPI метрики */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -108,7 +106,6 @@ export function AgentProfilePage() {
         </div>
       </div>
 
-      {/* Контракты агента */}
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
         <h2 className="text-lg font-bold text-[#000052] mb-4">Контракты агента</h2>
         <div className="space-y-4">

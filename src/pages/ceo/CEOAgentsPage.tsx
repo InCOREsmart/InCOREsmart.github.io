@@ -66,7 +66,6 @@ export function CEOAgentsPage() {
 
             setAgents(agentsWithStats);
           } else {
-            // Используем демо-данные
             setAgents(DEMO_AGENTS.map(agent => ({
               id: agent.id,
               full_name: agent.full_name,
