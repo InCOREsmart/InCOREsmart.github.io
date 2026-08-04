@@ -54,9 +54,8 @@ export function CEOContractDetailPage() {
     );
   }
 
-  // Unit-экономика сделки
+    // Unit-экономика сделки
   const gmv = contract.revenue || contract.kpi_revenue || 1250000;
-  const platformFee = gmv * 0.12; // 12% комиссии платформы
   const escrowTotal = gmv * 0.88; // 88% в эскроу для агента
 
   // 6 потоков выплат агенту (согласно PDF)
