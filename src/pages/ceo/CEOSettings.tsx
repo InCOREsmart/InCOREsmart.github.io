@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,6 +10,8 @@ export function CEOSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+  
   const [formData, setFormData] = useState({
     company_type: 'ИП',
     full_name: '',
@@ -29,13 +31,14 @@ export function CEOSettings() {
     bank_address: '',
   });
 
-  // Загрузка данных компании при монтировании
   useEffect(() => {
+    if (hasFetched.current || !user) {
+      setLoading(false);
+      return;
+    }
+    hasFetched.current = true;
+
     const fetchCompany = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
       try {
         const { data } = await supabase
           .from('companies')
@@ -45,7 +48,8 @@ export function CEOSettings() {
 
         if (data) {
           setCompanyId(data.id);
-          setFormData({
+          setFormData(prev => ({
+            ...prev,
             company_type: data.company_type || 'ИП',
             full_name: data.full_name || '',
             display_name: data.display_name || '',
@@ -62,7 +66,7 @@ export function CEOSettings() {
             correspondent_account: data.correspondent_account || '',
             settlement_account: data.settlement_account || '',
             bank_address: data.bank_address || '',
-          });
+          }));
         }
       } catch (err) {
         console.error('Ошибка загрузки:', err);
@@ -84,23 +88,15 @@ export function CEOSettings() {
 
     setSaving(true);
     try {
-      // Если компания уже есть — обновляем, иначе создаём
       if (companyId) {
-        const { error } = await supabase
-          .from('companies')
-          .update(formData)
-          .eq('id', companyId);
+        const { error } = await supabase.from('companies').update(formData).eq('id', companyId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
-          .from('companies')
-          .insert({ ...formData, user_id: user.id })
-          .select()
-          .single();
+        const { data, error } = await supabase.from('companies').insert({ ...formData, user_id: user.id }).select().single();
         if (error) throw error;
         if (data) setCompanyId(data.id);
       }
-      alert(t('common.success'));
+      alert(t('common.success') || 'Успешно сохранено');
     } catch (err) {
       console.error('Ошибка сохранения:', err);
       alert(t('common.error') + ': ' + (err as Error).message);
@@ -126,7 +122,6 @@ export function CEOSettings() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Тип компании */}
         <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
           <h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-[#B8860B]" />
@@ -134,31 +129,16 @@ export function CEOSettings() {
           </h2>
           <div className="flex gap-3">
             <label className="flex-1 flex items-center gap-2 p-3 bg-white border border-[#000052]/20 rounded-lg cursor-pointer hover:border-[#B8860B] transition">
-              <input
-                type="radio"
-                name="company_type"
-                value="ИП"
-                checked={formData.company_type === 'ИП'}
-                onChange={handleChange}
-                className="text-[#B8860B]"
-              />
+              <input type="radio" name="company_type" value="ИП" checked={formData.company_type === 'ИП'} onChange={handleChange} className="text-[#B8860B]" />
               <span className="text-sm text-[#000052]">ИП</span>
             </label>
             <label className="flex-1 flex items-center gap-2 p-3 bg-white border border-[#000052]/20 rounded-lg cursor-pointer hover:border-[#B8860B] transition">
-              <input
-                type="radio"
-                name="company_type"
-                value="ООО"
-                checked={formData.company_type === 'ООО'}
-                onChange={handleChange}
-                className="text-[#B8860B]"
-              />
+              <input type="radio" name="company_type" value="ООО" checked={formData.company_type === 'ООО'} onChange={handleChange} className="text-[#B8860B]" />
               <span className="text-sm text-[#000052]">ООО</span>
             </label>
           </div>
         </div>
 
-        {/* Личные данные */}
         <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
           <h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-[#B8860B]" />
@@ -167,47 +147,23 @@ export function CEOSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">ФИО *</label>
-              <input
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="full_name" value={formData.full_name} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Отображаемое имя *</label>
-              <input
-                name="display_name"
-                value={formData.display_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="display_name" value={formData.display_name} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Должность</label>
-              <input
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-              />
+              <input name="position" value={formData.position} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Телефон *</label>
-              <input
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
           </div>
         </div>
 
-        {/* Данные компании */}
         <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
           <h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-[#B8860B]" />
@@ -217,73 +173,32 @@ export function CEOSettings() {
             {formData.company_type === 'ООО' && (
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-[#000052] mb-1.5">Название компании *</label>
-                <input
-                  name="company_name"
-                  value={formData.company_name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                  required={formData.company_type === 'ООО'}
-                />
+                <input name="company_name" value={formData.company_name} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required={formData.company_type === 'ООО'} />
               </div>
             )}
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {formData.company_type === 'ООО' ? 'ИНН компании' : 'ИНН'} *
-              </label>
-              <input
-                name="inn"
-                value={formData.inn}
-                onChange={handleChange}
-                maxLength={formData.company_type === 'ООО' ? 10 : 12}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{formData.company_type === 'ООО' ? 'ИНН компании' : 'ИНН'} *</label>
+              <input name="inn" value={formData.inn} onChange={handleChange} maxLength={formData.company_type === 'ООО' ? 10 : 12} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
-            {/* КПП только для ООО */}
             {formData.company_type === 'ООО' && (
               <div>
                 <label className="block text-sm font-semibold text-[#000052] mb-1.5">КПП *</label>
-                <input
-                  name="kpp"
-                  value={formData.kpp}
-                  onChange={handleChange}
-                  maxLength={9}
-                  className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                  required
-                />
+                <input name="kpp" value={formData.kpp} onChange={handleChange} maxLength={9} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
               </div>
             )}
             <div>
-              <label className="block text-sm font-semibold text-[#000052] mb-1.5">
-                {formData.company_type === 'ООО' ? 'ОГРН' : 'ОГРНИП'} *
-              </label>
-              <input
-                name="ogrn"
-                value={formData.ogrn}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">{formData.company_type === 'ООО' ? 'ОГРН' : 'ОГРНИП'} *</label>
+              <input name="ogrn" value={formData.ogrn} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             {formData.company_type === 'ООО' && (
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-[#000052] mb-1.5 flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  Юридический адрес *
-                </label>
-                <input
-                  name="legal_address"
-                  value={formData.legal_address}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                  required
-                />
+                <label className="block text-sm font-semibold text-[#000052] mb-1.5 flex items-center gap-1"><MapPin className="w-4 h-4" />Юридический адрес *</label>
+                <input name="legal_address" value={formData.legal_address} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
               </div>
             )}
           </div>
         </div>
 
-        {/* Банковские реквизиты */}
         <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
           <h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2">
             <Landmark className="w-5 h-5 text-[#B8860B]" />
@@ -292,74 +207,32 @@ export function CEOSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('company.bankName')} *</label>
-              <input
-                name="bank_name"
-                value={formData.bank_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="bank_name" value={formData.bank_name} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('company.bankBik')} *</label>
-              <input
-                name="bank_bik"
-                value={formData.bank_bik}
-                onChange={handleChange}
-                maxLength={9}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="bank_bik" value={formData.bank_bik} onChange={handleChange} maxLength={9} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">ИНН банка</label>
-              <input
-                name="bank_inn"
-                value={formData.bank_inn}
-                onChange={handleChange}
-                maxLength={10}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-              />
+              <input name="bank_inn" value={formData.bank_inn} onChange={handleChange} maxLength={10} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('company.correspondentAccount')} *</label>
-              <input
-                name="correspondent_account"
-                value={formData.correspondent_account}
-                onChange={handleChange}
-                maxLength={20}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="correspondent_account" value={formData.correspondent_account} onChange={handleChange} maxLength={20} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">{t('company.settlementAccount')} *</label>
-              <input
-                name="settlement_account"
-                value={formData.settlement_account}
-                onChange={handleChange}
-                maxLength={20}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-                required
-              />
+              <input name="settlement_account" value={formData.settlement_account} onChange={handleChange} maxLength={20} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Адрес банка</label>
-              <input
-                name="bank_address"
-                value={formData.bank_address}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-              />
+              <input name="bank_address" value={formData.bank_address} onChange={handleChange} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" />
             </div>
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full py-3 px-4 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50"
-        >
+        <button type="submit" disabled={saving} className="w-full py-3 px-4 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50">
           <Save className="w-5 h-5" />
           {saving ? t('common.loading') : t('common.save')}
         </button>
