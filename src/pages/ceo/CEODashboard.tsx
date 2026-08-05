@@ -19,7 +19,6 @@ export function CEODashboard() {
       const frozenEscrow = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
       const revenuePerAgent = agents.length > 0 ? totalRevenue / agents.length : 0;
       
-      // Прогноз выполнения плана = фактическая выручка августа / плановая выручка августа × 100%
       const salesGoalData = calculateSalesGoalAchievement();
 
       setMetrics({ 
