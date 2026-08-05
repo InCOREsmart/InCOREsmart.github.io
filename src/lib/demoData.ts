@@ -75,34 +75,53 @@ function generateMonthlyContracts(
 ): DemoContract[] {
   const contracts: DemoContract[] = [];
   const start = new Date(startDate);
-  const end = new Date('2026-08-31');
   
-  let currentMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+  // Генерируем контракты с января 2026 по август 2026 включительно
+  const startMonth = new Date(2026, 0, 1); // 1 января 2026
+  const endMonth = new Date(2026, 7, 1);   // 1 августа 2026
+  
+  let currentMonth = new Date(startMonth);
   let contractIndex = 1;
   
-  while (currentMonth <= end) {
+  while (currentMonth <= endMonth) {
     const monthKey = currentMonth.toISOString().slice(0, 7);
     const monthName = currentMonth.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+    
+    // Пропускаем месяцы до даты подключения агента
+    const agentStartMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+    if (currentMonth < agentStartMonth) {
+      currentMonth.setMonth(currentMonth.getMonth() + 1);
+      continue;
+    }
     
     const variation = 0.85 + Math.random() * 0.3;
     const kpiCalls = Math.round(baseKpi.calls * variation);
     const kpiMeetings = Math.round(baseKpi.meetings * variation);
     const kpiProposals = Math.round(baseKpi.proposals * variation);
-    const targetClients = Math.round(baseKpi.clients * variation) || 1;
+    const targetClients = Math.max(Math.round(baseKpi.clients * variation), 2); // минимум 2 клиента
     
-    const actualCalls = Math.round(kpiCalls * performance);
-    const actualMeetings = Math.round(kpiMeetings * performance);
-    const actualProposals = Math.round(kpiProposals * performance);
-    const actualClients = Math.round(targetClients * performance);
+    // Для августа (текущий месяц) — фактические показатели ещё формируются (50-80% от плана)
+    // Для прошлых месяцев — performance влияет на результат
+    const isAugust = monthKey === '2026-08';
+    const effectivePerformance = isAugust ? 0.65 : performance;
+    
+    const actualCalls = Math.round(kpiCalls * effectivePerformance);
+    const actualMeetings = Math.round(kpiMeetings * effectivePerformance);
+    const actualProposals = Math.round(kpiProposals * effectivePerformance);
+    // Гарантируем минимум 1 клиента в каждом месяце (особенно в августе)
+    const actualClients = Math.max(Math.round(targetClients * effectivePerformance), 1);
     
     const contractStartDate = new Date(currentMonth);
-    contractStartDate.setDate(start.getDate());
+    const dayOfMonth = Math.min(start.getDate(), 28); // безопасная дата
+    contractStartDate.setDate(dayOfMonth);
     
     const contractDeadline = new Date(currentMonth);
     contractDeadline.setMonth(contractDeadline.getMonth() + 1);
     contractDeadline.setDate(0);
     
-    const status: 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' = monthKey === '2026-08' ? 'ACTIVE' : 'COMPLETED';
+    // Август 2026 всегда ACTIVE, прошлые месяцы COMPLETED
+    const status: 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' = isAugust ? 'ACTIVE' : 'COMPLETED';
+    
     const revenueVariation = 0.8 + Math.random() * 0.4;
     const contractRevenue = Math.round(baseRevenue * revenueVariation);
     
@@ -188,4 +207,22 @@ export function calculateAgentKPI(agent: DemoAgent): number {
 
 export function calculateTotalBitrixDeals(): number {
   return DEMO_AGENTS.reduce((sum: number, agent: DemoAgent) => sum + agent.contracts.reduce((cSum: number, c: DemoContract) => cSum + c.bitrix_deals.length, 0), 0);
+}
+
+// Новая функция: расчёт прогноза выполнения плана на текущий месяц (август 2026)
+export function calculateSalesGoalAchievement(): { planned: number; actual: number; percent: number } {
+  const currentMonth = '2026-08';
+  const augustContracts = DEMO_AGENTS.flatMap((a: DemoAgent) => 
+    a.contracts.filter((c: DemoContract) => c.month === currentMonth)
+  );
+  
+  const planned = augustContracts.reduce((sum: number, c: DemoContract) => sum + c.revenue, 0);
+  const actual = augustContracts.reduce((sum: number, c: DemoContract) => {
+    const dealValue = c.revenue / c.target_clients;
+    return sum + (c.actual_clients * dealValue);
+  }, 0);
+  
+  const percent = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+  
+  return { planned, actual, percent };
 }

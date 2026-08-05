@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, Users, Target, ShieldCheck, ExternalLink, Database, Zap, CheckCircle, BarChart3 } from 'lucide-react';
-import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI, calculateTotalBitrixDeals } from '../../lib/demoData';
+import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI, calculateTotalBitrixDeals, calculateSalesGoalAchievement } from '../../lib/demoData';
 
 export function CEODashboard() {
   const { t } = useTranslation();
@@ -11,8 +11,6 @@ export function CEODashboard() {
   const [metrics, setMetrics] = useState({ totalRevenue: 0, frozenEscrow: 0, salesGoalAchievement: 0, revenuePerAgent: 0 });
 
   useEffect(() => {
-    // Для безупречного демо мы принудительно используем DEMO_AGENTS.
-    // Это гарантирует, что у всех 8 агентов есть контракты, включая активный на август 2026.
     const prepareDemoData = () => {
       const contracts = DEMO_AGENTS.flatMap(a => a.contracts);
       const agents = DEMO_AGENTS;
@@ -20,9 +18,16 @@ export function CEODashboard() {
       const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
       const frozenEscrow = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
       const revenuePerAgent = agents.length > 0 ? totalRevenue / agents.length : 0;
-      const salesGoalAchievement = Math.round(agents.reduce((sum, a) => sum + calculateAgentKPI(a), 0) / agents.length);
+      
+      // Прогноз выполнения плана = фактическая выручка августа / плановая выручка августа × 100%
+      const salesGoalData = calculateSalesGoalAchievement();
 
-      setMetrics({ totalRevenue, frozenEscrow, salesGoalAchievement, revenuePerAgent });
+      setMetrics({ 
+        totalRevenue, 
+        frozenEscrow, 
+        salesGoalAchievement: salesGoalData.percent, 
+        revenuePerAgent 
+      });
       setLoading(false);
     };
 
@@ -98,13 +103,14 @@ export function CEODashboard() {
 
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-[#000052]/70">Прогноз выполнения плана</h3>
+            <h3 className="text-sm font-medium text-[#000052]/70">Прогноз выполнения плана (Август)</h3>
             <Target className="w-5 h-5 text-[#B8860B]" />
           </div>
           <p className="text-2xl font-bold text-[#000052]">{metrics.salesGoalAchievement}%</p>
           <div className="mt-2 h-2 bg-[#000052]/10 rounded-full overflow-hidden">
             <div className="h-full bg-[#B8860B] rounded-full transition-all duration-1000" style={{ width: `${Math.min(metrics.salesGoalAchievement, 100)}%` }}></div>
           </div>
+          <p className="text-xs text-[#000052]/60 mt-2">Факт / План за текущий месяц</p>
         </div>
 
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
@@ -272,8 +278,7 @@ export function CEODashboard() {
             <tbody className="divide-y divide-[#000052]/5">
               {DEMO_AGENTS.map((agent) => {
                 const kpi = calculateAgentKPI(agent);
-                // Берем последний контракт (августовский), чтобы показать текущую активность
-                const augustContract = agent.contracts[agent.contracts.length - 1];
+                const augustContract = agent.contracts.find(c => c.month === '2026-08') || agent.contracts[agent.contracts.length - 1];
                 
                 return (
                   <tr key={agent.id} onClick={() => navigate(`/ceo/agents/${agent.id}`)} className="hover:bg-[#000052]/5 transition cursor-pointer">
