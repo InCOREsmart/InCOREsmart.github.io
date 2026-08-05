@@ -102,7 +102,6 @@ function generateMonthlyContracts(
     contractDeadline.setMonth(contractDeadline.getMonth() + 1);
     contractDeadline.setDate(0);
     
-    // Август 2026 всегда ACTIVE, прошлые месяцы COMPLETED
     const status: 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' = monthKey === '2026-08' ? 'ACTIVE' : 'COMPLETED';
     const revenueVariation = 0.8 + Math.random() * 0.4;
     const contractRevenue = Math.round(baseRevenue * revenueVariation);
@@ -162,9 +161,9 @@ export function calculateRevenueByMonth(): { month: string; value: number; label
   ];
 
   return months.map(m => {
-    const monthRevenue = DEMO_AGENTS.reduce((sum, agent) => {
-      const agentMonthContracts = agent.contracts.filter(c => c.month === m.key);
-      const monthSum = agentMonthContracts.reduce((cSum, c) => {
+    const monthRevenue = DEMO_AGENTS.reduce((sum: number, agent: DemoAgent) => {
+      const agentMonthContracts = agent.contracts.filter((c: DemoContract) => c.month === m.key);
+      const monthSum = agentMonthContracts.reduce((cSum: number, c: DemoContract) => {
         const dealValue = c.revenue / c.target_clients;
         return cSum + (c.actual_clients * dealValue);
       }, 0);
@@ -176,7 +175,7 @@ export function calculateRevenueByMonth(): { month: string; value: number; label
 
 export function calculateAgentKPI(agent: DemoAgent): number {
   if (agent.contracts.length === 0) return 0;
-  const totalKPI = agent.contracts.reduce((sum, contract) => {
+  const totalKPI = agent.contracts.reduce((sum: number, contract: DemoContract) => {
     const callsProgress = contract.actual_calls / contract.kpi_calls;
     const meetingsProgress = contract.actual_meetings / contract.kpi_meetings;
     const proposalsProgress = contract.actual_proposals / contract.kpi_proposals;
@@ -188,5 +187,5 @@ export function calculateAgentKPI(agent: DemoAgent): number {
 }
 
 export function calculateTotalBitrixDeals(): number {
-  return DEMO_AGENTS.reduce((sum, agent) => sum + agent.contracts.reduce((cSum, c) => cSum + c.bitrix_deals.length, 0), 0);
+  return DEMO_AGENTS.reduce((sum: number, agent: DemoAgent) => sum + agent.contracts.reduce((cSum: number, c: DemoContract) => cSum + c.bitrix_deals.length, 0), 0);
 }
