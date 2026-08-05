@@ -1,52 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
 import { DollarSign, Users, Target, ShieldCheck, ExternalLink, Database, Zap, CheckCircle, BarChart3 } from 'lucide-react';
 import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI, calculateTotalBitrixDeals } from '../../lib/demoData';
 
 export function CEODashboard() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({ totalRevenue: 0, frozenEscrow: 0, salesGoalAchievement: 0, revenuePerAgent: 0 });
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      if (!user) { setLoading(false); return; }
-      try {
-        const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-        if (!companyData) { setLoading(false); return; }
+    // Для безупречного демо мы принудительно используем DEMO_AGENTS.
+    // Это гарантирует, что у всех 8 агентов есть контракты, включая активный на август 2026.
+    const prepareDemoData = () => {
+      const contracts = DEMO_AGENTS.flatMap(a => a.contracts);
+      const agents = DEMO_AGENTS;
 
-        const { data: contractsData } = await supabase.from('contracts').select('*').eq('company_id', companyData.id);
-        const { data: agentsData } = await supabase.from('agents').select('*').eq('company_id', companyData.id).eq('status', 'ACTIVE');
+      const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+      const frozenEscrow = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
+      const revenuePerAgent = agents.length > 0 ? totalRevenue / agents.length : 0;
+      const salesGoalAchievement = Math.round(agents.reduce((sum, a) => sum + calculateAgentKPI(a), 0) / agents.length);
 
-        const contracts = contractsData && contractsData.length > 0 ? contractsData : DEMO_AGENTS.flatMap(a => a.contracts);
-        
-        const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
-        const frozenEscrow = contracts.reduce((sum, c) => sum + ((c.revenue || 0) * 0.88), 0);
-        const revenuePerAgent = DEMO_AGENTS.length > 0 ? totalRevenue / DEMO_AGENTS.length : 0;
-
-        // Прогноз выполнения плана считается как средний KPI всех демо-агентов (гарантированно работает)
-        const salesGoalAchievement = Math.round(DEMO_AGENTS.reduce((sum, a) => sum + calculateAgentKPI(a), 0) / DEMO_AGENTS.length);
-
-        setMetrics({ totalRevenue, frozenEscrow, salesGoalAchievement, revenuePerAgent });
-      } catch (err) {
-        console.error('Ошибка:', err);
-      } finally {
-        setLoading(false);
-      }
+      setMetrics({ totalRevenue, frozenEscrow, salesGoalAchievement, revenuePerAgent });
+      setLoading(false);
     };
-    fetchMetrics();
-  }, [user]);
+
+    prepareDemoData();
+  }, []);
 
   if (loading) {
     return (
       <div className="p-8 text-center text-[#000052]">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div>
-        <p className="mt-2">{t('common.loading')}</p>
+        <p className="mt-2">Загрузка...</p>
       </div>
     );
   }
@@ -54,7 +41,6 @@ export function CEODashboard() {
   const revenueByMonth = calculateRevenueByMonth();
   const maxRevenue = Math.max(...revenueByMonth.map(d => d.value), 1);
 
-  // CRM-метрики
   const totalContracts = DEMO_AGENTS.reduce((sum, a) => sum + a.contracts.length, 0);
   const totalDeals = calculateTotalBitrixDeals();
   const allContracts = DEMO_AGENTS.flatMap(a => a.contracts);
@@ -64,7 +50,6 @@ export function CEODashboard() {
     return sum + closedDeals.reduce((s, d) => s + (d.amount || 0), 0);
   }, 0);
 
-  // Столбчатый график выручки (SVG)
   const chartWidth = 800;
   const chartHeight = 250;
   const padding = { top: 20, right: 20, bottom: 40, left: 70 };
@@ -73,7 +58,6 @@ export function CEODashboard() {
   const barWidth = (innerWidth / revenueByMonth.length) * 0.6;
   const barGap = (innerWidth / revenueByMonth.length) * 0.4;
 
-  // Столбчатый график KPI агентов (SVG)
   const kpiChartWidth = 800;
   const kpiChartHeight = 300;
   const kpiPadding = { top: 20, right: 20, bottom: 60, left: 50 };
@@ -95,7 +79,6 @@ export function CEODashboard() {
         <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">Финансовое ядро</h1>
       </div>
 
-      {/* Основные KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -133,7 +116,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* CRM-метрики */}
       <div onClick={() => navigate('/ceo/integrations')} className="cursor-pointer group">
         <div className="flex items-center justify-between mb-3 px-1">
           <div className="flex items-center gap-2">
@@ -176,7 +158,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Столбчатый график выручки */}
       <div className="bg-white p-5 md:p-6 rounded-xl border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
@@ -217,7 +198,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Столбчатый график KPI агентов */}
       <div className="bg-white p-5 md:p-6 rounded-xl border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
@@ -272,7 +252,6 @@ export function CEODashboard() {
         </div>
       </div>
 
-      {/* Таблица агентов */}
       <div className="bg-white p-5 md:p-6 rounded-xl border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <Users className="w-5 h-5 text-[#B8860B]" />
@@ -285,15 +264,16 @@ export function CEODashboard() {
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дата начала</th>
                 <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Средний KPI</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Звонки</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Встречи</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Сделки</th>
+                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Звонки (Авг)</th>
+                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider hidden md:table-cell">Встречи (Авг)</th>
+                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Сделки (Авг)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#000052]/5">
               {DEMO_AGENTS.map((agent) => {
                 const kpi = calculateAgentKPI(agent);
-                const contract = agent.contracts[agent.contracts.length - 1]; // Берем последний (августовский) контракт
+                // Берем последний контракт (августовский), чтобы показать текущую активность
+                const augustContract = agent.contracts[agent.contracts.length - 1];
                 
                 return (
                   <tr key={agent.id} onClick={() => navigate(`/ceo/agents/${agent.id}`)} className="hover:bg-[#000052]/5 transition cursor-pointer">
@@ -312,9 +292,9 @@ export function CEODashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{contract.actual_calls}</td>
-                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{contract.actual_meetings}</td>
-                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{contract.actual_clients}</td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{augustContract.actual_calls}</td>
+                    <td className="py-4 px-4 text-sm text-[#000052]/70 hidden md:table-cell">{augustContract.actual_meetings}</td>
+                    <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{augustContract.actual_clients}</td>
                   </tr>
                 );
               })}
