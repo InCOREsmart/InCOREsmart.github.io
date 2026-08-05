@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { DollarSign, Users, Target, ShieldCheck, BarChart3 } from 'lucide-react';
-import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI } from '../../lib/demoData';
+import { DollarSign, Users, Target, ShieldCheck, BarChart3, ExternalLink, Database, Zap, CheckCircle } from 'lucide-react';
+import { DEMO_AGENTS, calculateRevenueByMonth, calculateAgentKPI, calculateTotalBitrixDeals } from '../../lib/demoData';
 
 export function CEODashboard() {
   const { t } = useTranslation();
@@ -104,12 +104,26 @@ export function CEODashboard() {
   const revenueByMonth = calculateRevenueByMonth();
   const maxRevenue = Math.max(...revenueByMonth.map(d => d.value));
 
+  // CRM-метрики из demoData
+  const totalContracts = DEMO_AGENTS.reduce((sum, a) => sum + a.contracts.length, 0);
+  const totalDeals = calculateTotalBitrixDeals();
+  const allContracts = DEMO_AGENTS.flatMap(a => a.contracts);
+  const crmTotalRevenue = allContracts.reduce((sum, c) => sum + c.revenue, 0);
+  const crmTotalBonuses = allContracts.reduce((sum, c) => {
+    const closedDeals = c.bitrix_deals.filter(d => d.stage === 'Успешно реализовано');
+    return sum + closedDeals.reduce((s, d) => s + d.amount, 0);
+  }, 0);
+
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('ceoDashboard.title')}</h1>
+          <p className="text-sm text-[#000052]/70 mt-1">Финансовое ядро компании</p>
+        </div>
       </div>
 
+      {/* Основные KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl shadow-sm border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -150,6 +164,60 @@ export function CEODashboard() {
         </div>
       </div>
 
+      {/* CRM-метрики (кликабельные → переход в Интеграции) */}
+      <div 
+        onClick={() => navigate('/ceo/integrations')}
+        className="cursor-pointer group"
+      >
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <ExternalLink className="w-4 h-4 text-[#B8860B]" />
+            <h2 className="text-sm font-bold text-[#000052]">CRM-метрики (Битрикс24, amoCRM, HubSpot)</h2>
+          </div>
+          <span className="text-xs text-[#B8860B] font-semibold group-hover:underline flex items-center gap-1">
+            Перейти в интеграции <ExternalLink className="w-3 h-3" />
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052] group-hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium opacity-80">Всего контрактов</h3>
+              <Database className="w-5 h-5 opacity-80" />
+            </div>
+            <p className="text-2xl font-bold">{totalContracts}</p>
+            <p className="text-xs opacity-70 mt-1">За весь период</p>
+          </div>
+
+          <div className="bg-[#B8860B] text-white p-5 rounded-xl border border-[#B8860B] group-hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium opacity-80">Сделок в CRM</h3>
+              <ExternalLink className="w-5 h-5 opacity-80" />
+            </div>
+            <p className="text-2xl font-bold">{totalDeals}</p>
+            <p className="text-xs opacity-70 mt-1">Автоматически синхронизировано</p>
+          </div>
+
+          <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10 group-hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#000052]/70">Выручка</h3>
+              <Zap className="w-5 h-5 text-[#B8860B]" />
+            </div>
+            <p className="text-2xl font-bold text-[#000052]">${crmTotalRevenue.toLocaleString()}</p>
+            <p className="text-xs text-[#000052]/60 mt-1">По всем контрактам</p>
+          </div>
+
+          <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10 group-hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-[#000052]/70">Начислено бонусов</h3>
+              <CheckCircle className="w-5 h-5 text-[#B8860B]" />
+            </div>
+            <p className="text-2xl font-bold text-[#000052]">${crmTotalBonuses.toLocaleString()}</p>
+            <p className="text-xs text-[#000052]/60 mt-1">По закрытым сделкам</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Динамика выручки */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
@@ -177,6 +245,7 @@ export function CEODashboard() {
         </div>
       </div>
 
+      {/* Эффективность агентов */}
       <div className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-[#000052]/10">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
