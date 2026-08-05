@@ -5,17 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Search, Filter, DollarSign, Clock, Users, ShieldCheck, FileText } from 'lucide-react';
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
-
-// Демо-данные для питча (если в БД нет контрактов)
-const DEMO_CONTRACTS = [
-  { id: 'demo-1', title: 'Привлечение 10 корпоративных клиентов B2B', agent_id: 'demo-agent-1', agent_name: 'Александр С.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-08-31', created_at: '2026-01-15', kpi_calls: 120, kpi_meetings: 45, target_clients: 10 },
-  { id: 'demo-2', title: 'Расширение портфеля страхования в сегменте МСБ', agent_id: 'demo-agent-2', agent_name: 'Мария К.', revenue: 1000000, escrow_amount: 880000, status: 'IN_PROGRESS', deadline: '2026-09-15', created_at: '2026-02-01', kpi_calls: 150, kpi_meetings: 60, target_clients: 12 },
-  { id: 'demo-3', title: 'Пролонгация ключевых корпоративных договоров', agent_id: 'demo-agent-3', agent_name: 'Дмитрий В.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-07-30', created_at: '2026-01-20', kpi_calls: 90, kpi_meetings: 30, target_clients: 8 },
-  { id: 'demo-4', title: 'Кросс-продажи продуктов страхования жизни', agent_id: 'demo-agent-4', agent_name: 'Елена П.', revenue: 1000000, escrow_amount: 880000, status: 'PENDING_APPROVAL', deadline: '2026-10-01', created_at: '2026-03-10', kpi_calls: 130, kpi_meetings: 50, target_clients: 9 },
-  { id: 'demo-5', title: 'Выполнение квартального плана по новым продажам', agent_id: 'demo-agent-5', agent_name: 'Иван Т.', revenue: 1000000, escrow_amount: 880000, status: 'ACTIVE', deadline: '2026-08-15', created_at: '2026-02-15', kpi_calls: 80, kpi_meetings: 25, target_clients: 5 },
-  { id: 'demo-6', title: 'Удержание клиентов и снижение оттока', agent_id: 'demo-agent-6', agent_name: 'Ольга М.', revenue: 1000000, escrow_amount: 880000, status: 'COMPLETED', deadline: '2026-06-30', created_at: '2026-01-05', kpi_calls: 160, kpi_meetings: 65, target_clients: 14 },
-  { id: 'demo-7', title: 'Развитие партнерской сети в регионах', agent_id: 'demo-agent-7', agent_name: 'Сергей Н.', revenue: 1000000, escrow_amount: 880000, status: 'IN_PROGRESS', deadline: '2026-09-30', created_at: '2026-02-20', kpi_calls: 110, kpi_meetings: 40, target_clients: 7 },
-];
+import { DEMO_AGENTS } from '../../lib/demoData';
 
 export function CEOContractsPage() {
   const { t } = useTranslation();
@@ -48,30 +38,59 @@ export function CEOContractsPage() {
             .eq('company_id', companyData.id)
             .order('created_at', { ascending: false });
 
-          if (contractsData && contractsData.length > 0) {
-            // Получаем имена агентов
-            const agentIds = [...new Set(contractsData.map(c => c.agent_id).filter(Boolean))];
+          const realContracts = contractsData || [];
+
+          // Если реальных контрактов мало — дополняем демо-данными
+          if (realContracts.length < 8) {
+            const demoContracts = DEMO_AGENTS.flatMap(agent => 
+              agent.contracts.map(contract => ({
+                ...contract,
+                agent_name: agent.full_name,
+                agent_id: agent.id,
+                company_id: companyData.id,
+                is_demo: true,
+              }))
+            );
+            setContracts([...realContracts, ...demoContracts]);
+          } else {
+            // Получаем имена агентов для реальных контрактов
+            const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
             const { data: agentsData } = await supabase
               .from('agents')
               .select('id, full_name')
               .in('id', agentIds);
 
-            const contractsWithAgents = contractsData.map(c => ({
+            const contractsWithAgents = realContracts.map(c => ({
               ...c,
               agent_name: agentsData?.find(a => a.id === c.agent_id)?.full_name || 'Не назначен',
+              is_demo: false,
             }));
 
             setContracts(contractsWithAgents);
-          } else {
-            // Если контрактов нет — показываем демо-данные для питча
-            setContracts(DEMO_CONTRACTS);
           }
         } else {
-          setContracts(DEMO_CONTRACTS);
+          // Если компании нет — показываем все демо-контракты
+          const demoContracts = DEMO_AGENTS.flatMap(agent => 
+            agent.contracts.map(contract => ({
+              ...contract,
+              agent_name: agent.full_name,
+              agent_id: agent.id,
+              is_demo: true,
+            }))
+          );
+          setContracts(demoContracts);
         }
       } catch (err) {
         console.error('Ошибка загрузки контрактов:', err);
-        setContracts(DEMO_CONTRACTS);
+        const demoContracts = DEMO_AGENTS.flatMap(agent => 
+          agent.contracts.map(contract => ({
+            ...contract,
+            agent_name: agent.full_name,
+            agent_id: agent.id,
+            is_demo: true,
+          }))
+        );
+        setContracts(demoContracts);
       } finally {
         setLoading(false);
       }
@@ -84,7 +103,6 @@ export function CEOContractsPage() {
     window.location.reload();
   };
 
-  // Фильтрация и поиск
   const filteredContracts = contracts.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          c.agent_name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -92,7 +110,6 @@ export function CEOContractsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Статистика
   const totalGMV = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
   const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
   const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
@@ -126,7 +143,6 @@ export function CEOContractsPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Шапка */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
@@ -141,7 +157,6 @@ export function CEOContractsPage() {
         </button>
       </div>
 
-      {/* 3 ключевые метрики */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
@@ -171,7 +186,6 @@ export function CEOContractsPage() {
         </div>
       </div>
 
-      {/* Фильтры и поиск */}
       <div className="bg-white p-4 rounded-xl border border-[#000052]/10">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="flex-1 relative">
@@ -202,7 +216,6 @@ export function CEOContractsPage() {
         </div>
       </div>
 
-      {/* Таблица контрактов */}
       <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
         {filteredContracts.length === 0 ? (
           <div className="text-center py-12 text-[#000052]/60">
@@ -217,6 +230,7 @@ export function CEOContractsPage() {
                 <tr>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Название</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Месяц</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">GMV</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Эскроу</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дедлайн</th>
@@ -231,9 +245,14 @@ export function CEOContractsPage() {
                     className="hover:bg-[#000052]/5 cursor-pointer transition"
                   >
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-[#000052] text-sm">{contract.title}</div>
+                      <div className="font-semibold text-[#000052] text-sm flex items-center gap-2">
+                        {contract.title}
+                        {contract.is_demo && (
+                          <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-2 py-0.5 rounded font-normal">демо</span>
+                        )}
+                      </div>
                       <div className="text-xs text-[#000052]/60 mt-1">
-                        Создан: {new Date(contract.created_at).toLocaleDateString('ru-RU')}
+                        Создан: {new Date(contract.start_date || contract.created_at).toLocaleDateString('ru-RU')}
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -243,6 +262,11 @@ export function CEOContractsPage() {
                         </div>
                         <span className="text-sm text-[#000052]">{contract.agent_name || 'Не назначен'}</span>
                       </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm text-[#000052]/70">
+                        {contract.month ? new Date(contract.month + '-01').toLocaleString('ru-RU', { month: 'short', year: 'numeric' }) : '—'}
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <div className="text-sm font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
@@ -268,7 +292,6 @@ export function CEOContractsPage() {
         )}
       </div>
 
-      {/* Модалка создания контракта */}
       <CreateContractModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

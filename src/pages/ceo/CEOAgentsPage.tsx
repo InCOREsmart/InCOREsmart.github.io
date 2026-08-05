@@ -38,35 +38,17 @@ export function CEOAgentsPage() {
             .eq('status', 'ACTIVE')
             .order('created_at', { ascending: false });
 
-          if (agentsData && agentsData.length > 0) {
-            const agentsWithStats = await Promise.all(
-              agentsData.map(async (agent) => {
-                const { data: contractsData } = await supabase
-                  .from('contracts')
-                  .select('*')
-                  .eq('agent_id', agent.id);
+          const realAgents = agentsData || [];
+          const realAgentIdentifiers = new Set(
+            realAgents
+              .map(a => a.email || a.phone)
+              .filter(Boolean)
+          );
 
-                const activeContracts = (contractsData || []).filter(c => 
-                  c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL'
-                );
-                const totalRevenue = (contractsData || []).reduce((sum, c) => sum + (c.revenue || 0), 0);
-                const avgKpi = contractsData && contractsData.length > 0
-                  ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 100), 0) / contractsData.length
-                  : 100;
-
-                return {
-                  ...agent,
-                  contracts_count: (contractsData || []).length,
-                  total_revenue: totalRevenue,
-                  kpi_achievement: Math.round(avgKpi),
-                  active_contracts: activeContracts.length,
-                };
-              })
-            );
-
-            setAgents(agentsWithStats);
-          } else {
-            setAgents(DEMO_AGENTS.map(agent => ({
+          // Находим демо-агентов, которых ещё нет в БД
+          const demoAgentsToAdd = DEMO_AGENTS
+            .filter(demo => !realAgentIdentifiers.has(demo.email) && !realAgentIdentifiers.has(demo.phone))
+            .map(agent => ({
               id: agent.id,
               full_name: agent.full_name,
               email: agent.email,
@@ -78,9 +60,40 @@ export function CEOAgentsPage() {
               kpi_achievement: calculateAgentKPI(agent),
               active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
               start_date: agent.start_date,
-            })));
-          }
+              is_demo: true,
+            }));
+
+          // Реальные агенты с подсчётом статистики
+          const realAgentsWithStats = await Promise.all(
+            realAgents.map(async (agent) => {
+              const { data: contractsData } = await supabase
+                .from('contracts')
+                .select('*')
+                .eq('agent_id', agent.id);
+
+              const activeContracts = (contractsData || []).filter(c => 
+                c.status === 'ACTIVE' || c.status === 'IN_PROGRESS' || c.status === 'PENDING_APPROVAL'
+              );
+              const totalRevenue = (contractsData || []).reduce((sum, c) => sum + (c.revenue || 0), 0);
+              const avgKpi = contractsData && contractsData.length > 0
+                ? (contractsData || []).reduce((sum, c) => sum + (c.roi_percentage || 100), 0) / contractsData.length
+                : 100;
+
+              return {
+                ...agent,
+                contracts_count: (contractsData || []).length,
+                total_revenue: totalRevenue,
+                kpi_achievement: Math.round(avgKpi),
+                active_contracts: activeContracts.length,
+                is_demo: false,
+              };
+            })
+          );
+
+          // Объединяем: реальные + демо
+          setAgents([...realAgentsWithStats, ...demoAgentsToAdd]);
         } else {
+          // Если компании нет — показываем всех демо-агентов
           setAgents(DEMO_AGENTS.map(agent => ({
             id: agent.id,
             full_name: agent.full_name,
@@ -93,6 +106,7 @@ export function CEOAgentsPage() {
             kpi_achievement: calculateAgentKPI(agent),
             active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
             start_date: agent.start_date,
+            is_demo: true,
           })));
         }
       } catch (err) {
@@ -109,6 +123,7 @@ export function CEOAgentsPage() {
           kpi_achievement: calculateAgentKPI(agent),
           active_contracts: agent.contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length,
           start_date: agent.start_date,
+          is_demo: true,
         })));
       } finally {
         setLoading(false);
@@ -245,7 +260,12 @@ export function CEOAgentsPage() {
                           <Users className="w-5 h-5 text-[#B8860B]" />
                         </div>
                         <div>
-                          <div className="font-semibold text-[#000052] text-sm">{agent.full_name}</div>
+                          <div className="font-semibold text-[#000052] text-sm flex items-center gap-2">
+                            {agent.full_name}
+                            {agent.is_demo && (
+                              <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-2 py-0.5 rounded font-normal">демо</span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-3 mt-1">
                             <span className="text-xs text-[#000052]/60 flex items-center gap-1">
                               <Mail className="w-3 h-3" />
