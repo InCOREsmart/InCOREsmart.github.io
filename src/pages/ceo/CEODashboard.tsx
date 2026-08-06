@@ -43,6 +43,14 @@ export function CEODashboard() {
   }
 
   const revenueByMonth = calculateRevenueByMonth();
+  console.log("Revenue:", revenueByMonth);
+
+console.log("Sales goal:", calculateSalesGoalAchievement());
+
+console.log(
+  "August contracts:",
+  DEMO_AGENTS.flatMap(a => a.contracts).filter(c => c.month === "2026-08")
+);
   const maxRevenue = Math.max(...revenueByMonth.map(d => d.value), 1);
 
   const totalContracts = DEMO_AGENTS.reduce((sum, a) => sum + a.contracts.length, 0);

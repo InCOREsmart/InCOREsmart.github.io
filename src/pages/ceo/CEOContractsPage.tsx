@@ -32,44 +32,56 @@ export function CEOContractsPage() {
           .maybeSingle();
 
         if (companyData) {
-          const { data: contractsData } = await supabase
+          const { data: realContracts } = await supabase
             .from('contracts')
             .select('*')
             .eq('company_id', companyData.id)
             .order('created_at', { ascending: false });
 
-          const realContracts = contractsData || [];
+          const contractsList: any[] = [];
 
-          // Если реальных контрактов мало — дополняем демо-данными
-          if (realContracts.length < 8) {
+          if (realContracts && realContracts.length > 0) {
+            // 1. Собираем все уникальные agent_id из реальных контрактов
+            const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
+            
+            // 2. Загружаем имена этих агентов
+            let agentsMap = new Map();
+            if (agentIds.length > 0) {
+              const { data: agentsData } = await supabase
+                .from('agents')
+                .select('id, full_name')
+                .in('id', agentIds);
+              
+              if (agentsData) {
+                agentsData.forEach(a => agentsMap.set(a.id, a.full_name));
+              }
+            }
+
+            // 3. Мапим реальные контракты, подставляя правильное имя агента
+            const mappedRealContracts = realContracts.map(c => ({
+              ...c,
+              agent_name: agentsMap.get(c.agent_id) || 'Не назначен',
+              is_demo: false,
+            }));
+            contractsList.push(...mappedRealContracts);
+          }
+
+          // 4. Если реальных контрактов меньше 8, добавляем демо-контракты для красоты питча
+          if (contractsList.length < 8) {
             const demoContracts = DEMO_AGENTS.flatMap(agent => 
               agent.contracts.map(contract => ({
                 ...contract,
                 agent_name: agent.full_name,
                 agent_id: agent.id,
-                company_id: companyData.id,
                 is_demo: true,
               }))
             );
-            setContracts([...realContracts, ...demoContracts]);
-          } else {
-            // Получаем имена агентов для реальных контрактов
-            const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
-            const { data: agentsData } = await supabase
-              .from('agents')
-              .select('id, full_name')
-              .in('id', agentIds);
-
-            const contractsWithAgents = realContracts.map(c => ({
-              ...c,
-              agent_name: agentsData?.find(a => a.id === c.agent_id)?.full_name || 'Не назначен',
-              is_demo: false,
-            }));
-
-            setContracts(contractsWithAgents);
+            contractsList.push(...demoContracts);
           }
+
+          setContracts(contractsList);
         } else {
-          // Если компании нет — показываем все демо-контракты
+          // Если компании нет, показываем только демо
           const demoContracts = DEMO_AGENTS.flatMap(agent => 
             agent.contracts.map(contract => ({
               ...contract,
@@ -82,15 +94,6 @@ export function CEOContractsPage() {
         }
       } catch (err) {
         console.error('Ошибка загрузки контрактов:', err);
-        const demoContracts = DEMO_AGENTS.flatMap(agent => 
-          agent.contracts.map(contract => ({
-            ...contract,
-            agent_name: agent.full_name,
-            agent_id: agent.id,
-            is_demo: true,
-          }))
-        );
-        setContracts(demoContracts);
       } finally {
         setLoading(false);
       }
@@ -110,9 +113,9 @@ export function CEOContractsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalGMV = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
-  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-  const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+  const totalGMV = contracts.filter(c => !c.is_demo).reduce((sum, c) => sum + (c.revenue || 0), 0);
+  const totalEscrow = contracts.filter(c => !c.is_demo).reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
+  const activeCount = contracts.filter(c => !c.is_demo && (c.status === 'ACTIVE' || c.status === 'IN_PROGRESS')).length;
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
@@ -160,11 +163,11 @@ export function CEOContractsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium opacity-80">Общий GMV</h3>
+            <h3 className="text-sm font-medium opacity-80">Общий GMV (Реальные)</h3>
             <DollarSign className="w-5 h-5 opacity-80" />
           </div>
           <p className="text-2xl font-bold">${totalGMV.toLocaleString()}</p>
-          <p className="text-xs opacity-70 mt-1">{contracts.length} контрактов</p>
+          <p className="text-xs opacity-70 mt-1">{contracts.filter(c => !c.is_demo).length} реальных контрактов</p>
         </div>
 
         <div className="bg-[#B8860B] text-white p-5 rounded-xl border border-[#B8860B]">

@@ -1,3 +1,4 @@
+console.log('DEMO DATA VERSION 999');
 export interface DemoAgent {
   id: string;
   name: string;
@@ -13,7 +14,10 @@ export interface DemoContract {
   id: string;
   title: string;
   description: string;
-  revenue: number;
+  revenue: number;escrow_amount: number;
+escrow_status: 'FUNDED';
+agent_payouts_total: number;
+company_profit: number;
   status: 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED';
   start_date: string;
   deadline: string;
@@ -83,7 +87,10 @@ function generateMonthlyContracts(
   let contractIndex = 1;
   
   while (currentMonth <= endMonth) {
-    const monthKey = currentMonth.toISOString().slice(0, 7);
+   const year = currentMonth.getFullYear();
+const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+const monthKey = `${year}-${month}`;
+    
     const monthName = currentMonth.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
     
     const agentStartMonth = new Date(start.getFullYear(), start.getMonth(), 1);
@@ -118,13 +125,19 @@ function generateMonthlyContracts(
     
     const revenueVariation = 0.8 + Math.random() * 0.4;
     const contractRevenue = Math.round(baseRevenue * revenueVariation);
+    const escrowAmount = Math.round(contractRevenue * 0.88);
+const companyProfit = contractRevenue - escrowAmount;
     
     const contractBase: Omit<DemoContract, 'bitrix_deals'> = {
       id: `contract-${agentId}-${contractIndex}`,
       title: `Контракт ${monthName} - Выполнение плана`,
       description: `Ежемесячный контракт на выполнение KPI в ${monthName}`,
       revenue: contractRevenue,
-      status,
+escrow_amount: escrowAmount,
+escrow_status: 'FUNDED',
+agent_payouts_total: escrowAmount,
+company_profit: companyProfit,
+status,
       start_date: contractStartDate.toISOString().slice(0, 10),
       deadline: contractDeadline.toISOString().slice(0, 10),
       month: monthKey,
@@ -160,7 +173,11 @@ export const DEMO_AGENTS: DemoAgent[] = [
   { id: 'demo-7', name: 'Новиков Сергей', full_name: 'Новиков Сергей Андреевич', email: 's.novikov@incore.demo', phone: '+7 900 789-01-23', specialization: 'Партнерская сеть', start_date: '2026-03-25', contracts: generateMonthlyContracts('demo-7', '2026-03-25', { calls: 110, meetings: 40, proposals: 28, clients: 7 }, 0.92, 200000) },
   { id: 'demo-8', name: 'Киселева Наталья', full_name: 'Киселева Наталья Викторовна', email: 'n.kiseleva@incore.demo', phone: '+7 909 013-35-44', specialization: 'EdTech & HRTech', start_date: '2026-01-10', contracts: generateMonthlyContracts('demo-8', '2026-01-10', { calls: 140, meetings: 55, proposals: 38, clients: 11 }, 0.98, 260000) },
 ];
+console.log(DEMO_AGENTS.length);
 
+console.log(
+  DEMO_AGENTS[0].contracts.map(c => c.month)
+);
 export function calculateRevenueByMonth(): { month: string; value: number; label: string }[] {
   const months = [
     { key: '2026-01', label: 'Янв' },
