@@ -1,62 +1,67 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
-import { Lock, Mail, User, AlertCircle, Briefcase, Building } from 'lucide-react';
+import { logAcceptance, getActiveDocuments, AcceptanceData } from '../../lib/legal';
+import { Building2, User, Eye, EyeOff, FileText, Shield, Fingerprint } from 'lucide-react';
 
 export function RegisterPage() {
-  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'ceo' | 'agent'>('agent');
   const [fullName, setFullName] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [country, setCountry] = useState('RU');
-  const [agreeToData, setAgreeToData] = useState(false);
-  const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
-  
+  const [role, setRole] = useState<'ceo' | 'agent'>('ceo');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  
+  // Согласия
+  const [consentTos, setConsentTos] = useState(false);
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
+  const [consentPd, setConsentPd] = useState(false);
+  const [consentBio, setConsentBio] = useState(false);
+  
+  const languages = [
+    { code: 'ru', label: 'RU' },
+    { code: 'en', label: 'EN' },
+    { code: 'kk', label: 'KK' },
+    { code: 'az', label: 'AZ' }
+  ];
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setError('');
 
-    if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
+    // Валидация согласий
+    if (!consentTos || !consentPrivacy || !consentPd) {
+      setError(t('auth.consentRequired'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов');
-      return;
-    }
-
-    if (!agreeToData || !agreeToPrivacy) {
-      setError('Необходимо дать согласие на обработку персональных данных и принять политику конфиденциальности');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Регистрация в Supabase Auth
+      // 1. Создание пользователя в Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            role: role,
-            full_name: fullName,
-            company_name: companyName,
-            country: country,
-          },
-        },
+            role,
+            full_name: fullName
+          }
+        }
       });
 
       if (authError) {
@@ -64,285 +69,339 @@ export function RegisterPage() {
       }
 
       if (!authData.user) {
-        throw new Error('Не удалось создать пользователя');
+        throw new Error('User not created');
       }
 
       const userId = authData.user.id;
 
-      // 2. Автоматическое создание профиля в зависимости от роли
-      if (role === 'agent') {
-        const { data: existingAgent } = await supabase
-          .from('agents')
-          .select('id, company_id, full_name')
-          .eq('email', email)
-          .maybeSingle();
+      // 2. Получение актуальных документов
+      const docs = await getActiveDocuments(i18n.language);
 
-        if (existingAgent) {
-          const { error: updateError } = await supabase
-            .from('agents')
-            .update({ 
-              user_id: userId,
-              full_name: fullName || existingAgent.full_name,
-              country: country,
-            })
-            .eq('id', existingAgent.id);
-
-          if (updateError) console.error('Ошибка связывания профиля агента:', updateError);
-        } else {
-          const { error: agentError } = await supabase
-            .from('agents')
-            .insert({
-              user_id: userId,
-              full_name: fullName || email,
-              email: email,
-              country: country,
-              status: 'ACTIVE',
-            });
-
-          if (agentError) console.error('Ошибка создания профиля агента:', agentError);
+      // 3. Формирование списка согласий (явная типизация!)
+      const acceptances: AcceptanceData[] = [
+        {
+          document_type: 'tos',
+          document_id: docs.find(d => d.document_type === 'tos')?.id,
+          document_version: docs.find(d => d.document_type === 'tos')?.version,
+          document_hash: docs.find(d => d.document_type === 'tos')?.sha256_hash,
+          acceptance_method: 'registration'
+        },
+        {
+          document_type: 'privacy_policy',
+          document_id: docs.find(d => d.document_type === 'privacy_policy')?.id,
+          document_version: docs.find(d => d.document_type === 'privacy_policy')?.version,
+          document_hash: docs.find(d => d.document_type === 'privacy_policy')?.sha256_hash,
+          acceptance_method: 'registration'
+        },
+        {
+          document_type: 'consent_pd',
+          document_id: docs.find(d => d.document_type === 'consent_pd')?.id,
+          document_version: docs.find(d => d.document_type === 'consent_pd')?.version,
+          document_hash: docs.find(d => d.document_type === 'consent_pd')?.sha256_hash,
+          acceptance_method: 'registration'
         }
-      } else if (role === 'ceo') {
+      ];
+
+      // Если пользователь согласился на биометрию
+      if (consentBio) {
+        const bioDoc = docs.find(d => d.document_type === 'consent_bio');
+        if (bioDoc) {
+          acceptances.push({
+            document_type: 'consent_bio',
+            document_id: bioDoc.id,
+            document_version: bioDoc.version,
+            document_hash: bioDoc.sha256_hash,
+            acceptance_method: 'registration'
+          });
+        }
+      }
+
+      // 4. Логирование согласий
+      await logAcceptance(userId, acceptances);
+
+      // 5. Создание записи в соответствующей таблице
+      if (role === 'ceo') {
         const { error: companyError } = await supabase
           .from('companies')
           .insert({
             user_id: userId,
-            company_name: companyName || 'Моя компания',
-            full_name: fullName || email,
-            display_name: companyName || 'Моя компания',
-            country: country,
+            full_name: fullName,
+            display_name: fullName,
+            company_type: 'ООО'
           });
 
-        if (companyError) console.error('Ошибка создания профиля компании:', companyError);
+        if (companyError) {
+          console.error('Error creating company:', companyError);
+        }
+      } else {
+        const { error: agentError } = await supabase
+          .from('agents')
+          .insert({
+            user_id: userId,
+            full_name: fullName,
+            email,
+            status: 'ACTIVE'
+          });
+
+        if (agentError) {
+          console.error('Error creating agent:', agentError);
+        }
       }
 
-      setSuccess('Регистрация успешна! Теперь вы можете войти.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+      // 6. Успех — редирект на логин
+      alert(t('auth.registerSuccess'));
+      navigate('/login');
 
     } catch (err: any) {
-      console.error('Ошибка регистрации:', err);
-      setError(err.message || 'Ошибка при регистрации');
+      console.error('Registration error:', err);
+      setError(err.message || t('auth.registerError'));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-[#000052] mb-2">InCORE</h1>
-          <p className="text-gray-500">{t('auth.subtitle')}</p>
-        </div>
+  const ConsentCheckbox = ({ 
+    checked, 
+    onChange, 
+    label, 
+    docType,
+    required = true 
+  }: { 
+    checked: boolean; 
+    onChange: (v: boolean) => void; 
+    label: string; 
+    docType: string;
+    required?: boolean;
+  }) => (
+    <label className="flex items-start gap-3 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 w-4 h-4 rounded border-gray-300 text-[#B8860B] focus:ring-[#B8860B]"
+      />
+      <span className="text-sm text-gray-600 group-hover:text-[#000052] transition-colors">
+        {label}{' '}
+        <a
+          href={`/docs/${i18n.language}/${docType}.pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#B8860B] hover:underline inline-flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FileText size={12} />
+          {t('auth.viewDocument')}
+        </a>
+        {required && <span className="text-red-500"> *</span>}
+      </span>
+    </label>
+  );
 
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#000052] via-[#000070] to-[#000052] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Переключатель языков */}
         <div className="flex justify-center gap-2 mb-6">
-          {['ru', 'en', 'kk', 'az'].map((lang) => (
+          {languages.map((lang) => (
             <button
-              key={lang}
-              onClick={() => i18n.changeLanguage(lang)}
-              className={`px-3 py-1 rounded text-xs font-medium transition ${
-                i18n.language === lang
+              key={lang.code}
+              onClick={() => changeLanguage(lang.code)}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                i18n.language === lang.code
                   ? 'bg-[#B8860B] text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
-              {lang.toUpperCase()}
+              {lang.label}
             </button>
           ))}
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          {error && (
-            <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-              {success}
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-2">{t('auth.role')}</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('agent')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition ${
-                  role === 'agent'
-                    ? 'border-[#B8860B] bg-[#B8860B]/10 text-[#B8860B]'
-                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                <Briefcase className="w-5 h-5" />
-                <span className="font-medium">{t('auth.agentRole')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('ceo')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition ${
-                  role === 'ceo'
-                    ? 'border-[#000052] bg-[#000052]/10 text-[#000052]'
-                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                <Building className="w-5 h-5" />
-                <span className="font-medium">CEO</span>
-              </button>
-            </div>
+        {/* Карточка регистрации */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          {/* Логотип */}
+          <div className="text-center mb-8">
+            <img 
+              src="/logo.png" 
+              alt="InCORE" 
+              className="h-12 mx-auto mb-4"
+            />
+            <h1 className="text-2xl font-bold text-[#000052]">
+              {t('auth.registerTitle')}
+            </h1>
+            <p className="text-gray-500 mt-2">
+              {t('auth.registerSubtitle')}
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-1">
-              {role === 'agent' ? 'ФИО' : 'ФИО руководителя'}
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052]"
-                placeholder={role === 'agent' ? 'Иванов Иван Иванович' : 'Петров Петр Петрович'}
-              />
-            </div>
-          </div>
-
-          {role === 'ceo' && (
+          {/* Форма */}
+          <form onSubmit={handleRegister} className="space-y-5">
+            {/* Выбор роли */}
             <div>
-              <label className="block text-sm font-medium text-[#000052] mb-1">Название компании</label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  required
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052]"
-                  placeholder="ООО Ромашка"
-                />
+              <label className="block text-sm font-medium text-[#000052] mb-2">
+                {t('auth.selectRole')}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('ceo')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                    role === 'ceo'
+                      ? 'border-[#B8860B] bg-[#B8860B]/5 text-[#000052]'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Building2 size={24} className={role === 'ceo' ? 'text-[#B8860B]' : 'text-gray-400'} />
+                  <span className="text-sm font-medium">{t('auth.roleCeo')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('agent')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                    role === 'agent'
+                      ? 'border-[#B8860B] bg-[#B8860B]/5 text-[#000052]'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <User size={24} className={role === 'agent' ? 'text-[#B8860B]' : 'text-gray-400'} />
+                  <span className="text-sm font-medium">{t('auth.roleAgent')}</span>
+                </button>
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-1">Страна регистрации</label>
-            <select
-              required
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052] bg-white"
-            >
-              <option value="RU">🇷🇺 Россия</option>
-              <option value="KZ">🇰🇿 Казахстан</option>
-              <option value="AZ">🇦🇿 Азербайджан</option>
-              <option value="OTHER">🌍 Другая</option>
-            </select>
-          </div>
+            {/* ФИО */}
+            <div>
+              <label className="block text-sm font-medium text-[#000052] mb-1">
+                {t('auth.fullName')}
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none"
+                placeholder={t('auth.fullNamePlaceholder')}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-1">{t('auth.email')}</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-[#000052] mb-1">
+                {t('auth.email')}
+              </label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052]"
+                required
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none"
                 placeholder="email@company.com"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-1">{t('auth.password')}</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052]"
-                placeholder="••••••••"
-              />
+            {/* Пароль */}
+            <div>
+              <label className="block text-sm font-medium text-[#000052] mb-1">
+                {t('auth.password')}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none pr-10"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#000052] mb-1">{t('auth.confirmPassword')}</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#B8860B] focus:border-transparent outline-none transition text-[#000052]"
-                placeholder="••••••••"
+            {/* Согласия */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 text-[#000052] font-medium text-sm">
+                <Shield size={16} className="text-[#B8860B]" />
+                {t('auth.consentTitle')}
+              </div>
+              
+              <ConsentCheckbox
+                checked={consentTos}
+                onChange={setConsentTos}
+                label={t('auth.consentTos')}
+                docType="tos_v1.0"
               />
+              
+              <ConsentCheckbox
+                checked={consentPrivacy}
+                onChange={setConsentPrivacy}
+                label={t('auth.consentPrivacy')}
+                docType="privacy_v1.0"
+              />
+              
+              <ConsentCheckbox
+                checked={consentPd}
+                onChange={setConsentPd}
+                label={t('auth.consentPd')}
+                docType="consent_pd_v1.0"
+              />
+
+              {/* Опциональное согласие на биометрию */}
+              <div className="pt-2 border-t border-gray-200">
+                <ConsentCheckbox
+                  checked={consentBio}
+                  onChange={setConsentBio}
+                  label={t('auth.consentBio')}
+                  docType="consent_bio_v1.0"
+                  required={false}
+                />
+                <p className="text-xs text-gray-500 mt-1 ml-7 flex items-start gap-1">
+                  <Fingerprint size={12} className="mt-0.5 shrink-0" />
+                  {t('auth.consentBioNote')}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-3 pt-2">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeToData}
-                onChange={(e) => setAgreeToData(e.target.checked)}
-                className="mt-1 w-4 h-4 text-[#B8860B] border-gray-300 rounded focus:ring-[#B8860B]"
-              />
-              <span className="text-xs text-gray-600">
-                Я даю согласие на <a href="#" className="text-[#B8860B] underline">обработку персональных данных</a> в соответствии с законодательством выбранной страны.
-              </span>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeToPrivacy}
-                onChange={(e) => setAgreeToPrivacy(e.target.checked)}
-                className="mt-1 w-4 h-4 text-[#B8860B] border-gray-300 rounded focus:ring-[#B8860B]"
-              />
-              <span className="text-xs text-gray-600">
-                Я ознакомлен и согласен с <a href="#" className="text-[#B8860B] underline">Политикой конфиденциальности</a> и условиями использования платформы InCORE.
-              </span>
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#000052] text-white py-3 rounded-lg font-semibold hover:bg-[#000032] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mt-6"
-          >
-            {loading ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {t('common.loading')}
-              </span>
-            ) : (
-              t('auth.register')
+            {/* Ошибка */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          {t('auth.noAccount')}{' '}
-          <button 
-            onClick={() => navigate('/login')} 
-            className="text-[#B8860B] font-semibold hover:underline"
-          >
-            {t('auth.login')}
-          </button>
+            {/* Кнопка регистрации */}
+            <button
+              type="submit"
+              disabled={loading || !consentTos || !consentPrivacy || !consentPd}
+              className="w-full bg-[#B8860B] hover:bg-[#9A7209] text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                t('auth.registerButton')
+              )}
+            </button>
+          </form>
+
+          {/* Ссылка на вход */}
+          <p className="text-center text-sm text-gray-500 mt-6">
+            {t('auth.alreadyHaveAccount')}{' '}
+            <Link to="/login" className="text-[#B8860B] hover:underline font-medium">
+              {t('auth.loginNow')}
+            </Link>
+          </p>
         </div>
+
+        {/* Юридическая информация */}
+        <p className="text-center text-xs text-white/60 mt-6">
+          {t('auth.legalFooter')}
+        </p>
       </div>
     </div>
   );
