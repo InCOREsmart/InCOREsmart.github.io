@@ -181,8 +181,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
           platform_fee: calculations.platformFee,
           roi_percentage: calculations.roi,
           reward_type: 'standard_b2b',
-          escrow_status: 'NOT_FUNDED',
-          oracle_status: 'PENDING',
+      
           deadline,
         })
         .select()
