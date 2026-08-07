@@ -58,6 +58,9 @@
   },
   "contract": {
     "title": "Контракт",
+     "createNew": "Создать контракт",
+  "noContracts": "Контрактов пока нет",
+  "createFirst": "Создайте первый контракт",
     "status": "Статус",
     "deadline": "Дедлайн",
     "escrowAmount": "Сумма эскроу",
