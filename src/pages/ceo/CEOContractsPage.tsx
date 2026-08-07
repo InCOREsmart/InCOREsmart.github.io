@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, Search, Filter, DollarSign, Clock, Users, ShieldCheck, FileText } from 'lucide-react';
+import { Plus, Search, Filter, DollarSign, Users, ShieldCheck, FileText } from 'lucide-react';
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
 import { DEMO_AGENTS } from '../../lib/demoData';
 
@@ -41,10 +41,8 @@ export function CEOContractsPage() {
           const contractsList: any[] = [];
 
           if (realContracts && realContracts.length > 0) {
-            // 1. Собираем все уникальные agent_id из реальных контрактов
             const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
             
-            // 2. Загружаем имена этих агентов
             let agentsMap = new Map();
             if (agentIds.length > 0) {
               const { data: agentsData } = await supabase
@@ -57,7 +55,6 @@ export function CEOContractsPage() {
               }
             }
 
-            // 3. Мапим реальные контракты, подставляя правильное имя агента
             const mappedRealContracts = realContracts.map(c => ({
               ...c,
               agent_name: agentsMap.get(c.agent_id) || 'Не назначен',
@@ -66,7 +63,6 @@ export function CEOContractsPage() {
             contractsList.push(...mappedRealContracts);
           }
 
-          // 4. Если реальных контрактов меньше 8, добавляем демо-контракты для красоты питча
           if (contractsList.length < 8) {
             const demoContracts = DEMO_AGENTS.flatMap(agent => 
               agent.contracts.map(contract => ({
@@ -81,7 +77,6 @@ export function CEOContractsPage() {
 
           setContracts(contractsList);
         } else {
-          // Если компании нет, показываем только демо
           const demoContracts = DEMO_AGENTS.flatMap(agent => 
             agent.contracts.map(contract => ({
               ...contract,
@@ -113,9 +108,9 @@ export function CEOContractsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const totalGMV = contracts.filter(c => !c.is_demo).reduce((sum, c) => sum + (c.revenue || 0), 0);
-  const totalEscrow = contracts.filter(c => !c.is_demo).reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-  const activeCount = contracts.filter(c => !c.is_demo && (c.status === 'ACTIVE' || c.status === 'IN_PROGRESS')).length;
+  const totalGMV = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
+  const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
@@ -163,11 +158,11 @@ export function CEOContractsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium opacity-80">Общий GMV (Реальные)</h3>
+            <h3 className="text-sm font-medium opacity-80">Общий GMV</h3>
             <DollarSign className="w-5 h-5 opacity-80" />
           </div>
           <p className="text-2xl font-bold">${totalGMV.toLocaleString()}</p>
-          <p className="text-xs opacity-70 mt-1">{contracts.filter(c => !c.is_demo).length} реальных контрактов</p>
+          <p className="text-xs opacity-70 mt-1">{contracts.length} контрактов</p>
         </div>
 
         <div className="bg-[#B8860B] text-white p-5 rounded-xl border border-[#B8860B]">
@@ -233,7 +228,6 @@ export function CEOContractsPage() {
                 <tr>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Название</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Месяц</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">GMV</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Эскроу</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дедлайн</th>
@@ -267,11 +261,6 @@ export function CEOContractsPage() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-[#000052]/70">
-                        {contract.month ? new Date(contract.month + '-01').toLocaleString('ru-RU', { month: 'short', year: 'numeric' }) : '—'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
                       <div className="text-sm font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
                     </td>
                     <td className="py-4 px-4">
@@ -279,9 +268,8 @@ export function CEOContractsPage() {
                       <div className="text-xs text-[#000052]/60">Заблокировано</div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-1 text-sm text-[#000052]">
-                        <Clock className="w-3 h-3" />
-                        {new Date(contract.deadline).toLocaleDateString('ru-RU')}
+                      <div className="text-sm text-[#000052]">
+                        {contract.deadline ? new Date(contract.deadline).toLocaleDateString('ru-RU') : '—'}
                       </div>
                     </td>
                     <td className="py-4 px-4">
