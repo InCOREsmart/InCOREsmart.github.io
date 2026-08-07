@@ -135,7 +135,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
         </header>
 
-        {/* Верхняя панель с языком и уведомлениями */}
+        {/* Верхняя панель с языком и уведомлениями (только для десктопа) */}
         <header className="hidden md:flex items-center justify-end p-4 bg-white border-b border-[#000052]/10 gap-4">
           <LanguageSwitcher />
           <NotificationBell />
