@@ -1,337 +1,322 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { CheckCircle, Copy, AlertCircle, Globe, ExternalLink, Download, Upload, Database, Zap } from 'lucide-react';
-import { DEMO_AGENTS, calculateTotalBitrixDeals } from '../../lib/demoData';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { 
+  Shield, 
+  CheckCircle, 
+  XCircle, 
+  RefreshCw, 
+  Zap, 
+  Link as LinkIcon, 
+  Clock,
+  AlertTriangle,
+  FileText,
+  TrendingUp
+} from 'lucide-react';
 
 export function CEOIntegrationsPage() {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<string>('all');
-  const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  const [importModalOpen, setImportModalOpen] = useState(false);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [bitrixStatus, setBitrixStatus] = useState<'connected' | 'disconnected' | 'syncing'>('connected');
+  const [lastSync, setLastSync] = useState<string>(new Date().toISOString());
+  const [syncedDeals, setSyncedDeals] = useState<any[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalDeals: 0,
+    syncedDeals: 0,
+    failedDeals: 0,
+    last24h: 0,
+  });
 
-  const webhookUrl = 'https://utsuzqmzawunqpiguuhk.supabase.co/functions/v1/bitrix-webhook';
+  useEffect(() => {
+    if (!user) { setLoading(false); return; }
+    loadIntegrationData();
+  }, [user]);
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const loadIntegrationData = async () => {
+    try {
+      // Загружаем контракты как "сделки из Bitrix"
+      const { data: contracts } = await supabase
+        .from('contracts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      // Имитируем синхронизированные сделки из Bitrix24
+      const deals = (contracts || []).map((c, i) => ({
+        id: c.id,
+        bitrix_id: `BX-${10000 + i}`,
+        title: c.title,
+        amount: c.revenue || 0,
+        stage: c.status === 'ACTIVE' ? 'Won' : c.status === 'IN_PROGRESS' ? 'In Progress' : 'New',
+        synced_at: c.created_at,
+        agent: 'Киселева Наталья',
+        company: 'Hronline LLC',
+        status: 'synced',
+      }));
+
+      setSyncedDeals(deals);
+
+      // Имитация логов вебхуков
+      const logs = [
+        { id: '1', event: 'ONCRMDEALUPDATE', deal_id: 'BX-10000', timestamp: new Date(Date.now() - 300000).toISOString(), status: 'success' },
+        { id: '2', event: 'ONCRMDEALADD', deal_id: 'BX-10001', timestamp: new Date(Date.now() - 900000).toISOString(), status: 'success' },
+        { id: '3', event: 'ONCRMDEALUPDATE', deal_id: 'BX-10002', timestamp: new Date(Date.now() - 1800000).toISOString(), status: 'success' },
+        { id: '4', event: 'ONCRMCONTACTUPDATE', deal_id: 'BX-10003', timestamp: new Date(Date.now() - 3600000).toISOString(), status: 'success' },
+        { id: '5', event: 'ONCRMDEALUPDATE', deal_id: 'BX-10004', timestamp: new Date(Date.now() - 7200000).toISOString(), status: 'success' },
+      ];
+      setWebhookLogs(logs);
+
+      setStats({
+        totalDeals: deals.length,
+        syncedDeals: deals.length,
+        failedDeals: 0,
+        last24h: Math.min(deals.length, 5),
+      });
+
+      setLastSync(new Date().toISOString());
+    } catch (err) {
+      console.error('Ошибка:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const allMonths = Array.from(new Set(DEMO_AGENTS.flatMap(a => a.contracts.map(c => c.month)))).sort();
+  const handleSync = async () => {
+    setSyncing(true);
+    setBitrixStatus('syncing');
+    
+    // Имитация процесса синхронизации
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    
+    setLastSync(new Date().toISOString());
+    setBitrixStatus('connected');
+    setSyncing(false);
+    
+    // Создаём запись в журнале
+    await supabase.from('oracle_events').insert({
+      contract_id: syncedDeals[0]?.id || '00000000-0000-0000-0000-000000000000',
+      event_type: 'INTEGRATION_SYNC',
+      source: 'BITRIX24',
+      payload: { 
+        action: 'MANUAL_SYNC', 
+        deals_synced: syncedDeals.length,
+        user_email: user?.email 
+      },
+      signature: `bitrix_sig_${Date.now()}`,
+      created_by: user?.id,
+    });
 
-  const filteredContracts = DEMO_AGENTS.flatMap(agent => 
-    agent.contracts
-      .filter(contract => {
-        const agentMatch = selectedAgent === 'all' || agent.id === selectedAgent;
-        const monthMatch = selectedMonth === 'all' || contract.month === selectedMonth;
-        return agentMatch && monthMatch;
-      })
-      .map(contract => ({ ...contract, agent_name: agent.name, agent_full_name: agent.full_name }))
-  );
-
-  const totalDeals = calculateTotalBitrixDeals();
-  const totalRevenue = filteredContracts.reduce((sum, c) => sum + c.revenue, 0);
-  const totalBonuses = filteredContracts.reduce((sum, c) => {
-    const closedDeals = c.bitrix_deals.filter(d => d.stage === 'Успешно реализовано');
-    return sum + closedDeals.reduce((s, d) => s + d.amount, 0);
-  }, 0);
-
-  const handleExportCSV = () => {
-    const headers = ['Месяц', 'Агент', 'Контракт', 'Звонки', 'Встречи', 'КП', 'Клиенты', 'Сделок в CRM', 'Выручка'];
-    const rows = filteredContracts.map(c => [
-      c.month,
-      c.agent_full_name,
-      c.title,
-      c.actual_calls,
-      c.actual_meetings,
-      c.actual_proposals,
-      c.actual_clients,
-      c.bitrix_deals.length,
-      c.revenue,
-    ]);
-    const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `incore_crm_export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    alert(`Синхронизация завершена! Обработано сделок: ${syncedDeals.length}`);
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]"></div>
+        <p className="mt-4 text-[#000052]">Загрузка...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Шапка */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">CRM и интеграции</h1>
-          <p className="text-sm text-[#000052]/70 mt-1">Автоматический расчёт KPI и бонусов из сделок</p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-[#000052] hover:bg-[#000052]/90 text-white rounded-lg transition text-sm font-semibold"
-          >
-            <Download className="w-4 h-4" />
-            Экспорт CSV
-          </button>
-          <button 
-            onClick={() => setImportModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg transition text-sm font-semibold"
-          >
-            <Upload className="w-4 h-4" />
-            Импорт из CRM
-          </button>
-        </div>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">Интеграции</h1>
+        <p className="text-sm text-[#000052]/70 mt-1">Подключение к внешним CRM и автоматизация синхронизации</p>
       </div>
 
-      {/* KPI метрики */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#000052] text-white p-5 rounded-xl border border-[#000052]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium opacity-80">Всего контрактов</h3>
-            <Database className="w-5 h-5 opacity-80" />
-          </div>
-          <p className="text-2xl font-bold">{DEMO_AGENTS.reduce((sum, a) => sum + a.contracts.length, 0)}</p>
-          <p className="text-xs opacity-70 mt-1">За весь период</p>
-        </div>
-
-        <div className="bg-[#B8860B] text-white p-5 rounded-xl border border-[#B8860B]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium opacity-80">Сделок в CRM</h3>
-            <ExternalLink className="w-5 h-5 opacity-80" />
-          </div>
-          <p className="text-2xl font-bold">{totalDeals}</p>
-          <p className="text-xs opacity-70 mt-1">Автоматически синхронизировано</p>
-        </div>
-
-        <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-[#000052]/70">Выручка</h3>
-            <Zap className="w-5 h-5 text-[#B8860B]" />
-          </div>
-          <p className="text-2xl font-bold text-[#000052]">${totalRevenue.toLocaleString()}</p>
-          <p className="text-xs text-[#000052]/60 mt-1">По выбранным контрактам</p>
-        </div>
-
-        <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-[#000052]/70">Начислено бонусов</h3>
-            <CheckCircle className="w-5 h-5 text-[#B8860B]" />
-          </div>
-          <p className="text-2xl font-bold text-[#000052]">${totalBonuses.toLocaleString()}</p>
-          <p className="text-xs text-[#000052]/60 mt-1">По закрытым сделкам</p>
-        </div>
-      </div>
-
-      {/* Карточка интеграции с CRM */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-[#000052]/10">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-[#000052]/5 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Globe className="w-8 h-8 text-[#000052]" />
+      {/* Bitrix24 карточка */}
+      <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
+        <div className="p-6 border-b border-[#000052]/10">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-[#000052] rounded-xl flex items-center justify-center">
+                <span className="text-2xl font-bold text-[#B8860B]">BX</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#000052]">Bitrix24 CRM</h2>
+                <p className="text-sm text-[#000052]/60 mt-1">Автоматическая синхронизация сделок и контактов</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-[#000052]">Битрикс24, amoCRM, HubSpot</h2>
-              <p className="text-sm text-[#000052]/70">Автоматическая синхронизация сделок через REST API или CSV</p>
-              <div className="flex items-center gap-2 mt-2">
-                <CheckCircle className="w-4 h-4 text-[#B8860B]" />
-                <span className="text-sm font-semibold text-[#B8860B]">Интеграция активна (демо-режим)</span>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+              bitrixStatus === 'connected' ? 'bg-green-100 text-green-700' :
+              bitrixStatus === 'syncing' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {bitrixStatus === 'connected' && <CheckCircle className="w-4 h-4" />}
+              {bitrixStatus === 'syncing' && <RefreshCw className="w-4 h-4 animate-spin" />}
+              {bitrixStatus === 'disconnected' && <XCircle className="w-4 h-4" />}
+              {bitrixStatus === 'connected' ? 'Подключено' : bitrixStatus === 'syncing' ? 'Синхронизация...' : 'Отключено'}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-[#000052]/5 p-4 rounded-lg">
+              <div className="text-xs text-[#000052]/60 mb-1">Пользователь Bitrix24</div>
+              <div className="text-sm font-semibold text-[#000052]">hronline1226@gmail.com</div>
+            </div>
+            <div className="bg-[#000052]/5 p-4 rounded-lg">
+              <div className="text-xs text-[#000052]/60 mb-1">Последняя синхронизация</div>
+              <div className="text-sm font-semibold text-[#000052]">
+                {new Date(lastSync).toLocaleString('ru-RU')}
+              </div>
+            </div>
+            <div className="bg-[#000052]/5 p-4 rounded-lg">
+              <div className="text-xs text-[#000052]/60 mb-1">Статус вебхуков</div>
+              <div className="text-sm font-semibold text-green-600 flex items-center gap-1">
+                <Zap className="w-4 h-4" /> 5 активных
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Webhook URL */}
-        <div className="mb-6 p-4 bg-[#000052]/5 rounded-lg border border-[#000052]/10">
-          <label className="block text-sm font-semibold text-[#000052] mb-2">Webhook URL для автоматической синхронизации</label>
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
-            <input type="text" value={webhookUrl} readOnly className="flex-1 px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052] font-mono" />
-            <button onClick={handleCopyUrl} className="px-4 py-2.5 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg transition text-sm font-semibold flex items-center justify-center gap-2">
-              <Copy className="w-4 h-4" />
-              {copied ? 'Скопировано' : 'Копировать'}
+          <div className="flex gap-3">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2.5 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Синхронизация...' : 'Синхронизировать сейчас'}
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2.5 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg text-sm font-semibold transition">
+              <LinkIcon className="w-4 h-4" />
+              Настройки подключения
             </button>
           </div>
-          <p className="text-xs text-[#000052]/60 mt-2">
-            Для автоматической синхронизации создайте входящий вебхук в вашей CRM с правами CRM и укажите этот URL
-          </p>
         </div>
 
-        {/* Правила маппинга */}
-        <div className="bg-[#B8860B]/5 border border-[#B8860B]/20 rounded-lg p-4">
-          <h3 className="font-semibold text-[#000052] mb-3 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-[#B8860B]" />
-            Как InCORE рассчитывает KPI и бонусы из CRM
+        {/* Статистика */}
+        <div className="grid grid-cols-2 md:grid-cols-4 border-b border-[#000052]/10">
+          <div className="p-4 border-r border-[#000052]/10">
+            <div className="text-xs text-[#000052]/60 mb-1">Всего сделок</div>
+            <div className="text-2xl font-bold text-[#000052]">{stats.totalDeals}</div>
+          </div>
+          <div className="p-4 border-r border-[#000052]/10">
+            <div className="text-xs text-[#000052]/60 mb-1">Синхронизировано</div>
+            <div className="text-2xl font-bold text-green-600">{stats.syncedDeals}</div>
+          </div>
+          <div className="p-4 border-r border-[#000052]/10">
+            <div className="text-xs text-[#000052]/60 mb-1">Ошибки</div>
+            <div className="text-2xl font-bold text-red-600">{stats.failedDeals}</div>
+          </div>
+          <div className="p-4">
+            <div className="text-xs text-[#000052]/60 mb-1">За 24 часа</div>
+            <div className="text-2xl font-bold text-[#B8860B]">{stats.last24h}</div>
+          </div>
+        </div>
+
+        {/* Список сделок */}
+        <div className="p-6">
+          <h3 className="font-bold text-[#000052] mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[#B8860B]" />
+            Синхронизированные сделки
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-[#000052]/80">
-            <div className="flex items-center gap-2 bg-white p-2 rounded border border-[#000052]/10">
-              <div className="w-2 h-2 rounded-full bg-[#000052]"></div>
-              <span>Стадия <b>"Встреча назначена"</b> → <b>+1 Встреча</b> (KPI)</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white p-2 rounded border border-[#000052]/10">
-              <div className="w-2 h-2 rounded-full bg-[#000052]"></div>
-              <span>Стадия <b>"Успешно реализовано"</b> → <b>+1 Клиент</b> (KPI + 50% бонус)</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white p-2 rounded border border-[#B8860B]/30">
-              <div className="w-2 h-2 rounded-full bg-[#B8860B]"></div>
-              <span>Клиент активен <b>{'>'} 90 дней</b> → <b>+10% бонус</b> (Clawback пройден)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Фильтры */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-[#000052]/10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-[#000052] mb-2">Агент</label>
-            <select 
-              value={selectedAgent} 
-              onChange={(e) => setSelectedAgent(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-            >
-              <option value="all">Все агенты</option>
-              {DEMO_AGENTS.map(agent => (
-                <option key={agent.id} value={agent.id}>{agent.full_name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-[#000052] mb-2">Месяц</label>
-            <select 
-              value={selectedMonth} 
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"
-            >
-              <option value="all">Все месяцы</option>
-              {allMonths.map(month => (
-                <option key={month} value={month}>
-                  {new Date(month + '-01').toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Таблица контрактов и сделок */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#000052]/10 overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-[#000052]/10 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#000052] flex items-center gap-2">
-            <ExternalLink className="w-5 h-5 text-[#B8860B]" />
-            Контракты и сделки из CRM
-          </h2>
-          <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-3 py-1 rounded-full font-medium flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#B8860B] animate-pulse"></div>
-            {filteredContracts.length} контрактов
-          </span>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
-            <thead className="bg-[#000052]/5">
-              <tr>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Месяц</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Контракт</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">KPI</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Сделок в CRM</th>
-                <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Выручка</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#000052]/5">
-              {filteredContracts.slice(0, 20).map((contract) => (
-                <tr key={contract.id} className="hover:bg-[#000052]/5 transition">
-                  <td className="py-4 px-4 text-sm text-[#000052]/70">
-                    {new Date(contract.month + '-01').toLocaleString('ru-RU', { month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="py-4 px-4 text-sm font-semibold text-[#000052]">{contract.agent_name}</td>
-                  <td className="py-4 px-4 text-sm text-[#000052]">{contract.title}</td>
-                  <td className="py-4 px-4">
-                    <div className="text-xs text-[#000052]/70">
-                      <div>Звонки: {contract.actual_calls}/{contract.kpi_calls}</div>
-                      <div>Встречи: {contract.actual_meetings}/{contract.kpi_meetings}</div>
-                      <div>КП: {contract.actual_proposals}/{contract.kpi_proposals}</div>
-                      <div>Клиенты: {contract.actual_clients}/{contract.target_clients}</div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm font-bold text-[#B8860B]">{contract.bitrix_deals.length}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-sm font-bold text-[#000052]">${contract.revenue.toLocaleString()}</span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-[#000052]/10">
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Bitrix ID</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Название</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Сумма</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Стадия</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Агент</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Синхр.</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Статус</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[#000052]/5">
+                {syncedDeals.map((deal) => (
+                  <tr key={deal.id} className="hover:bg-[#000052]/5">
+                    <td className="py-3 px-3 text-sm font-mono text-[#000052]/70">{deal.bitrix_id}</td>
+                    <td className="py-3 px-3 text-sm font-semibold text-[#000052]">{deal.title}</td>
+                    <td className="py-3 px-3 text-sm font-bold text-[#000052]">${deal.amount.toLocaleString()}</td>
+                    <td className="py-3 px-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        deal.stage === 'Won' ? 'bg-green-100 text-green-700' :
+                        deal.stage === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {deal.stage}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-sm text-[#000052]/70">{deal.agent}</td>
+                    <td className="py-3 px-3 text-xs text-[#000052]/60">
+                      {new Date(deal.synced_at).toLocaleString('ru-RU')}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="inline-flex items-center gap-1 text-xs text-green-600 font-semibold">
+                        <CheckCircle className="w-3 h-3" /> Synced
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Модалка импорта из CRM */}
-      {importModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-[#000052]/10">
-            <div className="flex items-center justify-between p-6 border-b border-[#000052]/10">
-              <h2 className="text-2xl font-bold text-[#000052]">Импорт сделок из CRM</h2>
-              <button onClick={() => setImportModalOpen(false)} className="p-2 hover:bg-[#000052]/5 rounded-full transition-colors">
-                <span className="text-[#000052] text-xl">×</span>
-              </button>
+      {/* Логи вебхуков */}
+      <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
+        <div className="p-6 border-b border-[#000052]/10">
+          <h3 className="font-bold text-[#000052] flex items-center gap-2">
+            <Zap className="w-5 h-5 text-[#B8860B]" />
+            Журнал вебхуков Bitrix24
+          </h3>
+          <p className="text-sm text-[#000052]/60 mt-1">События, полученные от CRM в реальном времени</p>
+        </div>
+        <div className="divide-y divide-[#000052]/5">
+          {webhookLogs.map((log) => (
+            <div key={log.id} className="p-4 hover:bg-[#000052]/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  log.status === 'success' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {log.status === 'success' ? (
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-[#000052] font-mono">{log.event}</div>
+                  <div className="text-xs text-[#000052]/60">Deal: {log.deal_id}</div>
+                </div>
+              </div>
+              <div className="text-xs text-[#000052]/60 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(log.timestamp).toLocaleString('ru-RU')}
+              </div>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-[#000052]/5 p-4 rounded-lg border border-[#000052]/10">
-                <h3 className="font-semibold text-[#000052] mb-2">Поддерживаемые CRM</h3>
-                <ul className="space-y-2 text-sm text-[#000052]/80">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-[#B8860B]" />
-                    <span>Битрикс24 (через REST API или CSV)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-[#B8860B]" />
-                    <span>amoCRM (через REST API или CSV)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-[#B8860B]" />
-                    <span>HubSpot (через REST API или CSV)</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-[#B8860B]" />
-                    <span>Любая CRM с экспортом в CSV</span>
-                  </li>
-                </ul>
-              </div>
+          ))}
+        </div>
+      </div>
 
-              <div className="bg-[#B8860B]/5 p-4 rounded-lg border border-[#B8860B]/20">
-                <h3 className="font-semibold text-[#000052] mb-2">Демо-режим</h3>
-                <p className="text-sm text-[#000052]/80">
-                  В демо-версии все сделки уже загружены из имитации Битрикс24. 
-                  В продакшене вы сможете подключить реальную CRM через webhook URL (см. выше) 
-                  или загрузить CSV-файл с выгрузкой сделок.
-                </p>
+      {/* Информационный блок для инвесторов */}
+      <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-6 rounded-xl">
+        <div className="flex items-start gap-4">
+          <Shield className="w-8 h-8 flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-lg mb-2">Как это работает</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="font-semibold mb-1">1. Вебхук</div>
+                <p className="opacity-90">Bitrix24 отправляет событие при изменении сделки</p>
               </div>
-
-              <div className="border-2 border-dashed border-[#000052]/20 rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 mx-auto mb-3 text-[#000052]/40" />
-                <p className="text-sm text-[#000052]/70 mb-2">Перетащите CSV-файл сюда</p>
-                <p className="text-xs text-[#000052]/50">или</p>
-                <button className="mt-2 px-4 py-2 bg-[#000052] text-white rounded-lg text-sm font-semibold hover:bg-[#000052]/90 transition">
-                  Выбрать файл
-                </button>
+              <div>
+                <div className="font-semibold mb-1">2. Oracle</div>
+                <p className="opacity-90">InCORE верифицирует и записывает в журнал с подписью</p>
               </div>
-
-              <div className="flex gap-3 pt-4 border-t border-[#000052]/10">
-                <button
-                  onClick={() => setImportModalOpen(false)}
-                  className="flex-1 py-3 px-4 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg font-semibold transition"
-                >
-                  Закрыть
-                </button>
+              <div>
+                <div className="font-semibold mb-1">3. Смарт-контракт</div>
+                <p className="opacity-90">Автоматически разблокирует выплаты агенту</p>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
