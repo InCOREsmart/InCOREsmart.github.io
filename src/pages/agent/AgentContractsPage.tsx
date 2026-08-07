@@ -1,166 +1,325 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, DollarSign, AlertCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { 
+  FileText, 
+  DollarSign, 
+  Clock, 
+  CheckCircle, 
+  Shield, 
+  AlertTriangle,
+  Send,
+  Lock,
+  Unlock
+} from 'lucide-react';
 
 export function AgentContractsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [agent, setAgent] = useState<any>(null);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [streamsByContract, setStreamsByContract] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
-    const fetchContracts = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+    if (!user) { setLoading(false); return; }
+    const fetchData = async () => {
       try {
-        // 1. Сначала получаем ID записи агента (так как agent_id в contracts ссылается на agents.id, а не напрямую на user.id)
-        const { data: agent, error: agentError } = await supabase
+        const { data: agentData } = await supabase
           .from('agents')
-          .select('id')
+          .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (agentError || !agent) {
-          setError('Профиль агента не найден. Обратитесь к CEO.');
-          setLoading(false);
-          return;
-        }
+        if (!agentData) { setLoading(false); return; }
+        setAgent(agentData);
 
-        // 2. Получаем контракты, назначенные этому агенту (ТОЛЬКО ЧТЕНИЕ, без попыток insert)
-        const { data, error: contractsError } = await supabase
+        const { data: contractsData } = await supabase
           .from('contracts')
           .select('*')
-          .eq('agent_id', agent.id)
+          .eq('agent_id', agentData.id)
           .order('created_at', { ascending: false });
 
-        if (contractsError) {
-          console.error('Ошибка загрузки контрактов:', contractsError);
-          setError(contractsError.message);
-        } else {
-          setContracts(data || []);
+        setContracts(contractsData || []);
+
+        if (contractsData && contractsData.length > 0) {
+          const contractIds = contractsData.map(c => c.id);
+          const { data: streams } = await supabase
+            .from('contract_payout_streams')
+            .select('*')
+            .in('contract_id', contractIds);
+
+          // Группируем потоки по контракту
+          const grouped: Record<string, any[]> = {};
+          (streams || []).forEach(s => {
+            if (!grouped[s.contract_id]) grouped[s.contract_id] = [];
+            grouped[s.contract_id].push(s);
+          });
+          setStreamsByContract(grouped);
         }
       } catch (err) {
-        console.error('Критическая ошибка:', err);
-        setError('Произошла непредвиденная ошибка');
+        console.error('Ошибка:', err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchContracts();
+    fetchData();
   }, [user]);
+
+  const handleSendWork = async (contractId: string) => {
+    const confirmed = window.confirm('Отправить работу на проверку?');
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('contracts')
+        .update({ status: 'PENDING_APPROVAL' })
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      // Создаём уведомление для CEO
+      const { data: contract } = await supabase
+        .from('contracts')
+        .select('company_id, title')
+        .eq('id', contractId)
+        .single();
+
+      if (contract) {
+        await supabase.from('notifications').insert({
+          user_id: contract.company_id,
+          title: 'Работа отправлена на проверку',
+          message: `Агент отправил работу по контракту "${contract.title}"`,
+          type: 'WORK_SUBMITTED',
+          is_read: false,
+        });
+      }
+
+      alert('Работа отправлена на проверку');
+      window.location.reload();
+    } catch (err) {
+      console.error('Ошибка:', err);
+      alert('Ошибка отправки работы');
+    }
+  };
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'DRAFT': return { icon: FileText, color: 'bg-gray-100 text-gray-700', label: 'Черновик' };
+      case 'PENDING_PAYMENT': return { icon: Clock, color: 'bg-yellow-100 text-yellow-700', label: 'Ожидает оплаты' };
+      case 'ACTIVE': return { icon: CheckCircle, color: 'bg-green-100 text-green-700', label: 'Активен' };
+      case 'IN_PROGRESS': return { icon: Send, color: 'bg-blue-100 text-blue-700', label: 'В работе' };
+      case 'PENDING_APPROVAL': return { icon: Clock, color: 'bg-[#B8860B]/20 text-[#B8860B]', label: 'Ожидает подтверждения' };
+      case 'COMPLETED': return { icon: CheckCircle, color: 'bg-green-200 text-green-800', label: 'Завершён' };
+      case 'DISPUTED': return { icon: AlertTriangle, color: 'bg-red-100 text-red-700', label: 'Спор' };
+      case 'CANCELLED': return { icon: FileText, color: 'bg-gray-200 text-gray-700', label: 'Отменён' };
+      default: return { icon: FileText, color: 'bg-gray-100 text-gray-700', label: status };
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]"></div>
-        <p className="ml-3 text-[#000052]">{t('common.loading')}</p>
+      <div className="p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]"></div>
+        <p className="mt-4 text-[#000052]">{t('common.loading')}</p>
       </div>
     );
   }
 
-  if (error) {
+  if (!agent) {
     return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-700">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-        </div>
+      <div className="p-8 text-center">
+        <p className="text-lg text-[#000052]">Агент не найден</p>
       </div>
     );
   }
+
+  // Сводка
+  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
+  const totalRevenue = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
+  const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
+    <div className="p-4 md:p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('agent.myActiveContracts')}</h1>
+        <p className="text-sm text-[#000052]/70 mt-1">{t('agent.subtitle')}</p>
       </div>
 
+      {/* Сводка */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#000052] text-white p-5 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">{t('agent.activeContracts')}</h3>
+            <FileText className="w-5 h-5 opacity-80" />
+          </div>
+          <p className="text-2xl font-bold">{activeCount}</p>
+          <p className="text-xs opacity-70 mt-1">из {contracts.length} всего</p>
+        </div>
+
+        <div className="bg-[#B8860B] text-white p-5 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium opacity-80">Эскроу</h3>
+            <Shield className="w-5 h-5 opacity-80" />
+          </div>
+          <p className="text-2xl font-bold">${totalEscrow.toLocaleString()}</p>
+          <p className="text-xs opacity-70 mt-1">Защищено смарт-контрактом</p>
+        </div>
+
+        <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-[#000052]/70">Общая выручка</h3>
+            <DollarSign className="w-5 h-5 text-[#B8860B]" />
+          </div>
+          <p className="text-2xl font-bold text-[#000052]">${totalRevenue.toLocaleString()}</p>
+          <p className="text-xs text-[#000052]/60 mt-1">По всем контрактам</p>
+        </div>
+      </div>
+
+      {/* Баннер защиты */}
+      <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-4 rounded-xl">
+        <div className="flex items-center gap-3">
+          <Shield className="w-6 h-6 flex-shrink-0" />
+          <div>
+            <p className="font-bold text-sm">{t('agent.fundsVerified')}</p>
+            <p className="text-xs opacity-90 mt-0.5">{t('agent.clawbackWarning')}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Список контрактов */}
       {contracts.length === 0 ? (
-        <div className="bg-white p-12 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-center">
-          <FileText className="w-16 h-16 text-gray-300 mb-4" />
-          <h3 className="text-lg font-semibold text-[#000052] mb-2">
-            {t('agent.noActiveContracts')}
-          </h3>
-          <p className="text-gray-500 max-w-md">
-            {t('agent.contractWillAppear') || 'Контракты появятся здесь, когда CEO назначит вас исполнителем.'}
-          </p>
+        <div className="bg-white p-12 rounded-xl border border-[#000052]/10 text-center">
+          <FileText className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" />
+          <p className="text-lg font-medium text-[#000052] mb-2">Контрактов пока нет</p>
+          <p className="text-sm text-[#000052]/60">CEO создаст для вас новый смарт-контракт</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-4">
           {contracts.map((contract) => {
-            const gmv = contract.revenue || contract.kpi_revenue || 0;
-            const platformFee = gmv * 0.12;
-            const agentViewAmount = gmv - platformFee;
-            const escrow = contract.escrow_amount || 0;
+            const statusInfo = getStatusInfo(contract.status);
+            const StatusIcon = statusInfo.icon;
+            const streams = streamsByContract[contract.id] || [];
+            const totalStreamAmount = streams.reduce((sum, s) => sum + s.amount, 0);
+            const unlockedAmount = streams.filter(s => ['UNLOCKED', 'PAYABLE', 'PAID'].includes(s.status)).reduce((sum, s) => sum + s.amount, 0);
+            const lockedAmount = totalStreamAmount - unlockedAmount;
+            const paidAmount = streams.filter(s => s.status === 'PAID').reduce((sum, s) => sum + s.amount, 0);
 
             return (
               <div 
-                key={contract.id} 
-                onClick={() => navigate(`/agent/contracts/${contract.id}`)}
-                className="bg-white p-6 rounded-xl border border-gray-200 hover:shadow-lg hover:border-[#B8860B]/30 transition-all cursor-pointer"
+                key={contract.id}
+                className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden hover:shadow-md transition"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-[#B8860B]/10 rounded-lg">
-                    <FileText className="w-5 h-5 text-[#B8860B]" />
+                {/* Шапка контракта */}
+                <div className="p-5 border-b border-[#000052]/10">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-[#000052] text-lg">{contract.title}</h3>
+                      {contract.description && (
+                        <p className="text-sm text-[#000052]/60 mt-1">{contract.description}</p>
+                      )}
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {statusInfo.label}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                    contract.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                    contract.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {t(`contract.statuses.${contract.status}`) || contract.status}
-                  </span>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <div className="text-xs text-[#000052]/60">Выручка</div>
+                      <div className="font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#000052]/60">Эскроу</div>
+                      <div className="font-bold text-[#B8860B]">${(contract.escrow_amount || 0).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#000052]/60">Дедлайн</div>
+                      <div className="font-bold text-[#000052]">
+                        {contract.deadline ? new Date(contract.deadline).toLocaleDateString('ru-RU') : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-[#000052]/60">Статус эскроу</div>
+                      <div className="font-bold text-[#000052] flex items-center gap-1">
+                        {contract.escrow_status === 'FUNDED' ? (
+                          <><Unlock className="w-3 h-3 text-green-600" /> Заблокирован</>
+                        ) : (
+                          <><Lock className="w-3 h-3 text-gray-500" /> Не заблокирован</>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                <h3 className="text-lg font-semibold text-[#000052] mb-2 line-clamp-2">
-                  {contract.title}
-                </h3>
-                
-                <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                  {contract.description}
-                </p>
 
-                <div className="space-y-3 pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <DollarSign className="w-4 h-4" />
-                      <span>Сумма (за вычетом 12%)</span>
+                {/* Потоки выплат (кратко) */}
+                {streams.length > 0 && (
+                  <div className="p-5 bg-[#000052]/5 border-b border-[#000052]/10">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-bold text-[#000052]">Потоки выплат ({streams.length})</h4>
+                      <div className="text-xs text-[#000052]/60">
+                        Разблокировано: ${unlockedAmount.toLocaleString()} / ${totalStreamAmount.toLocaleString()}
+                      </div>
                     </div>
-                    <span className="font-semibold text-[#000052]">
-                      ${agentViewAmount.toLocaleString()}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <DollarSign className="w-4 h-4 text-[#B8860B]" />
-                      <span>Эскроу (бонусы)</span>
-                    </div>
-                    <span className="font-semibold text-[#B8860B]">
-                      ${escrow.toLocaleString()}
-                    </span>
-                  </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Clock className="w-4 h-4" />
-                      <span>{t('contract.deadline')}</span>
+                    {/* Прогресс-бар */}
+                    <div className="h-2 bg-[#000052]/10 rounded-full overflow-hidden mb-3">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#B8860B] to-green-600 transition-all"
+                        style={{ width: `${totalStreamAmount > 0 ? (unlockedAmount / totalStreamAmount) * 100 : 0}%` }}
+                      ></div>
                     </div>
-                    <span className="text-[#000052]">
-                      {new Date(contract.deadline).toLocaleDateString()}
-                    </span>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      {streams.slice(0, 4).map((stream) => (
+                        <div key={stream.id} className="bg-white p-2 rounded border border-[#000052]/10">
+                          <div className="text-[#000052]/60 truncate">{stream.title}</div>
+                          <div className="font-bold text-[#000052]">${stream.amount.toLocaleString()}</div>
+                          <div className={`text-xs mt-0.5 ${
+                            stream.status === 'PAID' ? 'text-green-600' :
+                            stream.status === 'UNLOCKED' ? 'text-blue-600' :
+                            stream.status === 'CLAWED_BACK' ? 'text-red-600' :
+                            'text-gray-500'
+                          }`}>
+                            {stream.status}
+                          </div>
+                        </div>
+                      ))}
+                      {streams.length > 4 && (
+                        <div className="bg-white p-2 rounded border border-[#000052]/10 flex items-center justify-center text-[#000052]/60">
+                          +{streams.length - 4} ещё
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3 text-xs">
+                      <span className="text-[#000052]/60">Выплачено: <span className="font-bold text-green-600">${paidAmount.toLocaleString()}</span></span>
+                      <span className="text-[#000052]/60">Заблокировано: <span className="font-bold text-[#000052]">${lockedAmount.toLocaleString()}</span></span>
+                    </div>
                   </div>
+                )}
+
+                {/* Действия */}
+                <div className="p-4 flex gap-2">
+                  <button
+                    onClick={() => navigate(`/agent/contracts/${contract.id}`)}
+                    className="flex-1 py-2 px-4 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg text-sm font-semibold transition"
+                  >
+                    Подробнее
+                  </button>
+                  {(contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS') && (
+                    <button
+                      onClick={() => handleSendWork(contract.id)}
+                      className="flex items-center gap-2 py-2 px-4 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg text-sm font-semibold transition"
+                    >
+                      <Send className="w-4 h-4" />
+                      Отправить работу
+                    </button>
+                  )}
                 </div>
               </div>
             );
