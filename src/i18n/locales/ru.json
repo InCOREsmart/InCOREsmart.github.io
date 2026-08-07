@@ -75,15 +75,19 @@
       "PENDING_PAYMENT": "Ожидает оплаты"
     }
   },
-  "agent": {
-    "dashboardTitle": "Рабочее пространство агента",
+     "agent": {
+    "title": "Кабинет агента",
+    "subtitle": "Управление контрактами и выплатами",
+    "dashboardTitle": "Моя панель",
     "totalEarned": "Всего заработано",
-    "pendingPayouts": "Ожидающие выплаты",
-    "escrowBalance": "Баланс эскроу",
+    "pendingPayouts": "Ожидает выплат",
+    "escrowBalance": "Заморожено в эскроу",
     "paymentStreams": "Потоки выплат",
     "smartContractStatus": "Статус смарт-контракта",
-    "fundsVerified": "Средства верифицированы",
-    "clawbackWarning": "Внимание: если клиент уйдёт до 90 дней, бонус за удержание не выплачивается",
+    "fundsVerified": "Ваши деньги защищены смарт-контрактом",
+    "clawbackWarning": "Если клиент уйдёт раньше 90 дней, retention-бонус не выплачивается",
+    "activeContracts": "Активные контракты",
+    "myActiveContracts": "Мои активные контракты",
     "personalData": "Личные данные",
     "paymentDetails": "Реквизиты для выплат",
     "fullName": "ФИО",
@@ -99,14 +103,15 @@
     "settlementAccount": "Расчётный счёт"
   },
   "payouts": {
-    "title": "Выплаты и потоки",
-    "newSales": "Комиссия с новых продаж",
+    "title": "Мои выплаты",
+    "subtitle": "Детализация потоков по всем контрактам",
+    "newSales": "Новые продажи",
     "renewal": "Продление",
     "crossSell": "Кросс-продажи",
     "planBonus": "Бонус за план",
     "retention": "Удержание 90 дней",
     "annual": "Годовой бонус",
-    "instantRelease": "Мгновенная разблокировка"
+    "instantRelease": "Мгновенная выплата"
   },
   "company": {
     "title": "Данные компании",

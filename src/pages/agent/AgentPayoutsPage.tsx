@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Lock, Unlock, CheckCircle, Ban, Clock, AlertTriangle, DollarSign } from 'lucide-react';
 
 export function AgentPayoutsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [agent, setAgent] = useState<any>(null);
@@ -61,7 +63,7 @@ export function AgentPayoutsPage() {
     return (
       <div className="p-8 text-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]"></div>
-        <p className="mt-4 text-[#000052]">Загрузка...</p>
+        <p className="mt-4 text-[#000052]">{t('common.loading')}</p>
       </div>
     );
   }
@@ -74,11 +76,10 @@ export function AgentPayoutsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">Мои выплаты</h1>
-        <p className="text-sm text-[#000052]/70 mt-1">Детализация 6 потоков по всем контрактам</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('payouts.title')}</h1>
+        <p className="text-sm text-[#000052]/70 mt-1">{t('payouts.subtitle')}</p>
       </div>
 
-      {/* Сводка */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-4 rounded-xl">
           <p className="text-xs opacity-80 mb-1">Всего по контрактам</p>
@@ -98,10 +99,9 @@ export function AgentPayoutsPage() {
         </div>
       </div>
 
-      {/* Таблица потоков */}
       <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
         <div className="p-4 border-b border-[#000052]/10">
-          <h2 className="font-bold text-[#000052]">Потоки выплат ({streams.length})</h2>
+          <h2 className="font-bold text-[#000052]">{t('agent.paymentStreams')} ({streams.length})</h2>
         </div>
 
         {streams.length === 0 ? (
@@ -168,7 +168,6 @@ export function AgentPayoutsPage() {
         )}
       </div>
 
-      {/* Clawback предупреждение */}
       {streams.some(s => s.stream_key === 'retention' && s.status === 'LOCKED') && (
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl">
           <div className="flex items-start gap-3">
@@ -176,8 +175,7 @@ export function AgentPayoutsPage() {
             <div>
               <h3 className="font-bold text-yellow-800 mb-1">Clawback Warning</h3>
               <p className="text-sm text-yellow-700">
-                Бонус за удержание 90 дней будет выплачен только если клиент останется активным более 90 дней. 
-                Если клиент уйдёт раньше — бонус не выплачивается (clawback).
+                {t('agent.clawbackWarning')}
               </p>
             </div>
           </div>
