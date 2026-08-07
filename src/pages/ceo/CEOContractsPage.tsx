@@ -114,13 +114,13 @@ export function CEOContractsPage() {
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
-      ACTIVE: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: 'Активен' },
-      IN_PROGRESS: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: 'В работе' },
-      PENDING_APPROVAL: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/70', label: 'Ожидает подтверждения' },
-      COMPLETED: { bg: 'bg-[#B8860B]/20', text: 'text-[#B8860B]', label: 'Завершен' },
-      DRAFT: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/60', label: 'Черновик' },
-      DISPUTED: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: 'Оспорен' },
-      PENDING_PAYMENT: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: 'Ожидает оплаты' },
+      ACTIVE: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: t('contract.statuses.ACTIVE') },
+      IN_PROGRESS: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: t('contract.statuses.IN_PROGRESS') },
+      PENDING_APPROVAL: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/70', label: t('contract.statuses.PENDING_APPROVAL') },
+      COMPLETED: { bg: 'bg-[#B8860B]/20', text: 'text-[#B8860B]', label: t('contract.statuses.COMPLETED') },
+      DRAFT: { bg: 'bg-[#000052]/5', text: 'text-[#000052]/60', label: t('contract.statuses.DRAFT') },
+      DISPUTED: { bg: 'bg-[#000052]/10', text: 'text-[#000052]', label: t('contract.statuses.DISPUTED') },
+      PENDING_PAYMENT: { bg: 'bg-[#B8860B]/10', text: 'text-[#B8860B]', label: t('contract.statuses.PENDING_PAYMENT') },
     };
     const badge = badges[status] || badges.DRAFT;
     return (
@@ -143,7 +143,7 @@ export function CEOContractsPage() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('contracts.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('contract.title')}</h1>
           <p className="text-sm text-[#000052]/70 mt-1">Управление смарт-контрактами и хеджирование рисков</p>
         </div>
         <button
@@ -151,7 +151,7 @@ export function CEOContractsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-lg hover:bg-[#9a7209] transition text-sm font-semibold"
         >
           <Plus className="w-4 h-4" />
-          {t('contracts.createNew')}
+          {t('contract.createNew')}
         </button>
       </div>
 
@@ -204,11 +204,11 @@ export function CEOContractsPage() {
               className="pl-10 pr-8 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30 appearance-none cursor-pointer"
             >
               <option value="all">Все статусы</option>
-              <option value="ACTIVE">Активен</option>
-              <option value="IN_PROGRESS">В работе</option>
-              <option value="PENDING_APPROVAL">Ожидает подтверждения</option>
-              <option value="COMPLETED">Завершен</option>
-              <option value="DRAFT">Черновик</option>
+              <option value="ACTIVE">{t('contract.statuses.ACTIVE')}</option>
+              <option value="IN_PROGRESS">{t('contract.statuses.IN_PROGRESS')}</option>
+              <option value="PENDING_APPROVAL">{t('contract.statuses.PENDING_APPROVAL')}</option>
+              <option value="COMPLETED">{t('contract.statuses.COMPLETED')}</option>
+              <option value="DRAFT">{t('contract.statuses.DRAFT')}</option>
             </select>
           </div>
         </div>
