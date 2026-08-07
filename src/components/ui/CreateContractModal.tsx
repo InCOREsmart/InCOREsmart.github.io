@@ -106,8 +106,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     // Выплата агенту
     const agentPayout = totalEscrow;
 
-    // Прибыль компании = эскроу - выплата агенту + комиссия
-    // (в реальности комиссия удерживается из эскроу, поэтому прибыль = комиссия)
+    // Прибыль компании = комиссия
     const companyProfit = platformFee;
 
     return {
@@ -188,7 +187,6 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
 
       if (streamsError) {
         console.error('Ошибка создания потоков:', streamsError);
-        // Не прерываем процесс, потоки можно создать позже
       }
 
       alert('Контракт успешно создан!');
@@ -222,10 +220,10 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl border border-[#000052]/10 my-8">
         {/* Заголовок */}
-        <div className="flex items-center justify-between p-6 border-b border-[#000052]/10 sticky top-0 bg-white z-10 rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-[#000052]/10">
           <div>
             <h2 className="text-2xl font-bold text-[#000052]">Создание смарт-контракта</h2>
             <p className="text-sm text-[#000052]/60 mt-1">Расчёт эскроу и 6 потоков выплат в реальном времени</p>
