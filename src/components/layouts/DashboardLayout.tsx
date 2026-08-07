@@ -14,6 +14,8 @@ import {
   DollarSign,
   Scale
 } from 'lucide-react';
+import { NotificationBell } from '../ui/NotificationBell';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -46,13 +48,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/agent/settings', label: 'Мои данные', icon: Settings, role: 'agent' },
   ];
 
-  // Определяем роль пользователя по URL
   const userRole = location.pathname.startsWith('/agent') ? 'agent' : 'ceo';
   const filteredMenu = menuItems.filter(item => item.role === userRole);
 
   return (
     <div className="flex h-screen bg-[#F8F9FA]">
-      {/* Overlay для мобильного меню */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -60,10 +60,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
       )}
 
-      {/* Боковое меню */}
       <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-[#000052]/10 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="flex flex-col h-full">
-          {/* Логотип */}
           <div className="p-6 border-b border-[#000052]/10 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-[#000052] tracking-tight">InCORE</h1>
@@ -77,7 +75,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           </div>
 
-          {/* Навигация */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {filteredMenu.map((item) => {
               const Icon = item.icon;
@@ -102,7 +99,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          {/* Профиль пользователя */}
           <div className="p-4 border-t border-[#000052]/10">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
@@ -128,9 +124,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      {/* Основной контент */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Мобильный header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-[#000052]/10">
           <h1 className="text-lg font-bold text-[#000052]">InCORE</h1>
           <button
@@ -141,7 +135,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
         </header>
 
-        {/* Контент страницы */}
+        {/* Верхняя панель с языком и уведомлениями */}
+        <header className="hidden md:flex items-center justify-end p-4 bg-white border-b border-[#000052]/10 gap-4">
+          <LanguageSwitcher />
+          <NotificationBell />
+        </header>
+
         <div className="flex-1 overflow-y-auto">
           {children}
         </div>
