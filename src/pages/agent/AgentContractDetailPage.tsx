@@ -49,7 +49,6 @@ export function AgentContractDetailPage() {
   const crossSell = gmv * 0.10;
   const planBonus = gmv * 0.10;
   const retention = gmv * 0.10;
-  const annual = gmv * 0.05;
 
   const deadlineDate = new Date(contract.deadline);
   const now = new Date();
@@ -96,7 +95,7 @@ export function AgentContractDetailPage() {
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
-        <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><DollarSign className="w-5 h-5 text-[#B8860B]" /> 6 потоков выплат</h3>
+        <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><DollarSign className="w-5 h-5 text-[#B8860B]" /> 5 потоков выплат</h3>
         <div className="space-y-3">
           <div className="flex justify-between items-center p-3 bg-[#000052]/5 rounded-lg"><span className="text-sm text-[#000052]/80">Новые продажи (50%)</span><span className="font-semibold text-[#000052]">${newSales.toLocaleString()}</span></div>
           <div className="flex justify-between items-center p-3 bg-[#000052]/5 rounded-lg"><span className="text-sm text-[#000052]/80">Продление (15%)</span><span className="font-semibold text-[#000052]">${renewal.toLocaleString()}</span></div>
@@ -106,7 +105,6 @@ export function AgentContractDetailPage() {
             <div><span className="text-sm font-semibold text-[#000052]">Удержание 90 дней (10%)</span><p className="text-xs text-[#000052]/60 mt-1">Выплачивается только если клиент остается более 90 дней</p></div>
             <span className="font-semibold text-[#B8860B]">${retention.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between items-center p-3 bg-[#000052]/5 rounded-lg"><span className="text-sm text-[#000052]/80">Годовой бонус (5%)</span><span className="font-semibold text-[#000052]">${annual.toLocaleString()}</span></div>
         </div>
       </div>
 
