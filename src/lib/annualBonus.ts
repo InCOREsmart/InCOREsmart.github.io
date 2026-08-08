@@ -1,4 +1,4 @@
-import { DemoAgent, DemoContract } from './demoData';
+import type { DemoAgent, DemoContract } from './demoData';
 
 export const ANNUAL_BONUS_MAX = 7000;
 
