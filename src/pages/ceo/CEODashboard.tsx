@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { DollarSign, Shield, TrendingUp, CheckCircle, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { DollarSign, Shield, TrendingUp, CheckCircle, BarChart3 } from 'lucide-react';
 import { DEMO_AGENTS } from '../../lib/demoData';
 import { getEscrowAmount, getPaidAmount } from '../../lib/annualBonus';
 
@@ -42,7 +42,6 @@ export function CEODashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({ totalRevenue: 0, totalEscrow: 0, totalPaidToAgents: 0, netProfit: 0, avgROI: 0, activeContracts: 0, pendingPayouts: 0, periodPaid: 0, periodPending: 0 });
-  const [streams, setStreams] = useState<any[]>([]);
   const [efficiency, setEfficiency] = useState<any[]>([]);
 
   useEffect(() => {
@@ -75,7 +74,6 @@ export function CEODashboard() {
         const all = [...currentDemo, ...real];
 
         let totalRevenue = 0, totalEscrow = 0, totalPaid = 0, profit = 0, roiSum = 0, roiCount = 0, pending = 0, periodPaid = 0, periodPending = 0;
-        const grouped: Record<string, any> = {};
         const people: Record<string, any> = {};
 
         all.forEach(c => {
@@ -91,9 +89,6 @@ export function CEODashboard() {
           if (revenue > 0) { roiSum += roi; roiCount++; }
 
           ps.filter(s => s.stream_key !== 'annual').forEach(s => {
-            const key = s.stream_key || 'other';
-            if (!grouped[key]) grouped[key] = { key, title: s.title || key, total: 0 };
-            grouped[key].total += n(s.amount);
             if (s.status === 'PAID' && inAugust(s)) periodPaid += n(s.amount);
           });
 
@@ -119,12 +114,10 @@ export function CEODashboard() {
           periodPaid,
           periodPending,
         });
-        setStreams(Object.values(grouped));
         setEfficiency(Object.values(people).map(p => ({ name: p.name, value: p.count ? Math.round(p.total / p.count) : 0 })).sort((a, b) => b.value - a.value));
       } catch (e) {
         console.error('Ошибка загрузки финансового ядра:', e);
         setMetrics({ totalRevenue: 0, totalEscrow: 0, totalPaidToAgents: 0, netProfit: 0, avgROI: 0, activeContracts: 0, pendingPayouts: 0, periodPaid: 0, periodPending: 0 });
-        setStreams([]);
         setEfficiency([]);
       } finally { setLoading(false); }
     };
@@ -134,8 +127,6 @@ export function CEODashboard() {
   if (loading) return <div className="p-8 text-center text-[#000052]">Загрузка...</div>;
   const paymentBase = metrics.periodPaid + metrics.periodPending;
   const paymentProgress = paymentBase ? Math.round(metrics.periodPaid / paymentBase * 100) : 0;
-  const totalStreams = streams.reduce((s, x) => s + x.total, 0);
-  const colors = ['#000052', '#B8860B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'];
   const barClass = (v: number) => v < 80 ? 'bg-red-500' : v > 100 ? 'bg-emerald-500' : 'bg-[#B8860B]';
   const label = (v: number) => v < 80 ? 'Критично' : v > 100 ? 'Перевыполнение' : 'Выполнение плана';
   const cards = [
@@ -152,7 +143,5 @@ export function CEODashboard() {
     <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><div className="flex items-start justify-between gap-4 mb-5"><div><div className="flex items-center gap-2"><Shield className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Движение средств за август</h2></div><p className="text-sm text-[#000052]/60 mt-1">Эскроу, фактически выплаченные и ожидающие выплаты всем 7 агентам</p></div><div className="text-right"><div className="text-xs text-[#000052]/60">В эскроу</div><div className="text-xl font-bold text-[#000052]">${metrics.totalEscrow.toLocaleString()}</div></div></div><div className="h-5 bg-[#000052]/10 rounded-full overflow-hidden flex"><div className="h-full bg-emerald-500" style={{ width: `${paymentProgress}%` }} /><div className="h-full bg-[#B8860B]" style={{ width: `${100 - paymentProgress}%` }} /></div><div className="grid grid-cols-3 gap-4 mt-4 text-sm"><div><div className="text-[#000052]/60">Эскроу</div><div className="font-bold mt-1">${metrics.totalEscrow.toLocaleString()}</div></div><div><div className="text-[#000052]/60">Выплачено в августе</div><div className="font-bold text-emerald-600 mt-1">${metrics.periodPaid.toLocaleString()}</div></div><div><div className="text-[#000052]/60">Ожидает выплаты</div><div className="font-bold text-[#B8860B] mt-1">${metrics.periodPending.toLocaleString()}</div></div></div><div className="flex justify-between mt-3 text-xs text-[#000052]/60"><span>Выплачено: {paymentProgress}%</span><span>Ожидает: {100 - paymentProgress}%</span></div></div>
 
     <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><div className="flex items-center gap-2 mb-5"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><div><h2 className="text-lg font-bold text-[#000052]">Выполнение плана агентами</h2><p className="text-sm text-[#000052]/60">Процент выполнения плана продаж по каждому агенту</p></div></div><div className="flex flex-wrap gap-4 mb-6 text-xs text-[#000052]/70"><span>🔴 Ниже 80% — критично</span><span>🟡 100% — выполнение плана</span><span>🟢 Выше 100% — перевыполнение</span></div><div className="overflow-x-auto"><div className="grid grid-cols-7 min-w-[1050px] border border-[#000052]/10 rounded-lg overflow-hidden">{efficiency.map((a, i) => { const h = Math.max(8, Math.min(180, a.value / 120 * 180)); return <div key={`${a.name}-${i}`} className={`flex flex-col items-center min-w-0 px-3 py-4 ${i < efficiency.length - 1 ? 'border-r border-[#000052]/10' : ''}`}><div className="w-full h-[190px] flex items-end justify-center relative border-b border-[#000052]/10"><div className={`w-12 ${barClass(a.value)} rounded-t-lg relative`} style={{ height: `${h}px` }}><span className="absolute -top-7 left-1/2 -translate-x-1/2 text-sm font-bold text-[#000052] whitespace-nowrap">{a.value}%</span></div></div><div className="text-center mt-3 w-full"><div className="font-semibold text-sm text-[#000052] leading-tight" title={a.name}>{a.name}</div><div className="text-xs text-[#000052]/60 mt-1">{label(a.value)}</div></div></div>; })}</div></div></div>
-
-    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><div className="flex items-center gap-2 mb-6"><PieChartIcon className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Распределение бюджета</h2></div><div className="flex flex-col md:flex-row items-center gap-6"><svg viewBox="0 0 200 200" className="w-48 h-48 flex-shrink-0">{(() => { let cp = 0; return streams.map((s, i) => { const p = totalStreams ? s.total / totalStreams * 100 : 0; const sa = cp / 100 * 360; cp += p; const ea = cp / 100 * 360; const sr = (sa - 90) * Math.PI / 180; const er = (ea - 90) * Math.PI / 180; const x1 = 100 + 80 * Math.cos(sr), y1 = 100 + 80 * Math.sin(sr), x2 = 100 + 80 * Math.cos(er), y2 = 100 + 80 * Math.sin(er); return <path key={s.key} d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${p > 50 ? 1 : 0} 1 ${x2} ${y2} Z`} fill={colors[i % colors.length]} opacity="0.85"><title>{`${s.title}: $${s.total.toLocaleString()} (${p.toFixed(1)}%)`}</title></path>; }); })()}<circle cx="100" cy="100" r="40" fill="white" /><text x="100" y="95" textAnchor="middle" fontSize="12" fill="#000052" fontWeight="bold">Всего</text><text x="100" y="112" textAnchor="middle" fontSize="14" fill="#B8860B">${Math.round(totalStreams / 1000)}K</text></svg><div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">{streams.map((s, i) => <div key={s.key} className="flex items-center justify-between gap-4 p-3 bg-[#000052]/5 rounded-lg"><div className="flex items-center gap-2 min-w-0"><span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[i % colors.length] }} /><span className="text-sm text-[#000052] truncate">{s.title}</span></div><div className="text-right flex-shrink-0"><div className="font-bold text-[#000052]">${s.total.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{totalStreams ? (s.total / totalStreams * 100).toFixed(1) : 0}%</div></div></div>)}</div></div></div>
   </div>;
 }
