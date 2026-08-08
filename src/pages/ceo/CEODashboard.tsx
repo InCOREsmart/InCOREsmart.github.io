@@ -11,7 +11,8 @@ const isActiveContract = (contract: any) => contract.status === 'ACTIVE' || cont
 /*
  * План продаж = "Общая выручка по договорам" при создании договора.
  * KPI звонков/встреч/предложений здесь НЕ используются.
- * Факт = фактическая выручка/продажи по договору.
+ * Факт продаж рассчитывается из количества уже привлечённых клиентов.
+ * Каждый привлечённый клиент закрывает соответствующую долю плана договора.
  */
 const getSalesPlan = (contract: any) => numberValue(
   contract.revenue ??
@@ -21,12 +22,39 @@ const getSalesPlan = (contract: any) => numberValue(
   contract.target_revenue
 );
 
-const getActualSales = (contract: any) => numberValue(
-  contract.actual_revenue ??
-  contract.sales_amount ??
-  contract.actual_sales ??
-  contract.realized_revenue
+const getTargetClients = (contract: any) => numberValue(
+  contract.target_clients ??
+  contract.planned_clients ??
+  contract.clients_target
 );
+
+const getActualClients = (contract: any) => numberValue(
+  contract.actual_clients ??
+  contract.attracted_clients ??
+  contract.acquired_clients ??
+  contract.current_clients ??
+  contract.clients_count ??
+  contract.clients
+);
+
+const getActualSales = (contract: any) => {
+  const explicitActual = numberValue(
+    contract.actual_revenue ??
+    contract.sales_amount ??
+    contract.actual_sales ??
+    contract.realized_revenue
+  );
+
+  if (explicitActual > 0) return explicitActual;
+
+  const plan = getSalesPlan(contract);
+  const targetClients = getTargetClients(contract);
+  const actualClients = getActualClients(contract);
+
+  if (plan <= 0 || targetClients <= 0 || actualClients <= 0) return 0;
+
+  return Math.min(plan, plan * (actualClients / targetClients));
+};
 
 const getPeriodStart = () => {
   const now = new Date();
@@ -167,7 +195,7 @@ export function CEODashboard() {
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
-        <div className="flex items-center gap-2 mb-5"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><div><h2 className="text-lg font-bold text-[#000052]">Выполнение плана агентами</h2><p className="text-sm text-[#000052]/60">План = «Общая выручка по договорам» при создании контрактов. KPI не учитывается.</p></div></div>
+        <div className="flex items-center gap-2 mb-5"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><div><h2 className="text-lg font-bold text-[#000052]">Выполнение плана агентами</h2><p className="text-sm text-[#000052]/60">План = «Общая выручка по договорам» при создании контрактов. Факт = доля плана по уже привлечённым клиентам.</p></div></div>
         <div className="flex flex-wrap gap-3 mb-6 text-xs text-[#000052]/70"><span>🔴 Ниже 80% — критично</span><span>🟡 80–99% — выполнение плана</span><span>🟢 100% — план выполнен</span><span>🟢 Выше 100% — перевыполнение</span></div>
         {agentEfficiency.length === 0 ? <div className="text-center py-8 text-[#000052]/60">Данные по выполнению плана пока недоступны</div> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-end">{agentEfficiency.map((agent, index) => { const [bar, label] = status(agent.value); const height = Math.max(8, Math.min(180, agent.value / 120 * 180)); return <div key={`${agent.name}-${index}`} className="flex flex-col items-center"><div className="w-full h-[190px] flex items-end justify-center relative border-b border-[#000052]/10"><div className={`w-12 sm:w-16 ${bar} rounded-t-lg relative`} style={{ height: `${height}px` }}><span className="absolute -top-7 left-1/2 -translate-x-1/2 text-sm font-bold text-[#000052] whitespace-nowrap">{agent.value}%</span></div><div className="absolute left-0 right-0 bottom-[30px] border-t border-dashed border-[#B8860B]/40" /></div><div className="text-center mt-3 w-full"><div className="font-semibold text-sm text-[#000052] truncate">{agent.name}</div><div className="text-xs text-[#000052]/60 mt-1">{label}</div><div className="text-[11px] text-[#000052]/50 mt-1">${agent.actual.toLocaleString()} / ${agent.plan.toLocaleString()}</div></div></div>; })}</div>}
       </div>
