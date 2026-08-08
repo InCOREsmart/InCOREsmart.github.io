@@ -55,7 +55,7 @@ export function AgentDashboard() {
   if (!agent) {
     return (
       <div className="p-8 text-center">
-        <p className="text-lg text-[#000052]">Агент не найден</p>
+        <p className="text-lg text-[#000052]">{t('agent.agentNotFound')}</p>
       </div>
     );
   }
@@ -71,11 +71,11 @@ export function AgentDashboard() {
 
   const kpis = [
     { label: t('agent.totalEarned'), value: totalEarned, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white' },
-    { label: 'Доступно к выплате', value: availableForWithdrawal, icon: CheckCircle, color: 'bg-green-600', textColor: 'text-white' },
-    { label: 'Ожидает подтверждения', value: pendingVerification, icon: Clock, color: 'bg-[#B8860B]', textColor: 'text-white' },
+    { label: t('agent.availableForWithdrawal'), value: availableForWithdrawal, icon: CheckCircle, color: 'bg-green-600', textColor: 'text-white' },
+    { label: t('agent.pendingVerification'), value: pendingVerification, icon: Clock, color: 'bg-[#B8860B]', textColor: 'text-white' },
     { label: t('agent.escrowBalance'), value: escrowBalance, icon: Lock, color: 'bg-white', textColor: 'text-[#000052]' },
     { label: t('payouts.retention'), value: retentionLocked, icon: Shield, color: 'bg-white', textColor: 'text-[#000052]' },
-    { label: 'Clawback (удержано)', value: clawedBack, icon: AlertTriangle, color: 'bg-red-600', textColor: 'text-white' },
+    { label: t('agent.clawedBack'), value: clawedBack, icon: AlertTriangle, color: 'bg-red-600', textColor: 'text-white' },
   ];
 
   return (
@@ -113,13 +113,13 @@ export function AgentDashboard() {
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
         <div className="flex items-center justify-between gap-4 mb-3">
           <div>
-            <h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />Годовой бонус · {annualBonus.year}</h2>
-            <p className="text-sm text-[#000052]/60 mt-1">Накопление по результатам выполнения плана продаж. В эскроу не входит.</p>
+            <h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />{t('agent.annualBonus')} · {annualBonus.year}</h2>
+            <p className="text-sm text-[#000052]/60 mt-1">{t('agent.annualBonusDescription')}</p>
           </div>
-          <div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">из ${annualBonus.maxBonus.toLocaleString()}</div></div>
+          <div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}</div></div>
         </div>
         <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div>
-        <div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>Выполнение плана: {annualBonus.planAchievementPercent}%</span><span>Накоплено: {annualBonus.progressPercent}%</span></div>
+        <div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>{t('agent.planAchievement')}: {annualBonus.planAchievementPercent}%</span><span>{t('agent.accumulated')}: {annualBonus.progressPercent}%</span></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
