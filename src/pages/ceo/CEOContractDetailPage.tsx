@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Clock, DollarSign, Lock, Shield, TrendingUp, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { DemoPayoutStream, getDemoContractById } from '../../lib/demoData';
+import { getEscrowStreams, getEscrowAmount, getPaidAmount, getLockedAmount } from '../../lib/annualBonus';
 import { getContractFullData, releasePayment } from '../../lib/smartContractLogic';
 
 export function CEOContractDetailPage() {
@@ -21,19 +22,23 @@ export function CEOContractDetailPage() {
         if (demo) {
           const { DEMO_AGENTS } = await import('../../lib/demoData');
           const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id));
+          const escrowStreams = getEscrowStreams(demo.payout_streams);
+          const escrowAmount = getEscrowAmount(demo, escrowStreams);
+          const totalPaid = getPaidAmount(escrowStreams);
+          const totalLocked = getLockedAmount(escrowStreams);
           setData({
             contract: demo,
-            streams: demo.payout_streams,
+            streams: escrowStreams,
             escrowEvents: demo.escrow_events,
             oracleEvents: demo.oracle_events,
             disputes: [],
             agent,
             financials: {
               plannedRevenue: demo.revenue,
-              totalEscrow: demo.escrow_amount,
-              totalLocked: demo.total_locked,
-              totalUnlocked: demo.total_paid,
-              companyProfit: demo.company_profit,
+              totalEscrow: escrowAmount,
+              totalLocked,
+              totalUnlocked: totalPaid,
+              companyProfit: demo.revenue - escrowAmount,
               platformFee: demo.platform_fee,
             },
             isDemo: true,
@@ -69,14 +74,14 @@ export function CEOContractDetailPage() {
   if (!data) return <div className="p-8 text-center"><XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" /><p className="text-lg text-[#000052]">Контракт не найден</p><button onClick={() => navigate('/ceo/contracts')} className="mt-4 px-6 py-2 bg-[#000052] text-white rounded-lg">Вернуться к контрактам</button></div>;
 
   const { contract, streams, escrowEvents, oracleEvents, disputes, agent, financials } = data;
-  const streamList = streams || [];
+  const streamList = data.isDemo ? getEscrowStreams(streams || []) : (streams || []);
   const escrowList = escrowEvents || [];
   const oracleList = oracleEvents || [];
   const disputeList = disputes || [];
   const paid = streamList.filter((stream: any) => stream.status === 'PAID').reduce((sum: number, stream: any) => sum + Number(stream.amount || 0), 0);
   const locked = streamList.filter((stream: any) => stream.status === 'LOCKED').reduce((sum: number, stream: any) => sum + Number(stream.amount || 0), 0);
   const plannedRevenue = Number(financials?.plannedRevenue ?? contract.revenue ?? contract.planned_revenue ?? 0);
-  const totalEscrow = Number(financials?.totalEscrow ?? contract.escrow_amount ?? 0);
+  const totalEscrow = Number(financials?.totalEscrow ?? (data.isDemo ? getEscrowAmount(contract, streamList) : contract.escrow_amount ?? 0));
   const companyProfit = Number(financials?.companyProfit ?? contract.company_profit ?? 0);
   const platformFee = Number(financials?.platformFee ?? contract.platform_fee ?? 0);
   const totalPaid = Number(financials?.totalUnlocked ?? paid);
@@ -108,6 +113,8 @@ export function CEOContractDetailPage() {
         <div className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex gap-2 mb-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" /><span className="text-sm text-[#000052]/70">Результат компании</span></div><p className="text-2xl font-bold text-[#000052]">${companyProfit.toLocaleString()}</p><p className="text-xs text-[#000052]/60">Комиссия ${platformFee.toLocaleString()}</p></div>
       </div>
 
+      {data.isDemo && <div className="bg-white p-4 rounded-xl border border-[#B8860B]/30 text-sm text-[#000052]/70">Годовой бонус рассчитывается отдельно по результатам выполнения годового плана и <strong>не входит в эскроу этого контракта</strong>.</div>}
+
       <div className="bg-white p-5 rounded-xl border border-[#000052]/10">
         <div className="flex justify-between mb-3"><h2 className="font-bold text-[#000052]">KPI контракта</h2><span className="font-bold text-[#B8860B]">{kpi}%</span></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -117,7 +124,7 @@ export function CEOContractDetailPage() {
 
       <div className="border-b border-[#000052]/10"><div className="flex gap-5 overflow-x-auto">{([['streams', `Потоки выплат (${streamList.length})`], ['escrow', `Журнал эскроу (${escrowList.length})`], ['oracle', `События Oracle (${oracleList.length})`], ['disputes', `Споры (${disputeList.length})`]] as const).map(([key, label]) => <button key={key} onClick={() => setTab(key)} className={`pb-3 px-2 text-sm font-semibold whitespace-nowrap ${tab === key ? 'text-[#B8860B] border-b-2 border-[#B8860B]' : 'text-[#000052]/60'}`}>{label}</button>)}</div></div>
 
-      {tab === 'streams' && <div className="space-y-4"><h2 className="text-xl font-bold text-[#000052]">8 потоков выплат</h2>{streamList.map((stream: any) => <div key={stream.id} className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex flex-col md:flex-row md:items-center justify-between gap-3"><div><h3 className="font-bold text-[#000052]">{stream.title}</h3><p className="text-xs text-[#000052]/60 mt-1">{stream.unlock_condition || 'Условие не указано'}</p></div><div className="text-right"><p className="text-2xl font-bold text-[#000052]">${Number(stream.amount || 0).toLocaleString()}</p><span className="px-3 py-1 rounded-full bg-[#000052]/5 text-xs font-semibold">{statusLabel(stream.status)}</span></div></div>{stream.unlocked_at && <p className="text-xs text-[#000052]/60 mt-3">Разблокировано: {new Date(stream.unlocked_at).toLocaleString('ru-RU')}</p>}{stream.paid_at && <p className="text-xs text-green-600 mt-1">Выплачено: {new Date(stream.paid_at).toLocaleString('ru-RU')}</p>}{stream.status === 'UNLOCKED' && !data.isDemo && <button onClick={() => handleRelease(stream)} className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Разблокировать выплату</button>}</div>)}</div>}
+      {tab === 'streams' && <div className="space-y-4"><h2 className="text-xl font-bold text-[#000052]">{streamList.length} потока выплат</h2>{streamList.map((stream: any) => <div key={stream.id} className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex flex-col md:flex-row md:items-center justify-between gap-3"><div><h3 className="font-bold text-[#000052]">{stream.title}</h3><p className="text-xs text-[#000052]/60 mt-1">{stream.unlock_condition || 'Условие не указано'}</p></div><div className="text-right"><p className="text-2xl font-bold text-[#000052]">${Number(stream.amount || 0).toLocaleString()}</p><span className="px-3 py-1 rounded-full bg-[#000052]/5 text-xs font-semibold">{statusLabel(stream.status)}</span></div></div>{stream.unlocked_at && <p className="text-xs text-[#000052]/60 mt-3">Разблокировано: {new Date(stream.unlocked_at).toLocaleString('ru-RU')}</p>}{stream.paid_at && <p className="text-xs text-green-600 mt-1">Выплачено: {new Date(stream.paid_at).toLocaleString('ru-RU')}</p>}{stream.status === 'UNLOCKED' && !data.isDemo && <button onClick={() => handleRelease(stream)} className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Разблокировать выплату</button>}</div>)}</div>}
 
       {tab === 'escrow' && <div className="space-y-4"><h2 className="text-xl font-bold text-[#000052]">Журнал эскроу</h2>{escrowList.map((event: any) => <div key={event.id} className="bg-white p-4 rounded-xl border border-[#000052]/10 flex items-start gap-4"><Clock className="w-5 h-5 text-[#B8860B] mt-1" /><div className="flex-1"><p className="font-semibold text-[#000052]">{eventLabel(event.event_type)}</p><p className="text-xs text-[#000052]/60 mt-1">{new Date(event.created_at).toLocaleString('ru-RU')} · {event.actor_role || 'SYSTEM'}</p></div><b className="text-[#000052]">{event.amount != null ? `$${Number(event.amount).toLocaleString()}` : '—'}</b></div>)}</div>}
 
