@@ -60,7 +60,7 @@ export function CEOAccountingExport() {
     completed.forEach((c, i) => {
       const gmv = c.revenue || 0;
       html += `<div class="page"><h2>Акт №${i + 1}</h2><p><b>Исполнитель:</b> ${getAgentName(c.agent_id)}</p><table>`;
-      html += `<tr><th>Услуга</th><th>Сумма</th></tr>`;
+      html += `<tr><th>Услуга</th><th>{t('ui.amount')}</th></tr>`;
       html += `<tr><td>Новые продажи (50%)</td><td>$${(gmv * 0.50).toLocaleString()}</td></tr>`;
       html += `<tr><td>Продление (15%)</td><td>$${(gmv * 0.15).toLocaleString()}</td></tr>`;
       html += `<tr><td>Кросс-продажи (10%)</td><td>$${(gmv * 0.10).toLocaleString()}</td></tr>`;

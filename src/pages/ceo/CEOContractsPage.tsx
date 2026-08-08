@@ -217,9 +217,9 @@ export function CEOContractsPage() {
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Название</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">GMV</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Эскроу</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Дедлайн</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Статус</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('ui.escrow')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('ui.deadline')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('ui.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#000052]/5">

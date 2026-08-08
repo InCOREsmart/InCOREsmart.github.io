@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export function CEOIntegrationsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -219,11 +221,11 @@ export function CEOIntegrationsPage() {
                 <tr className="border-b border-[#000052]/10">
                   <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Bitrix ID</th>
                   <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Название</th>
-                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Сумма</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">{t('ui.amount')}</th>
                   <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Стадия</th>
                   <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Агент</th>
                   <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Синхр.</th>
-                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">Статус</th>
+                  <th className="text-left py-2 px-3 text-xs font-bold text-[#000052] uppercase">{t('ui.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#000052]/5">

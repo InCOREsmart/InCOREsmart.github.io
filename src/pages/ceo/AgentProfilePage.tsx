@@ -73,7 +73,7 @@ export function AgentProfilePage() {
   }, [contracts, statusFilter]);
 
   if (loading) return <div className="p-8 text-center text-[#000052]">Загрузка...</div>;
-  if (!agent) return <div className="p-8 max-w-2xl mx-auto"><div className="bg-[#000052]/5 rounded-xl p-6"><h3 className="text-lg font-bold text-[#000052] mb-2">Агент не найден</h3><button onClick={() => navigate('/ceo/agents')} className="px-4 py-2 bg-[#000052] text-white rounded-lg">Назад к агентам</button></div></div>;
+  if (!agent) return <div className="p-8 max-w-2xl mx-auto"><div className="bg-[#000052]/5 rounded-xl p-6"><h3 className="text-lg font-bold text-[#000052] mb-2">{t('ui.agentNotFound')}</h3><button onClick={() => navigate('/ceo/agents')} className="px-4 py-2 bg-[#000052] text-white rounded-lg">Назад к агентам</button></div></div>;
 
   const kpi = isDemo ? calculateAgentKPI(agent) : 0;
   const totalRevenue = contracts.reduce((sum, contract) => sum + Number(contract.revenue || contract.planned_revenue || 0), 0);
@@ -97,7 +97,7 @@ export function AgentProfilePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl"><div className="flex justify-between mb-3"><span className="text-sm opacity-80">Общий KPI</span><Target className="w-5 h-5" /></div><p className="text-2xl font-bold">{kpi}%</p><div className="mt-2 h-2 bg-white/20 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B]" style={{ width: `${Math.min(kpi, 100)}%` }} /></div></div>
-        <div className="bg-[#B8860B] text-white p-5 rounded-xl"><div className="flex justify-between mb-3"><span className="text-sm opacity-80">Общая выручка</span><DollarSign className="w-5 h-5" /></div><p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p></div>
+        <div className="bg-[#B8860B] text-white p-5 rounded-xl"><div className="flex justify-between mb-3"><span className="text-sm opacity-80">{t('ui.totalRevenue')}</span><DollarSign className="w-5 h-5" /></div><p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p></div>
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10"><div className="flex justify-between mb-3"><span className="text-sm text-[#000052]/70">Активные контракты</span><ShieldCheck className="w-5 h-5 text-[#B8860B]" /></div><p className="text-2xl font-bold">{activeContracts}</p></div>
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10"><div className="flex justify-between mb-3"><span className="text-sm text-[#000052]/70">Всего контрактов</span><FileText className="w-5 h-5 text-[#B8860B]" /></div><p className="text-2xl font-bold">{contracts.length}</p></div>
       </div>
@@ -111,7 +111,7 @@ export function AgentProfilePage() {
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div><h2 className="text-lg font-bold text-[#000052]">Контракты агента</h2><span className="text-sm text-[#000052]/60">Показано {filteredContracts.length} из {contracts.length}</span></div>
-          <div className="flex items-center gap-2"><Filter className="w-4 h-4 text-[#000052]/50" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value as ContractFilter)} className="px-3 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"><option value="ALL">Все статусы</option><option value="ACTIVE">Активные</option><option value="IN_PROGRESS">В работе</option><option value="COMPLETED">Завершенные</option></select></div>
+          <div className="flex items-center gap-2"><Filter className="w-4 h-4 text-[#000052]/50" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value as ContractFilter)} className="px-3 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30"><option value="ALL">Все статусы</option><option value="ACTIVE">Активные</option><option value="IN_PROGRESS">{t('ui.inProgress')}</option><option value="COMPLETED">Завершенные</option></select></div>
         </div>
 
         <div className="space-y-4">

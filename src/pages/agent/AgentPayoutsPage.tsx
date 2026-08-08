@@ -43,20 +43,20 @@ export function AgentPayoutsPage() {
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'LOCKED': return { icon: Lock, color: 'text-gray-500', bg: 'bg-gray-100', label: 'Заблокировано' };
-      case 'PENDING_VERIFICATION': return { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100', label: 'Ожидает проверки' };
-      case 'UNLOCKED': return { icon: Unlock, color: 'text-green-600', bg: 'bg-green-100', label: 'Разблокировано' };
-      case 'PAYABLE': return { icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-100', label: 'Готово к выплате' };
-      case 'PAID': return { icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-200', label: 'Выплачено' };
+      case 'LOCKED': return { icon: Lock, color: 'text-gray-500', bg: 'bg-gray-100', label: t('ui.locked') };
+      case 'PENDING_VERIFICATION': return { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100', label: t('ui.pendingVerificationStatus') };
+      case 'UNLOCKED': return { icon: Unlock, color: 'text-green-600', bg: 'bg-green-100', label: t('ui.unlockedStatus') };
+      case 'PAYABLE': return { icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-100', label: t('ui.payableStatus') };
+      case 'PAID': return { icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-200', label: t('ui.paidStatus') };
       case 'CLAWED_BACK': return { icon: Ban, color: 'text-red-600', bg: 'bg-red-100', label: 'Clawback' };
-      case 'CANCELLED': return { icon: Ban, color: 'text-gray-600', bg: 'bg-gray-200', label: 'Отменено' };
+      case 'CANCELLED': return { icon: Ban, color: 'text-gray-600', bg: 'bg-gray-200', label: t('ui.cancelledStatus') };
       default: return { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-100', label: status };
     }
   };
 
   const getContractTitle = (contractId: string) => {
     const contract = contracts.find(c => c.id === contractId);
-    return contract?.title || 'Контракт';
+    return contract?.title || t('ui.contract');
   };
 
   if (loading) {
@@ -82,7 +82,7 @@ export function AgentPayoutsPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#000052] text-white p-4 rounded-xl">
-          <p className="text-xs opacity-80 mb-1">Всего по контрактам</p>
+          <p className="text-xs opacity-80 mb-1">{t('ui.totalContracts')}</p>
           <p className="text-xl font-bold">${totalAmount.toLocaleString()}</p>
         </div>
         <div className="bg-green-600 text-white p-4 rounded-xl">
@@ -94,7 +94,7 @@ export function AgentPayoutsPage() {
           <p className="text-xl font-bold">${totalLocked.toLocaleString()}</p>
         </div>
         <div className="bg-red-600 text-white p-4 rounded-xl">
-          <p className="text-xs opacity-80 mb-1">Clawback</p>
+          <p className="text-xs opacity-80 mb-1">{t('ui.clawback')}</p>
           <p className="text-xl font-bold">${totalClawed.toLocaleString()}</p>
         </div>
       </div>
@@ -107,19 +107,19 @@ export function AgentPayoutsPage() {
         {streams.length === 0 ? (
           <div className="p-8 text-center text-[#000052]/60">
             <DollarSign className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" />
-            <p>Потоков выплат пока нет</p>
+            <p>{t('ui.noStreams')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px]">
               <thead className="bg-[#000052]/5">
                 <tr>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Поток</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Контракт</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Сумма</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Статус</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Условие разблокировки</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">Дата</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.stream')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.contract')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.amount')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.status')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.unlockCondition')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase">{t('ui.date')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#000052]/5">
@@ -173,7 +173,7 @@ export function AgentPayoutsPage() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-bold text-yellow-800 mb-1">Clawback Warning</h3>
+              <h3 className="font-bold text-yellow-800 mb-1">{t('ui.clawbackWarningTitle')}</h3>
               <p className="text-sm text-yellow-700">
                 {t('agent.clawbackWarning')}
               </p>

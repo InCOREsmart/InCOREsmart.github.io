@@ -70,7 +70,7 @@ export function AgentContractsPage() {
   }, [user]);
 
   const handleSendWork = async (contractId: string) => {
-    const confirmed = window.confirm('Отправить работу на проверку?');
+    const confirmed = window.confirm(t('ui.submitWorkConfirm'));
     if (!confirmed) return;
 
     try {
@@ -91,31 +91,31 @@ export function AgentContractsPage() {
       if (contract) {
         await supabase.from('notifications').insert({
           user_id: contract.company_id,
-          title: 'Работа отправлена на проверку',
+          title: t('ui.workSubmitted'),
           message: `Агент отправил работу по контракту "${contract.title}"`,
           type: 'WORK_SUBMITTED',
           is_read: false,
         });
       }
 
-      alert('Работа отправлена на проверку');
+      alert(t('ui.workSubmitted'));
       window.location.reload();
     } catch (err) {
       console.error('Ошибка:', err);
-      alert('Ошибка отправки работы');
+      alert(t('ui.workSubmitError'));
     }
   };
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'DRAFT': return { icon: FileText, color: 'bg-gray-100 text-gray-700', label: 'Черновик' };
-      case 'PENDING_PAYMENT': return { icon: Clock, color: 'bg-yellow-100 text-yellow-700', label: 'Ожидает оплаты' };
-      case 'ACTIVE': return { icon: CheckCircle, color: 'bg-green-100 text-green-700', label: 'Активен' };
-      case 'IN_PROGRESS': return { icon: Send, color: 'bg-blue-100 text-blue-700', label: 'В работе' };
-      case 'PENDING_APPROVAL': return { icon: Clock, color: 'bg-[#B8860B]/20 text-[#B8860B]', label: 'Ожидает подтверждения' };
-      case 'COMPLETED': return { icon: CheckCircle, color: 'bg-green-200 text-green-800', label: 'Завершён' };
-      case 'DISPUTED': return { icon: AlertTriangle, color: 'bg-red-100 text-red-700', label: 'Спор' };
-      case 'CANCELLED': return { icon: FileText, color: 'bg-gray-200 text-gray-700', label: 'Отменён' };
+      case 'DRAFT': return { icon: FileText, color: 'bg-gray-100 text-gray-700', label: t('ui.draft') };
+      case 'PENDING_PAYMENT': return { icon: Clock, color: 'bg-yellow-100 text-yellow-700', label: t('ui.pendingPayment') };
+      case 'ACTIVE': return { icon: CheckCircle, color: 'bg-green-100 text-green-700', label: t('ui.active') };
+      case 'IN_PROGRESS': return { icon: Send, color: 'bg-blue-100 text-blue-700', label: t('ui.inProgress') };
+      case 'PENDING_APPROVAL': return { icon: Clock, color: 'bg-[#B8860B]/20 text-[#B8860B]', label: t('ui.pendingApproval') };
+      case 'COMPLETED': return { icon: CheckCircle, color: 'bg-green-200 text-green-800', label: t('ui.completed') };
+      case 'DISPUTED': return { icon: AlertTriangle, color: 'bg-red-100 text-red-700', label: t('ui.disputed') };
+      case 'CANCELLED': return { icon: FileText, color: 'bg-gray-200 text-gray-700', label: t('ui.cancelled') };
       default: return { icon: FileText, color: 'bg-gray-100 text-gray-700', label: status };
     }
   };
@@ -132,7 +132,7 @@ export function AgentContractsPage() {
   if (!agent) {
     return (
       <div className="p-8 text-center">
-        <p className="text-lg text-[#000052]">Агент не найден</p>
+        <p className="text-lg text-[#000052]">{t('ui.agentNotFound')}</p>
       </div>
     );
   }
@@ -157,25 +157,25 @@ export function AgentContractsPage() {
             <FileText className="w-5 h-5 opacity-80" />
           </div>
           <p className="text-2xl font-bold">{activeCount}</p>
-          <p className="text-xs opacity-70 mt-1">из {contracts.length} всего</p>
+          <p className="text-xs opacity-70 mt-1">{t('ui.ofTotal')}</p>
         </div>
 
         <div className="bg-[#B8860B] text-white p-5 rounded-xl">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium opacity-80">Эскроу</h3>
+            <h3 className="text-sm font-medium opacity-80">{t('ui.escrow')}</h3>
             <Shield className="w-5 h-5 opacity-80" />
           </div>
           <p className="text-2xl font-bold">${totalEscrow.toLocaleString()}</p>
-          <p className="text-xs opacity-70 mt-1">Защищено смарт-контрактом</p>
+          <p className="text-xs opacity-70 mt-1">{t('ui.protectedBySmartContract')}</p>
         </div>
 
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-[#000052]/70">Общая выручка</h3>
+            <h3 className="text-sm font-medium text-[#000052]/70">{t('ui.totalRevenue')}</h3>
             <DollarSign className="w-5 h-5 text-[#B8860B]" />
           </div>
           <p className="text-2xl font-bold text-[#000052]">${totalRevenue.toLocaleString()}</p>
-          <p className="text-xs text-[#000052]/60 mt-1">По всем контрактам</p>
+          <p className="text-xs text-[#000052]/60 mt-1">{t('ui.allContracts')}</p>
         </div>
       </div>
 
@@ -194,8 +194,8 @@ export function AgentContractsPage() {
       {contracts.length === 0 ? (
         <div className="bg-white p-12 rounded-xl border border-[#000052]/10 text-center">
           <FileText className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" />
-          <p className="text-lg font-medium text-[#000052] mb-2">Контрактов пока нет</p>
-          <p className="text-sm text-[#000052]/60">CEO создаст для вас новый смарт-контракт</p>
+          <p className="text-lg font-medium text-[#000052] mb-2">{t('ui.noContracts')}</p>
+          <p className="text-sm text-[#000052]/60">{t('ui.noContractsDescription')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -230,21 +230,21 @@ export function AgentContractsPage() {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                     <div>
-                      <div className="text-xs text-[#000052]/60">Выручка</div>
+                      <div className="text-xs text-[#000052]/60">{t('ui.revenue')}</div>
                       <div className="font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-[#000052]/60">Эскроу</div>
+                      <div className="text-xs text-[#000052]/60">{t('ui.escrow')}</div>
                       <div className="font-bold text-[#B8860B]">${(contract.escrow_amount || 0).toLocaleString()}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-[#000052]/60">Дедлайн</div>
+                      <div className="text-xs text-[#000052]/60">{t('ui.deadline')}</div>
                       <div className="font-bold text-[#000052]">
                         {contract.deadline ? new Date(contract.deadline).toLocaleDateString('ru-RU') : '—'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-[#000052]/60">Статус эскроу</div>
+                      <div className="text-xs text-[#000052]/60">{t('ui.escrowStatus')}</div>
                       <div className="font-bold text-[#000052] flex items-center gap-1">
                         {contract.escrow_status === 'FUNDED' ? (
                           <><Unlock className="w-3 h-3 text-green-600" /> Заблокирован</>

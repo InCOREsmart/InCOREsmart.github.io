@@ -82,7 +82,7 @@ export function AgentContractDetailPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[#B8860B]/10 p-4 rounded-xl border border-[#B8860B]/20">
-          <p className="text-xs text-[#B8860B] mb-1">Эскроу</p>
+          <p className="text-xs text-[#B8860B] mb-1">{t('ui.escrow')}</p>
           <p className="text-xl font-bold text-[#B8860B]">${escrow.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-[#000052]/10">

@@ -312,8 +312,8 @@ export function CEODisputesPage() {
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Тип</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Описание</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Агент</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Сумма</th>
-                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Статус</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('ui.amount')}</th>
+                  <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{t('ui.status')}</th>
                   <th className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">Действия</th>
                 </tr>
               </thead>

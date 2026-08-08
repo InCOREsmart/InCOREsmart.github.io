@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Clock, DollarSign, Lock, Shield, TrendingUp, XCircle } from 'lucide-react';
@@ -7,6 +8,7 @@ import { getEscrowStreams, getEscrowAmount, getPaidAmount, getLockedAmount } fro
 import { getContractFullData, releasePayment } from '../../lib/smartContractLogic';
 
 export function CEOContractDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -113,7 +115,7 @@ export function CEOContractDetailPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-[#000052] text-white p-5 rounded-xl"><div className="flex gap-2 mb-2"><DollarSign className="w-5 h-5" /><span className="text-sm opacity-80">Плановая выручка</span></div><p className="text-2xl font-bold">${plannedRevenue.toLocaleString()}</p></div>
-        <div className="bg-[#B8860B] text-white p-5 rounded-xl"><div className="flex gap-2 mb-2"><Shield className="w-5 h-5" /><span className="text-sm opacity-80">Эскроу</span></div><p className="text-2xl font-bold">${totalEscrow.toLocaleString()}</p></div>
+        <div className="bg-[#B8860B] text-white p-5 rounded-xl"><div className="flex gap-2 mb-2"><Shield className="w-5 h-5" /><span className="text-sm opacity-80">{t('ui.escrow')}</span></div><p className="text-2xl font-bold">${totalEscrow.toLocaleString()}</p></div>
         <div className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex gap-2 mb-2"><CheckCircle className="w-5 h-5 text-green-600" /><span className="text-sm text-[#000052]/70">Выплачено</span></div><p className="text-2xl font-bold text-[#000052]">${totalPaid.toLocaleString()}</p></div>
         <div className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex gap-2 mb-2"><Lock className="w-5 h-5 text-[#B8860B]" /><span className="text-sm text-[#000052]/70">Заблокировано</span></div><p className="text-2xl font-bold text-[#000052]">${totalLocked.toLocaleString()}</p></div>
         <div className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex gap-2 mb-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" /><span className="text-sm text-[#000052]/70">Результат компании</span></div><p className="text-2xl font-bold text-[#000052]">${companyProfit.toLocaleString()}</p><p className="text-xs text-[#000052]/60">Комиссия ${platformFee.toLocaleString()}</p></div>
