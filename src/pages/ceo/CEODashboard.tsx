@@ -8,14 +8,31 @@ import { getEscrowAmount, getPaidAmount } from '../../lib/annualBonus';
 const n = (v: any) => Number(v || 0);
 const active = (c: any) => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS';
 const demoKPI = (c: any) => c.kpi_calls > 0 ? Math.round((n(c.actual_calls) / n(c.kpi_calls)) * 100) : 0;
+
 const realKPI = (c: any) => {
-  const pairs = [[c.actual_calls, c.kpi_calls], [c.actual_meetings, c.kpi_meetings], [c.actual_proposals, c.kpi_proposals], [c.actual_clients, c.target_clients]].filter(([, t]) => n(t) > 0);
-  if (pairs.length) return Math.round(pairs.reduce((s, [a, t]) => s + (n(a) / n(t)) * 100, 0) / pairs.length);
-  const planned = n(c.planned_revenue || c.sales_plan || c.target_revenue);
-  return planned > 0 ? Math.round((n(c.actual_revenue || c.revenue || c.sales_amount) / planned) * 100) : 0;
+  const pairs = [
+    [c.actual_calls, c.kpi_calls],
+    [c.actual_meetings, c.kpi_meetings],
+    [c.actual_proposals, c.kpi_proposals],
+    [c.actual_clients, c.target_clients],
+  ].filter(([, t]) => n(t) > 0);
+
+  if (pairs.length) {
+    return Math.round(pairs.reduce((s, [a, t]) => s + (n(a) / n(t)) * 100, 0) / pairs.length);
+  }
+
+  const planned = n(c.kpi_revenue || c.planned_revenue || c.sales_plan || c.target_revenue);
+  const actual = n(c.actual_revenue || c.revenue || c.sales_amount);
+  return planned > 0 ? Math.round((actual / planned) * 100) : 0;
 };
+
 const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); };
-const inAugust = (s: any) => { const v = s.paid_at || s.unlocked_at || s.payment_date || s.updated_at || s.created_at; if (!v) return false; const d = new Date(v); return !Number.isNaN(d.getTime()) && d >= monthStart(); };
+const inAugust = (s: any) => {
+  const v = s.paid_at || s.unlocked_at || s.payment_date || s.updated_at || s.created_at;
+  if (!v) return false;
+  const d = new Date(v);
+  return !Number.isNaN(d.getTime()) && d >= monthStart();
+};
 
 export function CEODashboard() {
   const { user } = useAuth();
@@ -29,6 +46,8 @@ export function CEODashboard() {
     const load = async () => {
       try {
         const demos = DEMO_AGENTS.flatMap(a => a.contracts.map(c => ({ ...c, agent_id: a.id, agent_name: a.full_name, is_demo: true })));
+        const currentDemo = demos.filter(active);
+
         const { data: company, error: companyError } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
         if (companyError) throw companyError;
         let agents: any[] = [], contracts: any[] = [], payoutStreams: any[] = [];
@@ -46,10 +65,11 @@ export function CEODashboard() {
             payoutStreams = s.data || [];
           }
         }
+
         const names = new Map(agents.map(a => [a.id, a.full_name || a.name || a.email || 'Агент']));
         const real = contracts.map(c => ({ ...c, agent_name: names.get(c.agent_id) || 'Агент', is_demo: false }));
-        const currentDemo = demos.filter(active);
         const all = [...currentDemo, ...real];
+
         let totalRevenue = 0, totalEscrow = 0, totalPaid = 0, profit = 0, roiSum = 0, roiCount = 0, pending = 0, periodPaid = 0, periodPending = 0;
         const grouped: Record<string, any> = {};
         const people: Record<string, any> = {};
@@ -65,24 +85,43 @@ export function CEODashboard() {
           const roi = c.roi_percentage != null ? n(c.roi_percentage) : revenue > 0 ? Math.round(companyProfit / revenue * 100) : 0;
           totalRevenue += revenue; totalEscrow += escrow; totalPaid += paid; profit += companyProfit; pending += currentPending;
           if (revenue > 0) { roiSum += roi; roiCount++; }
+
           ps.filter(s => s.stream_key !== 'annual').forEach(s => {
             const key = s.stream_key || 'other';
             if (!grouped[key]) grouped[key] = { key, title: s.title || key, total: 0 };
             grouped[key].total += n(s.amount);
             if (s.status === 'PAID' && inAugust(s)) periodPaid += n(s.amount);
           });
+
           const key = c.agent_id || c.agent_name || c.id;
           if (!people[key]) people[key] = { name: c.agent_name || 'Агент', total: 0, count: 0 };
-          people[key].total += c.is_demo ? demoKPI(c) : realKPI(c); people[key].count++;
+          people[key].total += c.is_demo ? demoKPI(c) : realKPI(c);
+          people[key].count++;
         });
-        agents.forEach(a => { if (!people[a.id]) people[a.id] = { name: a.full_name || a.name || a.email || 'Агент', total: 0, count: 0 }; });
+
+        agents.forEach(a => {
+          if (!people[a.id]) people[a.id] = { name: a.full_name || a.name || a.email || 'Агент', total: 0, count: 0 };
+        });
+
         periodPending = pending;
-        setMetrics({ totalRevenue, totalEscrow, totalPaidToAgents: totalPaid, netProfit: profit, avgROI: roiCount ? Math.round(roiSum / roiCount) : 0, activeContracts: all.length, pendingPayouts: pending, periodPaid, periodPending });
+        setMetrics({
+          totalRevenue,
+          totalEscrow,
+          totalPaidToAgents: totalPaid,
+          netProfit: profit,
+          avgROI: roiCount ? Math.round(roiSum / roiCount) : 0,
+          activeContracts: all.filter(active).length,
+          pendingPayouts: pending,
+          periodPaid,
+          periodPending,
+        });
         setStreams(Object.values(grouped));
         setEfficiency(Object.values(people).map(p => ({ name: p.name, value: p.count ? Math.round(p.total / p.count) : 0 })).sort((a, b) => b.value - a.value));
       } catch (e) {
         console.error('Ошибка загрузки финансового ядра:', e);
-        setMetrics({ totalRevenue: 0, totalEscrow: 0, totalPaidToAgents: 0, netProfit: 0, avgROI: 0, activeContracts: 0, pendingPayouts: 0, periodPaid: 0, periodPending: 0 }); setStreams([]); setEfficiency([]);
+        setMetrics({ totalRevenue: 0, totalEscrow: 0, totalPaidToAgents: 0, netProfit: 0, avgROI: 0, activeContracts: 0, pendingPayouts: 0, periodPaid: 0, periodPending: 0 });
+        setStreams([]);
+        setEfficiency([]);
       } finally { setLoading(false); }
     };
     load();
