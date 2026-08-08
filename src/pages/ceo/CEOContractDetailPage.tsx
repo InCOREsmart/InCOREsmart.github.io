@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, DollarSign, FileText, Lock, Shield, TrendingUp, Unlock, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, DollarSign, Lock, Shield, TrendingUp, XCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
-import { DemoContract, DemoPayoutStream, DemoEscrowEvent, DemoOracleEvent, getDemoContractById } from '../../lib/demoData';
+import { DemoPayoutStream, getDemoContractById } from '../../lib/demoData';
 import { getContractFullData, releasePayment } from '../../lib/smartContractLogic';
 
 export function CEOContractDetailPage() {
@@ -20,7 +19,8 @@ export function CEOContractDetailPage() {
       try {
         const demo = getDemoContractById(id);
         if (demo) {
-          const agent = (await import('../../lib/demoData')).DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id));
+          const { DEMO_AGENTS } = await import('../../lib/demoData');
+          const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id));
           setData({
             contract: demo,
             streams: demo.payout_streams,
@@ -42,7 +42,7 @@ export function CEOContractDetailPage() {
         }
         if (!user) return;
         const real = await getContractFullData(id);
-        setData({ ...real, isDemo: false });
+        if (real) setData({ ...real, isDemo: false });
       } catch (error) {
         console.error('Ошибка загрузки данных контракта:', error);
       } finally {
@@ -55,7 +55,7 @@ export function CEOContractDetailPage() {
   const refreshReal = async () => {
     if (!id || !user) return;
     const real = await getContractFullData(id);
-    setData({ ...real, isDemo: false });
+    if (real) setData({ ...real, isDemo: false });
   };
 
   const handleRelease = async (stream: DemoPayoutStream | any) => {
@@ -82,15 +82,13 @@ export function CEOContractDetailPage() {
   const totalPaid = Number(financials?.totalUnlocked ?? paid);
   const totalLocked = Number(financials?.totalLocked ?? locked);
 
-  const kpi = useMemo(() => {
-    const values = [
-      contract.kpi_calls ? Number(contract.actual_calls || 0) / Number(contract.kpi_calls) : 0,
-      contract.kpi_meetings ? Number(contract.actual_meetings || 0) / Number(contract.kpi_meetings) : 0,
-      contract.kpi_proposals ? Number(contract.actual_proposals || 0) / Number(contract.kpi_proposals) : 0,
-      contract.target_clients ? Number(contract.actual_clients || 0) / Number(contract.target_clients) : 0,
-    ];
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length * 100);
-  }, [contract]);
+  const kpiValues = [
+    contract.kpi_calls ? Number(contract.actual_calls || 0) / Number(contract.kpi_calls) : 0,
+    contract.kpi_meetings ? Number(contract.actual_meetings || 0) / Number(contract.kpi_meetings) : 0,
+    contract.kpi_proposals ? Number(contract.actual_proposals || 0) / Number(contract.kpi_proposals) : 0,
+    contract.target_clients ? Number(contract.actual_clients || 0) / Number(contract.target_clients) : 0,
+  ];
+  const kpi = Math.round(kpiValues.reduce((a: number, b: number) => a + b, 0) / kpiValues.length * 100);
 
   const statusLabel = (status: string) => ({ LOCKED: 'Заблокирован', UNLOCKED: 'Разблокирован', PAYABLE: 'К выплате', PAID: 'Выплачено', CLAWED_BACK: 'Возврат', CANCELLED: 'Отменён' }[status] || status);
   const eventLabel = (type: string) => ({ ESCROW_CREATED: 'Создание эскроу', ESCROW_FUNDED: 'Пополнение эскроу', PARTIAL_RELEASE: 'Частичная разблокировка', PAYOUT_TO_AGENT: 'Выплата агенту', REFUND_TO_CEO: 'Возврат компании', CLAWBACK: 'Clawback', CLIENT_PAYMENT_CONFIRMED: 'Оплата клиента подтверждена', RETENTION_PERIOD_PASSED: 'Период удержания пройден', RENEWAL_CONFIRMED: 'Продление подтверждено', CROSS_SELL_CONFIRMED: 'Cross-sell подтверждён', PLAN_ACHIEVED: 'План выполнен', ANNUAL_BONUS_CONFIRMED: 'Годовой бонус подтверждён' }[type] || type);
@@ -98,7 +96,7 @@ export function CEOContractDetailPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div><button onClick={() => navigate('/ceo/contracts')} className="flex items-center text-sm text-[#000052]/60 hover:text-[#000052] mb-2"><ArrowLeft className="w-4 h-4 mr-2" />Назад к контрактам</button><h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{contract.title}</h1><p className="text-sm text-[#000052]/60 mt-1">Агент: {agent?.full_name || 'Не назначен'} · {contract.start_date} — {contract.deadline}</p></div>
+        <div><button onClick={() => navigate('/ceo/contracts')} className="flex items-center text-sm text-[#000052]/60 hover:text-[#000052] mb-2"><ArrowLeft className="w-4 h-4 mr-2" />Назад к контрактам</button><h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{contract.title}</h1><p className="text-sm text-[#000052]/60 mt-1">Агент: {agent?.full_name || 'Не назначен'} · {contract.start_date || contract.start_at || contract.created_at} — {contract.deadline || contract.end_date || contract.end_at || '—'}</p></div>
         <span className="px-3 py-1 rounded-full bg-[#B8860B]/10 text-[#B8860B] text-sm font-semibold">{contract.status}</span>
       </div>
 
