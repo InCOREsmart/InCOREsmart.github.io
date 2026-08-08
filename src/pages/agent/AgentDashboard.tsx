@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { DollarSign, Shield, Clock, CheckCircle, AlertTriangle, TrendingUp, Lock } from 'lucide-react';
+import { getAnnualBonusForAgent } from '../../lib/annualBonus';
+import { DollarSign, Shield, Clock, CheckCircle, AlertTriangle, TrendingUp, Lock, Award } from 'lucide-react';
 
 export function AgentDashboard() {
   const { t } = useTranslation();
@@ -59,12 +60,14 @@ export function AgentDashboard() {
     );
   }
 
-  const totalEarned = streams.reduce((sum, s) => sum + (s.status === 'PAID' ? s.amount : 0), 0);
-  const availableForWithdrawal = streams.reduce((sum, s) => sum + (s.status === 'UNLOCKED' || s.status === 'PAYABLE' ? s.amount : 0), 0);
-  const pendingVerification = streams.reduce((sum, s) => sum + (s.status === 'PENDING_VERIFICATION' ? s.amount : 0), 0);
-  const escrowBalance = streams.reduce((sum, s) => sum + (s.status === 'LOCKED' ? s.amount : 0), 0);
-  const retentionLocked = streams.filter(s => s.stream_key === 'retention' && s.status === 'LOCKED').reduce((sum, s) => sum + s.amount, 0);
-  const clawedBack = streams.reduce((sum, s) => sum + (s.status === 'CLAWED_BACK' ? s.amount : 0), 0);
+  const escrowStreams = streams.filter(stream => stream.stream_key !== 'annual');
+  const totalEarned = escrowStreams.reduce((sum, s) => sum + (s.status === 'PAID' ? Number(s.amount || 0) : 0), 0);
+  const availableForWithdrawal = escrowStreams.reduce((sum, s) => sum + (s.status === 'UNLOCKED' || s.status === 'PAYABLE' ? Number(s.amount || 0) : 0), 0);
+  const pendingVerification = escrowStreams.reduce((sum, s) => sum + (s.status === 'PENDING_VERIFICATION' ? Number(s.amount || 0) : 0), 0);
+  const escrowBalance = escrowStreams.reduce((sum, s) => sum + (s.status === 'LOCKED' ? Number(s.amount || 0) : 0), 0);
+  const retentionLocked = escrowStreams.filter(s => s.stream_key === 'retention' && s.status === 'LOCKED').reduce((sum, s) => sum + Number(s.amount || 0), 0);
+  const clawedBack = escrowStreams.reduce((sum, s) => sum + (s.status === 'CLAWED_BACK' ? Number(s.amount || 0) : 0), 0);
+  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
 
   const kpis = [
     { label: t('agent.totalEarned'), value: totalEarned, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white' },
@@ -105,6 +108,18 @@ export function AgentDashboard() {
             </div>
           );
         })}
+      </div>
+
+      <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />Годовой бонус · {annualBonus.year}</h2>
+            <p className="text-sm text-[#000052]/60 mt-1">Накопление по результатам выполнения плана продаж. В эскроу не входит.</p>
+          </div>
+          <div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">из ${annualBonus.maxBonus.toLocaleString()}</div></div>
+        </div>
+        <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div>
+        <div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>Выполнение плана: {annualBonus.planAchievementPercent}%</span><span>Накоплено: {annualBonus.progressPercent}%</span></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
