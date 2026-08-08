@@ -26,10 +26,15 @@ export function CEOContractDetailPage() {
           const escrowAmount = getEscrowAmount(demo, escrowStreams);
           const totalPaid = getPaidAmount(escrowStreams);
           const totalLocked = getLockedAmount(escrowStreams);
+          const escrowEvents = demo.escrow_events.map(event => ({
+            ...event,
+            amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount,
+            metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount } : event.metadata,
+          }));
           setData({
             contract: demo,
             streams: escrowStreams,
-            escrowEvents: demo.escrow_events,
+            escrowEvents,
             oracleEvents: demo.oracle_events,
             disputes: [],
             agent,
@@ -74,15 +79,16 @@ export function CEOContractDetailPage() {
   if (!data) return <div className="p-8 text-center"><XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" /><p className="text-lg text-[#000052]">Контракт не найден</p><button onClick={() => navigate('/ceo/contracts')} className="mt-4 px-6 py-2 bg-[#000052] text-white rounded-lg">Вернуться к контрактам</button></div>;
 
   const { contract, streams, escrowEvents, oracleEvents, disputes, agent, financials } = data;
-  const streamList = data.isDemo ? getEscrowStreams(streams || []) : (streams || []);
+  const streamList = getEscrowStreams(streams || []);
   const escrowList = escrowEvents || [];
   const oracleList = oracleEvents || [];
   const disputeList = disputes || [];
-  const paid = streamList.filter((stream: any) => stream.status === 'PAID').reduce((sum: number, stream: any) => sum + Number(stream.amount || 0), 0);
-  const locked = streamList.filter((stream: any) => stream.status === 'LOCKED').reduce((sum: number, stream: any) => sum + Number(stream.amount || 0), 0);
+  const paid = getPaidAmount(streamList);
+  const locked = getLockedAmount(streamList);
   const plannedRevenue = Number(financials?.plannedRevenue ?? contract.revenue ?? contract.planned_revenue ?? 0);
-  const totalEscrow = Number(financials?.totalEscrow ?? (data.isDemo ? getEscrowAmount(contract, streamList) : contract.escrow_amount ?? 0));
-  const companyProfit = Number(financials?.companyProfit ?? contract.company_profit ?? 0);
+  const calculatedEscrow = streamList.length > 0 ? getEscrowAmount(contract, streamList) : Number(contract.escrow_amount ?? 0);
+  const totalEscrow = Number(financials?.totalEscrow ?? calculatedEscrow);
+  const companyProfit = Number(financials?.companyProfit ?? contract.company_profit ?? (plannedRevenue - totalEscrow));
   const platformFee = Number(financials?.platformFee ?? contract.platform_fee ?? 0);
   const totalPaid = Number(financials?.totalUnlocked ?? paid);
   const totalLocked = Number(financials?.totalLocked ?? locked);
@@ -113,7 +119,7 @@ export function CEOContractDetailPage() {
         <div className="bg-white p-5 rounded-xl border border-[#000052]/10"><div className="flex gap-2 mb-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" /><span className="text-sm text-[#000052]/70">Результат компании</span></div><p className="text-2xl font-bold text-[#000052]">${companyProfit.toLocaleString()}</p><p className="text-xs text-[#000052]/60">Комиссия ${platformFee.toLocaleString()}</p></div>
       </div>
 
-      {data.isDemo && <div className="bg-white p-4 rounded-xl border border-[#B8860B]/30 text-sm text-[#000052]/70">Годовой бонус рассчитывается отдельно по результатам выполнения годового плана и <strong>не входит в эскроу этого контракта</strong>.</div>}
+      <div className="bg-white p-4 rounded-xl border border-[#B8860B]/30 text-sm text-[#000052]/70">Годовой бонус рассчитывается отдельно по результатам выполнения годового плана и <strong>не входит в эскроу этого контракта</strong>.</div>
 
       <div className="bg-white p-5 rounded-xl border border-[#000052]/10">
         <div className="flex justify-between mb-3"><h2 className="font-bold text-[#000052]">KPI контракта</h2><span className="font-bold text-[#B8860B]">{kpi}%</span></div>
