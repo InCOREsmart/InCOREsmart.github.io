@@ -11,6 +11,25 @@ const isActiveContract = (contract: any) =>
 
 const numberValue = (value: any) => Number(value || 0);
 
+const contractEfficiency = (contract: any) => {
+  const pairs = [
+    [contract.actual_calls, contract.kpi_calls],
+    [contract.actual_meetings, contract.kpi_meetings],
+    [contract.actual_proposals, contract.kpi_proposals],
+    [contract.actual_clients, contract.target_clients],
+  ].filter(([, target]) => numberValue(target) > 0);
+
+  if (pairs.length > 0) {
+    return Math.min(100, Math.round(
+      pairs.reduce((sum, [actual, target]) => sum + (numberValue(actual) / numberValue(target)) * 100, 0) / pairs.length
+    ));
+  }
+
+  const planned = numberValue(contract.planned_revenue || contract.revenue);
+  const revenue = numberValue(contract.revenue);
+  return planned > 0 ? Math.min(100, Math.round((revenue / planned) * 100)) : 0;
+};
+
 export function CEODashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +44,7 @@ export function CEODashboard() {
     pendingPayouts: 0,
   });
   const [streamsByType, setStreamsByType] = useState<any[]>([]);
+  const [agentEfficiency, setAgentEfficiency] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -34,11 +54,11 @@ export function CEODashboard() {
 
     const loadMetrics = async () => {
       try {
-        // Демо-контракты всегда входят в финансовое ядро вместе с реальными.
         const demoContracts = DEMO_AGENTS.flatMap(agent =>
           agent.contracts.map(contract => ({
             ...contract,
             agent_id: agent.id,
+            agent_name: agent.full_name,
             is_demo: true,
           }))
         );
@@ -51,8 +71,17 @@ export function CEODashboard() {
 
         let realContracts: any[] = [];
         let realStreams: any[] = [];
+        let realAgents: any[] = [];
 
         if (companyData) {
+          const { data: agents, error: agentsError } = await supabase
+            .from('agents')
+            .select('*')
+            .eq('company_id', companyData.id);
+
+          if (agentsError) throw agentsError;
+          realAgents = agents || [];
+
           const { data: contracts, error: contractsError } = await supabase
             .from('contracts')
             .select('*')
@@ -73,30 +102,37 @@ export function CEODashboard() {
           }
         }
 
-        // Объединяем по ID, затем считаем только активные контракты.
+        const realAgentNames = new Map(realAgents.map(agent => [agent.id, agent.full_name || agent.name || agent.email || 'Агент']));
+        const normalizedRealContracts = realContracts.map(contract => ({
+          ...contract,
+          agent_name: realAgentNames.get(contract.agent_id) || 'Агент',
+          is_demo: false,
+        }));
+
         const contractsById = new Map<string, any>();
-        [...demoContracts, ...realContracts].forEach(contract => contractsById.set(contract.id, contract));
+        [...demoContracts, ...normalizedRealContracts].forEach(contract => contractsById.set(contract.id, contract));
         const allContracts = Array.from(contractsById.values());
         const activeContracts = allContracts.filter(isActiveContract);
         const activeIds = new Set(activeContracts.map(c => c.id));
         const activeRealIds = new Set(realContracts.filter(isActiveContract).map(c => c.id));
-
         const activeRealStreams = realStreams.filter(stream => activeRealIds.has(stream.contract_id));
 
         let totalRevenue = 0;
         let totalEscrow = 0;
         let totalPaidToAgents = 0;
-        let totalLocked = 0;
         let netProfit = 0;
         let roiSum = 0;
         let roiCount = 0;
         let pendingPayouts = 0;
 
         const grouped: Record<string, { key: string; title: string; total: number }> = {};
+        const efficiencyGroups: Record<string, { name: string; total: number; count: number }> = {};
 
         activeContracts.forEach(contract => {
           const isDemo = contract.is_demo === true;
-          const streams = isDemo ? (contract.payout_streams || []) : activeRealStreams.filter(s => s.contract_id === contract.id);
+          const streams = isDemo
+            ? (contract.payout_streams || [])
+            : activeRealStreams.filter(s => s.contract_id === contract.id);
 
           const escrow = isDemo
             ? getEscrowAmount(contract, streams)
@@ -104,19 +140,17 @@ export function CEODashboard() {
           const paid = isDemo
             ? getPaidAmount(streams)
             : streams.filter(s => s.status === 'PAID').reduce((sum, s) => sum + numberValue(s.amount), 0);
-          const locked = isDemo
-            ? getLockedAmount(streams)
-            : streams.filter(s => s.status === 'LOCKED').reduce((sum, s) => sum + numberValue(s.amount), 0);
           const pending = streams
             .filter(s => s.status === 'UNLOCKED' || s.status === 'PAYABLE')
             .reduce((sum, s) => sum + numberValue(s.amount), 0);
           const revenue = numberValue(contract.revenue || contract.planned_revenue);
-          const profit = isDemo ? revenue - escrow : numberValue(contract.company_profit || (revenue - escrow));
+          const profit = isDemo
+            ? revenue - escrow
+            : numberValue(contract.company_profit || (revenue - escrow));
 
           totalRevenue += revenue;
           totalEscrow += escrow;
           totalPaidToAgents += paid;
-          totalLocked += locked;
           pendingPayouts += pending;
           netProfit += profit;
 
@@ -135,9 +169,33 @@ export function CEODashboard() {
             }
             grouped[key].total += numberValue(stream.amount);
           });
+
+          const agentKey = contract.agent_id || contract.agent_name || contract.id;
+          const agentName = contract.agent_name || 'Агент';
+          if (!efficiencyGroups[agentKey]) {
+            efficiencyGroups[agentKey] = { name: agentName, total: 0, count: 0 };
+          }
+          efficiencyGroups[agentKey].total += contractEfficiency(contract);
+          efficiencyGroups[agentKey].count += 1;
         });
 
-        // Не показываем годовой бонус в распределении бюджета: это не escrow.
+        // Агент без активного контракта тоже остаётся на графике с 0%, чтобы CEO видел всю команду.
+        realAgents.forEach(agent => {
+          if (!efficiencyGroups[agent.id]) {
+            efficiencyGroups[agent.id] = {
+              name: agent.full_name || agent.name || agent.email || 'Агент',
+              total: 0,
+              count: 0,
+            };
+          }
+        });
+
+        setAgentEfficiency(
+          Object.values(efficiencyGroups)
+            .map(item => ({ name: item.name, value: item.count > 0 ? Math.min(100, Math.round(item.total / item.count)) : 0 }))
+            .sort((a, b) => b.value - a.value)
+        );
+
         setStreamsByType(Object.values(grouped).filter(item => item.key !== 'annual'));
         setMetrics({
           totalRevenue,
@@ -160,6 +218,7 @@ export function CEODashboard() {
           pendingPayouts: 0,
         });
         setStreamsByType([]);
+        setAgentEfficiency([]);
       } finally {
         setLoading(false);
       }
@@ -181,13 +240,16 @@ export function CEODashboard() {
     { label: 'Общая выручка', value: metrics.totalRevenue, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white', prefix: '$' },
     { label: 'Эскроу', value: metrics.totalEscrow, icon: Shield, color: 'bg-[#B8860B]', textColor: 'text-white', prefix: '$' },
     { label: 'Выплаты агентам', value: metrics.totalPaidToAgents, icon: Users, color: 'bg-white', textColor: 'text-[#000052]', prefix: '$' },
-    { label: 'Чистая прибыль', value: metrics.netProfit, icon: TrendingUp, color: 'bg-white', textColor: 'text-[#000052]', prefix: '$' },
+    { label: 'Прибыль', value: metrics.netProfit, icon: TrendingUp, color: 'bg-white', textColor: 'text-[#000052]', prefix: '$' },
     { label: 'Средний ROI', value: metrics.avgROI, icon: BarChart3, color: 'bg-green-600', textColor: 'text-white', suffix: '%' },
     { label: 'Активные контракты', value: metrics.activeContracts, icon: CheckCircle, color: 'bg-white', textColor: 'text-[#000052]' },
     { label: 'Ожидающие выплаты', value: metrics.pendingPayouts, icon: Clock, color: 'bg-[#B8860B]', textColor: 'text-white', prefix: '$' },
   ];
 
   const totalStreams = streamsByType.reduce((sum, stream) => sum + stream.total, 0);
+  const paymentProgress = metrics.totalEscrow > 0
+    ? Math.min(100, Math.round((metrics.totalPaidToAgents / metrics.totalEscrow) * 100))
+    : 0;
   const colors = ['#000052', '#B8860B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'];
 
   return (
@@ -212,6 +274,53 @@ export function CEODashboard() {
             </div>
           );
         })}
+      </div>
+
+      <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#000052]">Выплаты из эскроу</h2>
+            <p className="text-sm text-[#000052]/60">Фактически выплачено агентам по всем активным контрактам</p>
+          </div>
+          <div className="text-right">
+            <div className="text-xl font-bold text-[#000052]">${metrics.totalPaidToAgents.toLocaleString()}</div>
+            <div className="text-xs text-[#000052]/60">из ${metrics.totalEscrow.toLocaleString()}</div>
+          </div>
+        </div>
+        <div className="h-4 bg-[#000052]/10 rounded-full overflow-hidden">
+          <div className="h-full bg-[#B8860B] rounded-full transition-all" style={{ width: `${paymentProgress}%` }} />
+        </div>
+        <div className="flex justify-between mt-2 text-xs text-[#000052]/60">
+          <span>Выплачено: {paymentProgress}%</span>
+          <span>Остаток: {Math.max(0, 100 - paymentProgress)}%</span>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart3 className="w-5 h-5 text-[#B8860B]" />
+          <div>
+            <h2 className="text-lg font-bold text-[#000052]">Эффективность агентов</h2>
+            <p className="text-sm text-[#000052]/60">Среднее выполнение KPI по активным контрактам</p>
+          </div>
+        </div>
+        {agentEfficiency.length === 0 ? (
+          <div className="text-center py-8 text-[#000052]/60">Данные по эффективности пока недоступны</div>
+        ) : (
+          <div className="space-y-3">
+            {agentEfficiency.map((agent, index) => (
+              <div key={`${agent.name}-${index}`}>
+                <div className="flex justify-between mb-1 text-sm">
+                  <span className="font-medium text-[#000052]">{agent.name}</span>
+                  <span className="font-bold text-[#000052]">{agent.value}%</span>
+                </div>
+                <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${agent.value}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
