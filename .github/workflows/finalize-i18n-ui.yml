@@ -1,0 +1,101 @@
+name: Finalize Agent and CEO i18n
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Refactor user-facing strings safely
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path('src/pages/agent'), Path('src/pages/ceo')]
+          files = [p for root in roots for p in root.glob('*.tsx')]
+
+          jsx = {
+            'Агент не найден':'agentNotFound','из {contracts.length} всего':'ofTotal','Эскроу':'escrow',
+            'Защищено смарт-контрактом':'protectedBySmartContract','Общая выручка':'totalRevenue','По всем контрактам':'allContracts',
+            'Контрактов пока нет':'noContracts','CEO создаст для вас новый смарт-контракт':'noContractsDescription',
+            'Выручка':'revenue','Дедлайн':'deadline','Статус эскроу':'escrowStatus','Заблокирован':'locked','Не заблокирован':'notLocked',
+            'Потоки выплат':'paymentStreams','Разблокировано:':'unlocked','Выплачено:':'paid','Заблокировано:':'lockedAmount','Подробнее':'details','Отправить работу':'sendWork',
+            'Черновик':'draft','Ожидает оплаты':'pendingPayment','Активен':'active','В работе':'inProgress','Ожидает подтверждения':'pendingApproval','Завершён':'completed','Спор':'disputed','Отменён':'cancelled',
+            'Всего по контрактам':'totalContracts','Clawback':'clawback','Потоков выплат пока нет':'noStreams','Поток':'stream','Контракт':'contract','Сумма':'amount','Статус':'status','Условие разблокировки':'unlockCondition','Дата':'date','Разб.:':'unlockedShort','Выпл.:':'paidShort','Clawback Warning':'clawbackWarningTitle',
+            'Личные данные':'personalData','Реквизиты для выплат':'paymentDetails','ФИО':'fullName','Телефон':'phone','Налоговый статус':'taxStatus','ИНН':'inn','СНИЛС':'snils','Название банка':'bankName','БИК':'bik','Корреспондентский счёт':'correspondentAccount','Расчётный счёт':'settlementAccount','Страна':'country',
+            'Верификация документов (InCORE)':'documentVerification','Загрузите документы для верификации. InCORE проверит их автоматически в течение 24 часов.':'documentVerificationDescription','Загрузить':'upload','Сохранить':'save',
+            'Паспорт РФ / ВНЖ':'passportRu','Свидетельство самозанятого / ИП':'taxDocRu','Паспорт / ВНЖ Азербайджана':'passportAz','Свидетельство VÖEN':'taxDocAz','Удостоверение личности / Паспорт РК':'passportKz','Свидетельство ИП / Патент':'taxDocKz',
+            'Ключевые финансовые показатели компании':'financialOverview','Движение средств за август':'cashMovementAugust','В эскроу':'inEscrow','Выплачено в августе':'paidInAugust','Ожидает выплаты':'pendingPayout','Выполнение плана агентами':'agentPlanAchievement','Процент выполнения плана по активным контрактам':'planAchievementDescription','Критично':'critical','Перевыполнение':'overachieved','Выполнение плана':'planAchievement'
+          }
+
+          status_quoted = {
+            'Черновик':'draft','Ожидает оплаты':'pendingPayment','Активен':'active','В работе':'inProgress','Ожидает подтверждения':'pendingApproval','Завершён':'completed','Спор':'disputed','Отменён':'cancelled',
+            'Заблокировано':'locked','Ожидает проверки':'pendingVerificationStatus','Разблокировано':'unlockedStatus','Готово к выплате':'payableStatus','Выплачено':'paidStatus','Отменено':'cancelledStatus'
+          }
+
+          changed = []
+          for path in files:
+            text = path.read_text(encoding='utf-8')
+            original = text
+            if "useTranslation" not in text:
+              text = text.replace("import { useEffect", "import { useTranslation } from 'react-i18next';\nimport { useEffect", 1)
+              marker = "export function "
+              idx = text.find(marker)
+              if idx >= 0:
+                brace = text.find('{', idx)
+                text = text[:brace+1] + "\n  const { t } = useTranslation();" + text[brace+1:]
+            elif 'const { t } = useTranslation();' not in text:
+              marker = "export function "
+              idx = text.find(marker)
+              if idx >= 0:
+                brace = text.find('{', idx)
+                text = text[:brace+1] + "\n  const { t } = useTranslation();" + text[brace+1:]
+
+            for src, key in sorted(jsx.items(), key=lambda x: -len(x[0])):
+              text = text.replace(f'>{src}<', f">{{t('ui.{key}')}}<")
+
+            text = text.replace("window.confirm('Отправить работу на проверку?')", "window.confirm(t('ui.submitWorkConfirm'))")
+            text = text.replace("alert('Работа отправлена на проверку')", "alert(t('ui.workSubmitted'))")
+            text = text.replace("alert('Ошибка отправки работы')", "alert(t('ui.workSubmitError'))")
+            text = text.replace("title: 'Работа отправлена на проверку'", "title: t('ui.workSubmitted')")
+            text = text.replace("return contract?.title || 'Контракт'", "return contract?.title || t('ui.contract')")
+
+            for src, key in status_quoted.items():
+              text = text.replace(f"label: '{src}'", f"label: t('ui.{key}')")
+              text = text.replace(f'label: "{src}"', f"label: t('ui.{key}')")
+
+            if text != original:
+              path.write_text(text, encoding='utf-8')
+              changed.append(str(path))
+
+          print('Changed:', *changed, sep='\n')
+          PY
+
+      - name: Build before commit
+        run: |
+          npm ci
+          npm run build
+
+      - name: Commit refactor
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/agent src/pages/ceo
+          if git diff --cached --quiet; then
+            echo 'No UI changes to commit.'
+          else
+            git commit -m 'Complete Agent and CEO hardcoded UI translation refactor'
+            git push origin main
+          fi
