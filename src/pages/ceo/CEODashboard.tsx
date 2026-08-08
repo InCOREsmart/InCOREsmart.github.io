@@ -4,33 +4,25 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   DollarSign,
   Shield,
-  Users,
   TrendingUp,
-  Clock,
   CheckCircle,
   PieChart as PieChartIcon,
   BarChart3,
 } from 'lucide-react';
-import { DEMO_AGENTS } from '../../lib/demoData';
+import { DEMO_AGENTS, calculateContractKPI } from '../../lib/demoData';
 import { getEscrowAmount, getPaidAmount } from '../../lib/annualBonus';
+
+const numberValue = (value: any) => Number(value || 0);
 
 const isActiveContract = (contract: any) =>
   contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS';
 
-const numberValue = (value: any) => Number(value || 0);
+const getContractStreams = (contract: any, realStreams: any[]) =>
+  contract.is_demo
+    ? contract.payout_streams || []
+    : realStreams.filter(stream => stream.contract_id === contract.id);
 
-const salesPlanPercent = (contract: any) => {
-  const plannedRevenue = numberValue(
-    contract.planned_revenue || contract.sales_plan || contract.target_revenue
-  );
-  const actualRevenue = numberValue(
-    contract.actual_revenue || contract.revenue || contract.sales_amount
-  );
-
-  if (plannedRevenue > 0) {
-    return Math.max(0, Math.round((actualRevenue / plannedRevenue) * 100));
-  }
-
+const getRealContractKPI = (contract: any) => {
   const pairs = [
     [contract.actual_calls, contract.kpi_calls],
     [contract.actual_meetings, contract.kpi_meetings],
@@ -51,7 +43,16 @@ const salesPlanPercent = (contract: any) => {
     );
   }
 
-  return 0;
+  const planned = numberValue(contract.planned_revenue || contract.sales_plan || contract.target_revenue);
+  const actual = numberValue(contract.actual_revenue || contract.revenue || contract.sales_amount);
+  return planned > 0 ? Math.max(0, Math.round((actual / planned) * 100)) : 0;
+};
+
+const getContractKPI = (contract: any) => {
+  if (contract.is_demo) {
+    return calculateContractKPI(contract);
+  }
+  return getRealContractKPI(contract);
 };
 
 const getPeriodStart = () => {
@@ -60,7 +61,12 @@ const getPeriodStart = () => {
 };
 
 const isInCurrentPeriod = (stream: any) => {
-  const dateValue = stream.paid_at || stream.payment_date || stream.updated_at || stream.created_at;
+  const dateValue =
+    stream.paid_at ||
+    stream.unlocked_at ||
+    stream.payment_date ||
+    stream.updated_at ||
+    stream.created_at;
   if (!dateValue) return false;
   const date = new Date(dateValue);
   return !Number.isNaN(date.getTime()) && date >= getPeriodStart();
@@ -100,11 +106,13 @@ export function CEODashboard() {
           }))
         );
 
-        const { data: companyData } = await supabase
+        const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        if (companyError) throw companyError;
 
         let realContracts: any[] = [];
         let realStreams: any[] = [];
@@ -115,7 +123,6 @@ export function CEODashboard() {
             .from('agents')
             .select('*')
             .eq('company_id', companyData.id);
-
           if (agentsError) throw agentsError;
           realAgents = agents || [];
 
@@ -123,7 +130,6 @@ export function CEODashboard() {
             .from('contracts')
             .select('*')
             .eq('company_id', companyData.id);
-
           if (contractsError) throw contractsError;
           realContracts = contracts || [];
 
@@ -133,7 +139,6 @@ export function CEODashboard() {
               .from('contract_payout_streams')
               .select('*')
               .in('contract_id', contractIds);
-
             if (streamsError) throw streamsError;
             realStreams = streams || [];
           }
@@ -152,20 +157,12 @@ export function CEODashboard() {
           is_demo: false,
         }));
 
-        const contractsById = new Map<string, any>();
+        const byId = new Map<string, any>();
         [...demoContracts, ...normalizedRealContracts].forEach(contract =>
-          contractsById.set(contract.id, contract)
+          byId.set(contract.id, contract)
         );
 
-        const allContracts = Array.from(contractsById.values());
-        const activeContracts = allContracts.filter(isActiveContract);
-        const activeIds = new Set(activeContracts.map(c => c.id));
-        const activeRealIds = new Set(
-          realContracts.filter(isActiveContract).map(c => c.id)
-        );
-        const activeRealStreams = realStreams.filter(stream =>
-          activeRealIds.has(stream.contract_id)
-        );
+        const allContracts = Array.from(byId.values());
 
         let totalRevenue = 0;
         let totalEscrow = 0;
@@ -177,39 +174,28 @@ export function CEODashboard() {
         let periodPaid = 0;
         let periodPending = 0;
 
-        const grouped: Record<
-          string,
-          { key: string; title: string; total: number }
-        > = {};
-        const efficiencyGroups: Record<
-          string,
-          { name: string; total: number; count: number }
-        > = {};
+        const grouped: Record<string, { key: string; title: string; total: number }> = {};
+        const efficiencyGroups: Record<string, { name: string; total: number; count: number }> = {};
 
-        activeContracts.forEach(contract => {
-          const isDemo = contract.is_demo === true;
-          const streams = isDemo
-            ? contract.payout_streams || []
-            : activeRealStreams.filter(s => s.contract_id === contract.id);
-
-          const escrow = isDemo
-            ? getEscrowAmount(contract, streams)
+        // Все 6 демо-контрактов + реальный контракт Натальи участвуют
+        // в финансовом ядре. Статус реального контракта в Supabase не меняем.
+        allContracts.forEach(contract => {
+          const streams = getContractStreams(contract, realStreams);
+          const escrowFromStreams = getEscrowAmount(contract, streams);
+          const escrow = escrowFromStreams > 0
+            ? escrowFromStreams
             : numberValue(contract.escrow_amount);
 
-          const paid = isDemo
-            ? getPaidAmount(streams)
-            : streams
-                .filter(s => s.status === 'PAID')
-                .reduce((sum, s) => sum + numberValue(s.amount), 0);
-
+          const paid = getPaidAmount(streams);
           const pending = streams
-            .filter(s => s.status === 'UNLOCKED' || s.status === 'PAYABLE')
-            .reduce((sum, s) => sum + numberValue(s.amount), 0);
+            .filter(stream =>
+              (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') &&
+              isInCurrentPeriod(stream)
+            )
+            .reduce((sum, stream) => sum + numberValue(stream.amount), 0);
 
-          const revenue = numberValue(
-            contract.revenue || contract.planned_revenue
-          );
-          const profit = isDemo
+          const revenue = numberValue(contract.revenue || contract.planned_revenue);
+          const profit = contract.is_demo
             ? revenue - escrow
             : numberValue(contract.company_profit || revenue - escrow);
 
@@ -219,16 +205,18 @@ export function CEODashboard() {
           pendingPayouts += pending;
           netProfit += profit;
 
-          if (contract.roi_percentage != null) {
-            roiSum += numberValue(contract.roi_percentage);
-            roiCount += 1;
-          } else if (revenue > 0) {
-            roiSum += Math.round((profit / revenue) * 100);
+          const roi = contract.roi_percentage != null
+            ? numberValue(contract.roi_percentage)
+            : revenue > 0
+              ? Math.round((profit / revenue) * 100)
+              : 0;
+          if (revenue > 0) {
+            roiSum += roi;
             roiCount += 1;
           }
 
           streams
-            .filter(s => s.stream_key !== 'annual')
+            .filter(stream => stream.stream_key !== 'annual')
             .forEach(stream => {
               const key = stream.stream_key || 'other';
               if (!grouped[key]) {
@@ -239,34 +227,22 @@ export function CEODashboard() {
                 };
               }
               grouped[key].total += numberValue(stream.amount);
+
+              if (stream.status === 'PAID' && isInCurrentPeriod(stream)) {
+                periodPaid += numberValue(stream.amount);
+              }
             });
 
           const agentKey = contract.agent_id || contract.agent_name || contract.id;
           const agentName = contract.agent_name || 'Агент';
-
           if (!efficiencyGroups[agentKey]) {
-            efficiencyGroups[agentKey] = {
-              name: agentName,
-              total: 0,
-              count: 0,
-            };
+            efficiencyGroups[agentKey] = { name: agentName, total: 0, count: 0 };
           }
-
-          efficiencyGroups[agentKey].total += salesPlanPercent(contract);
+          efficiencyGroups[agentKey].total += getContractKPI(contract);
           efficiencyGroups[agentKey].count += 1;
         });
 
-        // Выплаты за текущий месяц. На 8 августа 2026 это август 2026.
-        realStreams.forEach(stream => {
-          const amount = numberValue(stream.amount);
-          if (stream.status === 'PAID' && isInCurrentPeriod(stream)) {
-            periodPaid += amount;
-          }
-          if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') {
-            periodPending += amount;
-          }
-        });
-
+        // Реальные агенты без контракта тоже остаются видимыми в команде.
         realAgents.forEach(agent => {
           if (!efficiencyGroups[agent.id]) {
             efficiencyGroups[agent.id] = {
@@ -277,14 +253,27 @@ export function CEODashboard() {
           }
         });
 
+        // Для демо текущего месяца pending уже имеет unlocked_at.
+        // Для реального контракта pending имеет created_at/unlocked_at.
+        periodPending = allContracts.reduce((sum, contract) => {
+          const streams = getContractStreams(contract, realStreams);
+          return sum + streams
+            .filter(stream =>
+              (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') &&
+              isInCurrentPeriod(stream)
+            )
+            .reduce((streamSum, stream) => streamSum + numberValue(stream.amount), 0);
+        }, 0);
+
+        const dashboardActiveContracts = allContracts.filter(contract =>
+          isActiveContract(contract) || contract.is_demo === false
+        ).length;
+
         setAgentEfficiency(
           Object.values(efficiencyGroups)
             .map(item => ({
               name: item.name,
-              value:
-                item.count > 0
-                  ? Math.max(0, Math.round(item.total / item.count))
-                  : 0,
+              value: item.count > 0 ? Math.max(0, Math.round(item.total / item.count)) : 0,
             }))
             .sort((a, b) => b.value - a.value)
         );
@@ -299,7 +288,7 @@ export function CEODashboard() {
           totalPaidToAgents,
           netProfit,
           avgROI: roiCount > 0 ? Math.round(roiSum / roiCount) : 0,
-          activeContracts: activeIds.size,
+          activeContracts: dashboardActiveContracts,
           pendingPayouts,
           periodPaid,
           periodPending,
@@ -337,56 +326,18 @@ export function CEODashboard() {
   }
 
   const kpis = [
-    {
-      label: 'Общая выручка',
-      value: metrics.totalRevenue,
-      icon: DollarSign,
-      color: 'bg-[#000052]',
-      textColor: 'text-white',
-      prefix: '$',
-    },
-    {
-      label: 'Прибыль',
-      value: metrics.netProfit,
-      icon: TrendingUp,
-      color: 'bg-white',
-      textColor: 'text-[#000052]',
-      prefix: '$',
-    },
-    {
-      label: 'Средний ROI',
-      value: metrics.avgROI,
-      icon: BarChart3,
-      color: 'bg-green-600',
-      textColor: 'text-white',
-      suffix: '%',
-    },
-    {
-      label: 'Активные контракты',
-      value: metrics.activeContracts,
-      icon: CheckCircle,
-      color: 'bg-white',
-      textColor: 'text-[#000052]',
-    },
+    { label: 'Общая выручка', value: metrics.totalRevenue, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white', prefix: '$' },
+    { label: 'Прибыль', value: metrics.netProfit, icon: TrendingUp, color: 'bg-white', textColor: 'text-[#000052]', prefix: '$' },
+    { label: 'Средний ROI', value: metrics.avgROI, icon: BarChart3, color: 'bg-green-600', textColor: 'text-white', suffix: '%' },
+    { label: 'Активные контракты', value: metrics.activeContracts, icon: CheckCircle, color: 'bg-white', textColor: 'text-[#000052]' },
   ];
 
-  const totalStreams = streamsByType.reduce(
-    (sum, stream) => sum + stream.total,
-    0
-  );
+  const totalStreams = streamsByType.reduce((sum, stream) => sum + stream.total, 0);
   const paymentBase = metrics.periodPaid + metrics.periodPending;
-  const paymentProgress =
-    paymentBase > 0
-      ? Math.min(100, Math.round((metrics.periodPaid / paymentBase) * 100))
-      : 0;
-  const colors = [
-    '#000052',
-    '#B8860B',
-    '#10B981',
-    '#3B82F6',
-    '#EF4444',
-    '#8B5CF6',
-  ];
+  const paymentProgress = paymentBase > 0
+    ? Math.min(100, Math.round((metrics.periodPaid / paymentBase) * 100))
+    : 0;
+  const colors = ['#000052', '#B8860B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6'];
 
   const performanceClass = (value: number) => {
     if (value < 80) return 'bg-red-500';
@@ -404,31 +355,20 @@ export function CEODashboard() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">
-          Финансовое ядро
-        </h1>
-        <p className="text-sm text-[#000052]/70 mt-1">
-          Ключевые финансовые показатели компании
-        </p>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">Финансовое ядро</h1>
+        <p className="text-sm text-[#000052]/70 mt-1">Ключевые финансовые показатели компании</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
           return (
-            <div
-              key={index}
-              className={`${kpi.color} ${kpi.textColor} p-5 rounded-xl border border-[#000052]/10`}
-            >
+            <div key={index} className={`${kpi.color} ${kpi.textColor} p-5 rounded-xl border border-[#000052]/10`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium opacity-80">{kpi.label}</h3>
                 <Icon className="w-5 h-5 opacity-80" />
               </div>
-              <p className="text-2xl font-bold">
-                {kpi.prefix || ''}
-                {kpi.value.toLocaleString()}
-                {kpi.suffix || ''}
-              </p>
+              <p className="text-2xl font-bold">{kpi.prefix || ''}{kpi.value.toLocaleString()}{kpi.suffix || ''}</p>
             </div>
           );
         })}
@@ -439,62 +379,33 @@ export function CEODashboard() {
           <div>
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-[#B8860B]" />
-              <h2 className="text-lg font-bold text-[#000052]">
-                Движение средств за август
-              </h2>
+              <h2 className="text-lg font-bold text-[#000052]">Движение средств за август</h2>
             </div>
-            <p className="text-sm text-[#000052]/60 mt-1">
-              Эскроу, фактически выплаченные и ожидающие выплаты агентам
-            </p>
+            <p className="text-sm text-[#000052]/60 mt-1">Эскроу, фактически выплаченные и ожидающие выплаты всем 7 агентам</p>
           </div>
           <div className="text-right">
             <div className="text-xs text-[#000052]/60">В эскроу</div>
-            <div className="text-xl font-bold text-[#000052]">
-              ${metrics.totalEscrow.toLocaleString()}
-            </div>
+            <div className="text-xl font-bold text-[#000052]">${metrics.totalEscrow.toLocaleString()}</div>
           </div>
         </div>
 
         <div className="h-5 bg-[#000052]/10 rounded-full overflow-hidden flex">
-          <div
-            className="h-full bg-emerald-500 transition-all"
-            style={{ width: `${paymentProgress}%` }}
-            title={`Выплачено: $${metrics.periodPaid.toLocaleString()}`}
-          />
-          <div
-            className="h-full bg-[#B8860B] transition-all"
-            style={{ width: `${Math.max(0, 100 - paymentProgress)}%` }}
-            title={`Ожидает выплаты: $${metrics.periodPending.toLocaleString()}`}
-          />
+          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${paymentProgress}%` }} title={`Выплачено: $${metrics.periodPaid.toLocaleString()}`} />
+          <div className="h-full bg-[#B8860B] transition-all" style={{ width: `${Math.max(0, 100 - paymentProgress)}%` }} title={`Ожидает выплаты: $${metrics.periodPending.toLocaleString()}`} />
         </div>
 
         <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
           <div>
-            <div className="flex items-center gap-2 text-[#000052]/60">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#000052]" />
-              Эскроу
-            </div>
-            <div className="font-bold text-[#000052] mt-1">
-              ${metrics.totalEscrow.toLocaleString()}
-            </div>
+            <div className="flex items-center gap-2 text-[#000052]/60"><span className="w-2.5 h-2.5 rounded-full bg-[#000052]" />Эскроу</div>
+            <div className="font-bold text-[#000052] mt-1">${metrics.totalEscrow.toLocaleString()}</div>
           </div>
           <div>
-            <div className="flex items-center gap-2 text-[#000052]/60">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Выплачено в августе
-            </div>
-            <div className="font-bold text-emerald-600 mt-1">
-              ${metrics.periodPaid.toLocaleString()}
-            </div>
+            <div className="flex items-center gap-2 text-[#000052]/60"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Выплачено в августе</div>
+            <div className="font-bold text-emerald-600 mt-1">${metrics.periodPaid.toLocaleString()}</div>
           </div>
           <div>
-            <div className="flex items-center gap-2 text-[#000052]/60">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#B8860B]" />
-              Ожидает выплаты
-            </div>
-            <div className="font-bold text-[#B8860B] mt-1">
-              ${metrics.periodPending.toLocaleString()}
-            </div>
+            <div className="flex items-center gap-2 text-[#000052]/60"><span className="w-2.5 h-2.5 rounded-full bg-[#B8860B]" />Ожидает выплаты</div>
+            <div className="font-bold text-[#B8860B] mt-1">${metrics.periodPending.toLocaleString()}</div>
           </div>
         </div>
 
@@ -508,63 +419,36 @@ export function CEODashboard() {
         <div className="flex items-center gap-2 mb-5">
           <BarChart3 className="w-5 h-5 text-[#B8860B]" />
           <div>
-            <h2 className="text-lg font-bold text-[#000052]">
-              Выполнение плана агентами
-            </h2>
-            <p className="text-sm text-[#000052]/60">
-              Процент выполнения плана продаж по каждому агенту
-            </p>
+            <h2 className="text-lg font-bold text-[#000052]">Выполнение плана агентами</h2>
+            <p className="text-sm text-[#000052]/60">Процент выполнения плана продаж по каждому агенту</p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-6 text-xs text-[#000052]/70">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            Ниже 80% — критично
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#B8860B]" />
-            80–100% — выполнение плана
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            Выше 100% — перевыполнение
-          </span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />Ниже 80% — критично</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#B8860B]" />80–100% — выполнение плана</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Выше 100% — перевыполнение</span>
         </div>
 
         {agentEfficiency.length === 0 ? (
-          <div className="text-center py-8 text-[#000052]/60">
-            Данные по выполнению плана пока недоступны
-          </div>
+          <div className="text-center py-8 text-[#000052]/60">Данные по выполнению плана пока недоступны</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-end">
             {agentEfficiency.map((agent, index) => {
               const barHeight = Math.max(8, Math.min(180, (agent.value / 120) * 180));
               const statusColor = performanceClass(agent.value);
               return (
-                <div
-                  key={`${agent.name}-${index}`}
-                  className="flex flex-col items-center"
-                >
+                <div key={`${agent.name}-${index}`} className="flex flex-col items-center">
                   <div className="w-full h-[190px] flex items-end justify-center relative border-b border-[#000052]/10">
-                    <div
-                      className={`w-12 sm:w-16 ${statusColor} rounded-t-lg transition-all relative`}
-                      style={{ height: `${barHeight}px` }}
-                    >
-                      <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-sm font-bold text-[#000052] whitespace-nowrap">
-                        {agent.value}%
-                      </span>
+                    <div className={`w-12 sm:w-16 ${statusColor} rounded-t-lg transition-all relative`} style={{ height: `${barHeight}px` }}>
+                      <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-sm font-bold text-[#000052] whitespace-nowrap">{agent.value}%</span>
                     </div>
                     <div className="absolute left-0 right-0 bottom-[150px] border-t border-dashed border-red-300/60" />
                     <div className="absolute left-0 right-0 bottom-[30px] border-t border-dashed border-[#B8860B]/40" />
                   </div>
                   <div className="text-center mt-3 w-full">
-                    <div className="font-semibold text-sm text-[#000052] truncate">
-                      {agent.name}
-                    </div>
-                    <div className="text-xs text-[#000052]/60 mt-1">
-                      {performanceLabel(agent.value)}
-                    </div>
+                    <div className="font-semibold text-sm text-[#000052] truncate">{agent.name}</div>
+                    <div className="text-xs text-[#000052]/60 mt-1">{performanceLabel(agent.value)}</div>
                   </div>
                 </div>
               );
@@ -576,16 +460,11 @@ export function CEODashboard() {
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
         <div className="flex items-center gap-2 mb-6">
           <PieChartIcon className="w-5 h-5 text-[#B8860B]" />
-          <h2 className="text-lg font-bold text-[#000052]">
-            Распределение бюджета
-          </h2>
+          <h2 className="text-lg font-bold text-[#000052]">Распределение бюджета</h2>
         </div>
 
         {streamsByType.length === 0 ? (
-          <div className="text-center py-12 text-[#000052]/60">
-            <PieChartIcon className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" />
-            <p>Активных потоков выплат пока нет</p>
-          </div>
+          <div className="text-center py-12 text-[#000052]/60"><PieChartIcon className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" /><p>Активных потоков выплат пока нет</p></div>
         ) : (
           <div className="flex flex-col md:flex-row items-center gap-6">
             <svg viewBox="0 0 200 200" className="w-48 h-48 flex-shrink-0">
@@ -604,56 +483,26 @@ export function CEODashboard() {
                   const y2 = 100 + 80 * Math.sin(endRad);
                   const largeArc = percent > 50 ? 1 : 0;
                   const d = `M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`;
-                  return (
-                    <path
-                      key={stream.key}
-                      d={d}
-                      fill={colors[index % colors.length]}
-                      opacity="0.85"
-                    >
-                      <title>{`${stream.title}: $${stream.total.toLocaleString()} (${percent.toFixed(1)}%)`}</title>
-                    </path>
-                  );
+                  return <path key={stream.key} d={d} fill={colors[index % colors.length]} opacity="0.85"><title>{`${stream.title}: $${stream.total.toLocaleString()} (${percent.toFixed(1)}%)`}</title></path>;
                 });
               })()}
               <circle cx="100" cy="100" r="40" fill="white" />
-              <text x="100" y="95" textAnchor="middle" fontSize="12" fill="#000052" fontWeight="bold">
-                Всего
-              </text>
-              <text x="100" y="112" textAnchor="middle" fontSize="14" fill="#B8860B" fontWeight="bold">
-                ${(totalStreams / 1000).toFixed(0)}K
-              </text>
+              <text x="100" y="95" textAnchor="middle" fontSize="12" fill="#000052" fontWeight="bold">Всего</text>
+              <text x="100" y="112" textAnchor="middle" fontSize="14" fill="#B8860B" fontWeight="bold">${(totalStreams / 1000).toFixed(0)}K</text>
             </svg>
 
             <div className="flex-1 space-y-2 w-full">
               {streamsByType.map((stream, index) => {
-                const percent =
-                  totalStreams > 0
-                    ? ((stream.total / totalStreams) * 100).toFixed(1)
-                    : '0';
+                const percent = totalStreams > 0 ? ((stream.total / totalStreams) * 100).toFixed(1) : '0';
                 return (
-                  <div
-                    key={stream.key}
-                    className="flex items-center justify-between p-2 hover:bg-[#000052]/5 rounded-lg"
-                  >
+                  <div key={stream.key} className="flex items-center justify-between p-2 hover:bg-[#000052]/5 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{
-                          backgroundColor: colors[index % colors.length],
-                        }}
-                      />
-                      <span className="text-sm text-[#000052]">
-                        {stream.title}
-                      </span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
+                      <span className="text-sm text-[#000052]">{stream.title}</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-bold text-[#000052]">
-                        ${stream.total.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-[#000052]/60">
-                        {percent}%
-                      </div>
+                      <div className="text-sm font-bold text-[#000052]">${stream.total.toLocaleString()}</div>
+                      <div className="text-xs text-[#000052]/60">{percent}%</div>
                     </div>
                   </div>
                 );
