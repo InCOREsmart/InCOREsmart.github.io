@@ -1,0 +1,183 @@
+name: Finish i18n refactor
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Refactor hardcoded UI strings
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('src/pages')
+
+          replacements = {
+            # Agent contracts
+            'Агент не найден': "{t('agent.agentNotFound')}",
+            'из {contracts.length} всего': "{t('agent.ofTotal', { count: contracts.length })}",
+            'Эскроу': "{t('agent.escrow')}",
+            'Защищено смарт-контрактом': "{t('agent.protectedBySmartContract')}",
+            'Общая выручка': "{t('agent.totalRevenue')}",
+            'По всем контрактам': "{t('agent.allContracts')}",
+            'Контрактов пока нет': "{t('agent.noContracts')}",
+            'CEO создаст для вас новый смарт-контракт': "{t('agent.noContractsDescription')}",
+            'Выручка': "{t('agent.revenue')}",
+            'Дедлайн': "{t('agent.deadline')}",
+            'Статус эскроу': "{t('agent.escrowStatus')}",
+            'Заблокирован': "{t('agent.locked')}",
+            'Не заблокирован': "{t('agent.notLocked')}",
+            'Потоки выплат (': "{t('agent.paymentStreams')} (",
+            'Разблокировано:': "{t('agent.unlocked')}: ",
+            'Выплачено:': "{t('agent.paid')}: ",
+            'Заблокировано:': "{t('agent.locked')}: ",
+            'Подробнее': "{t('agent.details')}",
+            'Отправить работу на проверку?': "{t('agent.submitWorkConfirm')}",
+            'Работа отправлена на проверку': "{t('agent.workSubmitted')}",
+            'Ошибка отправки работы': "{t('agent.workSubmitError')}",
+            'Черновик': "{t('agent.statusDraft')}",
+            'Ожидает оплаты': "{t('agent.statusPendingPayment')}",
+            'Активен': "{t('agent.statusActive')}",
+            'В работе': "{t('agent.statusInProgress')}",
+            'Ожидает подтверждения': "{t('agent.statusPendingApproval')}",
+            'Завершён': "{t('agent.statusCompleted')}",
+            'Спор': "{t('agent.statusDisputed')}",
+            'Отменён': "{t('agent.statusCancelled')}",
+
+            # Agent payouts
+            'Всего по контрактам': "{t('payouts.totalContracts')}",
+            'Выплачено': "{t('payouts.paid')}",
+            'Заблокировано': "{t('payouts.locked')}",
+            'Clawback': "{t('payouts.clawback')}",
+            'Потоков выплат пока нет': "{t('payouts.noStreams')}",
+            'Поток': "{t('payouts.stream')}",
+            'Контракт': "{t('payouts.contract')}",
+            'Сумма': "{t('payouts.amount')}",
+            'Статус': "{t('payouts.status')}",
+            'Условие разблокировки': "{t('payouts.unlockCondition')}",
+            'Дата': "{t('payouts.date')}",
+            'Разб.: ': "{t('payouts.unlockedShort')}: ",
+            'Выпл.: ': "{t('payouts.paidShort')}: ",
+            'Clawback Warning': "{t('payouts.clawbackWarningTitle')}",
+            'Контракт не найден': "{t('payouts.contractNotFound')}",
+
+            # Agent settings
+            'Личные данные': "{t('agent.personalData')}",
+            'Реквизиты для выплат': "{t('agent.paymentDetails')}",
+            'ФИО': "{t('agent.fullName')}",
+            'Телефон': "{t('agent.phone')}",
+            'Налоговый статус': "{t('agent.taxStatus')}",
+            'Самозанятый (6%)': "{t('agent.selfEmployedRu')}",
+            'ИП (6%)': "{t('agent.ipRu')}",
+            'ИНН': "{t('agent.inn')}",
+            'СНИЛС': "{t('agent.snils')}",
+            'Название банка': "{t('agent.bankName')}",
+            'БИК': "{t('agent.bik')}",
+            'Корреспондентский счёт': "{t('agent.correspondentAccount')}",
+            'Расчётный счёт': "{t('agent.settlementAccount')}",
+            'Страна': "{t('agent.country')}",
+            'Верификация документов (InCORE)': "{t('agent.documentVerification')}",
+            'Загрузите документы для верификации. InCORE проверит их автоматически в течение 24 часов.': "{t('agent.documentVerificationDescription')}",
+            'Загрузить': "{t('agent.upload')}",
+            'Паспорт РФ / ВНЖ': "{t('agent.passportRu')}",
+            'Свидетельство самозанятого / ИП': "{t('agent.taxDocRu')}",
+            'Паспорт / ВНЖ Азербайджана': "{t('agent.passportAz')}",
+            'Свидетельство VÖEN': "{t('agent.taxDocAz')}",
+            'Удостоверение личности / Паспорт РК': "{t('agent.passportKz')}",
+            'Свидетельство ИП / Патент': "{t('agent.taxDocKz')}",
+            'Самозанятый (3%)': "{t('agent.selfEmployedKz')}",
+            'ИП (3%)': "{t('agent.ipKz')}",
+            'Физическое лицо (14%)': "{t('agent.selfEmployedAz')}",
+            'ИП (5%)': "{t('agent.ipAz')}",
+            'Сохранить': "{t('common.save')}",
+
+            # CEO common labels
+            'Финансовое ядро': "{t('layout.financialCore')}",
+            'Ключевые финансовые показатели компании': "{t('ceo.financialOverview')}",
+            'Движение средств за август': "{t('ceo.cashMovementAugust')}",
+            'В эскроу': "{t('ceo.inEscrow')}",
+            'Выплачено в августе': "{t('ceo.paidInAugust')}",
+            'Ожидает выплаты': "{t('ceo.pendingPayout')}",
+            'Выполнение плана агентами': "{t('ceo.agentPlanAchievement')}",
+            'Процент выполнения плана по активным контрактам': "{t('ceo.planAchievementDescription')}",
+            'Критично': "{t('ceo.critical')}",
+            'Перевыполнение': "{t('ceo.overachieved')}",
+            'Выполнение плана': "{t('ceo.planAchievement')}",
+          }
+
+          files = list((root / 'agent').glob('*.tsx')) + list((root / 'ceo').glob('*.tsx'))
+
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              original = text
+              for src, dst in replacements.items():
+                  # Replace JSX text nodes containing the exact literal.
+                  text = text.replace(f'>{src}<', f'>{dst}<')
+                  # Replace quoted literals in JS/TS strings where the destination is safe.
+                  text = text.replace(f"'{src}'", dst)
+                  text = text.replace(f'"{src}"', dst)
+              if text != original:
+                  path.write_text(text, encoding='utf-8')
+
+          # Add a small typed translation layer without rewriting the existing locale files.
+          ui = Path('src/i18n/uiTranslations.ts')
+          ui.write_text(r'''export const uiTranslations = {
+            ru: { agent: {
+              ofTotal: 'из {{count}} всего', escrow: 'Эскроу', protectedBySmartContract: 'Защищено смарт-контрактом', totalRevenue: 'Общая выручка', allContracts: 'По всем контрактам', noContracts: 'Контрактов пока нет', noContractsDescription: 'CEO создаст для вас новый смарт-контракт', revenue: 'Выручка', deadline: 'Дедлайн', escrowStatus: 'Статус эскроу', locked: 'Заблокирован', notLocked: 'Не заблокирован', unlocked: 'Разблокировано', paid: 'Выплачено', details: 'Подробнее', submitWorkConfirm: 'Отправить работу на проверку?', workSubmitted: 'Работа отправлена на проверку', workSubmitError: 'Ошибка отправки работы', statusDraft: 'Черновик', statusPendingPayment: 'Ожидает оплаты', statusActive: 'Активен', statusInProgress: 'В работе', statusPendingApproval: 'Ожидает подтверждения', statusCompleted: 'Завершён', statusDisputed: 'Спор', statusCancelled: 'Отменён', country: 'Страна', documentVerification: 'Верификация документов (InCORE)', documentVerificationDescription: 'Загрузите документы для верификации. InCORE проверит их автоматически в течение 24 часов.', upload: 'Загрузить', passportRu: 'Паспорт РФ / ВНЖ', taxDocRu: 'Свидетельство самозанятого / ИП', passportAz: 'Паспорт / ВНЖ Азербайджана', taxDocAz: 'Свидетельство VÖEN', passportKz: 'Удостоверение личности / Паспорт РК', taxDocKz: 'Свидетельство ИП / Патент', selfEmployedRu: 'Самозанятый (6%)', ipRu: 'ИП (6%)', selfEmployedKz: 'Самозанятый (3%)', ipKz: 'ИП (3%)', selfEmployedAz: 'Физическое лицо (14%)', ipAz: 'ИП (5%)' },
+              payouts: { totalContracts: 'Всего по контрактам', paid: 'Выплачено', locked: 'Заблокировано', clawback: 'Clawback', noStreams: 'Потоков выплат пока нет', stream: 'Поток', contract: 'Контракт', amount: 'Сумма', status: 'Статус', unlockCondition: 'Условие разблокировки', date: 'Дата', unlockedShort: 'Разб.', paidShort: 'Выпл.', clawbackWarningTitle: 'Предупреждение о clawback', contractNotFound: 'Контракт не найден' },
+              ceo: { financialOverview: 'Ключевые финансовые показатели компании', cashMovementAugust: 'Движение средств за август', inEscrow: 'В эскроу', paidInAugust: 'Выплачено в августе', pendingPayout: 'Ожидает выплаты', agentPlanAchievement: 'Выполнение плана агентами', planAchievementDescription: 'Процент выполнения плана по активным контрактам', critical: 'Критично', overachieved: 'Перевыполнение', planAchievement: 'Выполнение плана' }
+            },
+            en: { agent: {
+              ofTotal: 'of {{count}} total', escrow: 'Escrow', protectedBySmartContract: 'Protected by smart contract', totalRevenue: 'Total revenue', allContracts: 'Across all contracts', noContracts: 'No contracts yet', noContractsDescription: 'CEO will create a new smart contract for you', revenue: 'Revenue', deadline: 'Deadline', escrowStatus: 'Escrow status', locked: 'Locked', notLocked: 'Not locked', unlocked: 'Unlocked', paid: 'Paid', details: 'Details', submitWorkConfirm: 'Send work for review?', workSubmitted: 'Work submitted for review', workSubmitError: 'Failed to submit work', statusDraft: 'Draft', statusPendingPayment: 'Awaiting payment', statusActive: 'Active', statusInProgress: 'In progress', statusPendingApproval: 'Awaiting approval', statusCompleted: 'Completed', statusDisputed: 'Dispute', statusCancelled: 'Cancelled', country: 'Country', documentVerification: 'Document verification (InCORE)', documentVerificationDescription: 'Upload documents for verification. InCORE will verify them automatically within 24 hours.', upload: 'Upload', passportRu: 'Russian passport / residence permit', taxDocRu: 'Self-employed / sole proprietor certificate', passportAz: 'Azerbaijan passport / residence permit', taxDocAz: 'VÖEN certificate', passportKz: 'ID card / Kazakhstan passport', taxDocKz: 'Sole proprietor certificate / patent', selfEmployedRu: 'Self-employed (6%)', ipRu: 'Sole proprietor (6%)', selfEmployedKz: 'Self-employed (3%)', ipKz: 'Sole proprietor (3%)', selfEmployedAz: 'Individual (14%)', ipAz: 'Sole proprietor (5%)' },
+              payouts: { totalContracts: 'Total across contracts', paid: 'Paid', locked: 'Locked', clawback: 'Clawback', noStreams: 'No payment streams yet', stream: 'Stream', contract: 'Contract', amount: 'Amount', status: 'Status', unlockCondition: 'Unlock condition', date: 'Date', unlockedShort: 'Unlocked:', paidShort: 'Paid:', clawbackWarningTitle: 'Clawback Warning', contractNotFound: 'Contract not found' },
+              ceo: { financialOverview: 'Key company financial metrics', cashMovementAugust: 'Cash movement for August', inEscrow: 'In escrow', paidInAugust: 'Paid in August', pendingPayout: 'Pending payout', agentPlanAchievement: 'Agent plan achievement', planAchievementDescription: 'Plan achievement percentage for active contracts', critical: 'Critical', overachieved: 'Overachievement', planAchievement: 'Plan achievement' }
+            },
+            kk: { agent: { ofTotal: 'барлығы {{count}} ішінен', escrow: 'Эскроу', protectedBySmartContract: 'Смарт-келісімшартпен қорғалған', totalRevenue: 'Жалпы түсім', allContracts: 'Барлық келісімшарттар бойынша', noContracts: 'Әзірге келісімшарттар жоқ', noContractsDescription: 'CEO сіз үшін жаңа смарт-келісімшарт жасайды', revenue: 'Түсім', deadline: 'Мерзімі', escrowStatus: 'Эскроу мәртебесі', locked: 'Бұғатталған', notLocked: 'Бұғатталмаған', unlocked: 'Босатылды', paid: 'Төленді', details: 'Толығырақ', submitWorkConfirm: 'Жұмысты тексеруге жіберу керек пе?', workSubmitted: 'Жұмыс тексеруге жіберілді', workSubmitError: 'Жұмысты жіберу қатесі', statusDraft: 'Жоба', statusPendingPayment: 'Төлем күтілуде', statusActive: 'Белсенді', statusInProgress: 'Жұмыста', statusPendingApproval: 'Растау күтілуде', statusCompleted: 'Аяқталды', statusDisputed: 'Дау', statusCancelled: 'Бас тартылды', country: 'Ел', documentVerification: 'Құжаттарды тексеру (InCORE)', documentVerificationDescription: 'Тексеру үшін құжаттарды жүктеңіз. InCORE оларды 24 сағат ішінде автоматты түрде тексереді.', upload: 'Жүктеу', passportRu: 'Ресей паспорты / тұруға рұқсат', taxDocRu: 'Өзін-өзі жұмыспен қамтыған / ЖК анықтамасы', passportAz: 'Әзербайжан паспорты / тұруға рұқсат', taxDocAz: 'VÖEN анықтамасы', passportKz: 'Жеке куәлік / ҚР паспорты', taxDocKz: 'ЖК куәлігі / патент', selfEmployedRu: 'Өзін-өзі жұмыспен қамтыған (6%)', ipRu: 'ЖК (6%)', selfEmployedKz: 'Өзін-өзі жұмыспен қамтыған (3%)', ipKz: 'ЖК (3%)', selfEmployedAz: 'Жеке тұлға (14%)', ipAz: 'ЖК (5%)' }, payouts: { totalContracts: 'Келісімшарттар бойынша барлығы', paid: 'Төленді', locked: 'Бұғатталған', clawback: 'Clawback', noStreams: 'Әзірге төлем ағындары жоқ', stream: 'Ағын', contract: 'Келісімшарт', amount: 'Сома', status: 'Мәртебе', unlockCondition: 'Босату шарты', date: 'Күні', unlockedShort: 'Бос.:', paidShort: 'Төл.:', clawbackWarningTitle: 'Clawback ескертуі', contractNotFound: 'Келісімшарт табылмады' }, ceo: { financialOverview: 'Компанияның негізгі қаржылық көрсеткіштері', cashMovementAugust: 'Тамыздағы ақша қозғалысы', inEscrow: 'Эскроуда', paidInAugust: 'Тамызда төленді', pendingPayout: 'Төлем күтілуде', agentPlanAchievement: 'Агенттердің жоспарды орындауы', planAchievementDescription: 'Белсенді келісімшарттар бойынша жоспарды орындау пайызы', critical: 'Маңызды', overachieved: 'Артық орындау', planAchievement: 'Жоспарды орындау' } },
+            az: { agent: { ofTotal: 'ümumi {{count}}-dan', escrow: 'Escrow', protectedBySmartContract: 'Smart-müqavilə ilə qorunur', totalRevenue: 'Ümumi gəlir', allContracts: 'Bütün müqavilələr üzrə', noContracts: 'Hələ müqavilə yoxdur', noContractsDescription: 'CEO sizin üçün yeni smart-müqavilə yaradacaq', revenue: 'Gəlir', deadline: 'Son tarix', escrowStatus: 'Escrow statusu', locked: 'Bloklanıb', notLocked: 'Bloklanmayıb', unlocked: 'Açılıb', paid: 'Ödənilib', details: 'Ətraflı', submitWorkConfirm: 'İşi yoxlamaya göndərmək?', workSubmitted: 'İş yoxlamaya göndərildi', workSubmitError: 'İşi göndərmək alınmadı', statusDraft: 'Qaralama', statusPendingPayment: 'Ödəniş gözlənilir', statusActive: 'Aktiv', statusInProgress: 'İcrada', statusPendingApproval: 'Təsdiq gözlənilir', statusCompleted: 'Tamamlandı', statusDisputed: 'Mübahisə', statusCancelled: 'Ləğv edildi', country: 'Ölkə', documentVerification: 'Sənədlərin yoxlanılması (InCORE)', documentVerificationDescription: 'Yoxlama üçün sənədləri yükləyin. InCORE onları 24 saat ərzində avtomatik yoxlayacaq.', upload: 'Yüklə', passportRu: 'Rusiya pasportu / yaşayış icazəsi', taxDocRu: 'Özünüməşğul / fərdi sahibkar arayışı', passportAz: 'Azərbaycan pasportu / yaşayış icazəsi', taxDocAz: 'VÖEN şəhadətnaməsi', passportKz: 'Şəxsiyyət vəsiqəsi / Qazaxıstan pasportu', taxDocKz: 'Fərdi sahibkar şəhadətnaməsi / patent', selfEmployedRu: 'Özünüməşğul (6%)', ipRu: 'Fərdi sahibkar (6%)', selfEmployedKz: 'Özünüməşğul (3%)', ipKz: 'Fərdi sahibkar (3%)', selfEmployedAz: 'Fiziki şəxs (14%)', ipAz: 'Fərdi sahibkar (5%)' }, payouts: { totalContracts: 'Müqavilələr üzrə cəmi', paid: 'Ödənilib', locked: 'Bloklanıb', clawback: 'Clawback', noStreams: 'Hələ ödəniş axını yoxdur', stream: 'Axın', contract: 'Müqavilə', amount: 'Məbləğ', status: 'Status', unlockCondition: 'Açılma şərti', date: 'Tarix', unlockedShort: 'Aç.:', paidShort: 'Öd.:', clawbackWarningTitle: 'Clawback xəbərdarlığı', contractNotFound: 'Müqavilə tapılmadı' }, ceo: { financialOverview: 'Şirkətin əsas maliyyə göstəriciləri', cashMovementAugust: 'Avqust üzrə pul hərəkəti', inEscrow: 'Escrow-da', paidInAugust: 'Avqustda ödənilib', pendingPayout: 'Ödəniş gözlənilir', agentPlanAchievement: 'Agentlərin plan icrası', planAchievementDescription: 'Aktiv müqavilələr üzrə plan icrası faizi', critical: 'Kritik', overachieved: 'Planın üstündə', planAchievement: 'Plan icrası' } }
+          };
+          Path('src/i18n/uiTranslations.ts').write_text(ui, encoding='utf-8')
+
+          # Extend i18n with the new layer and deep-merge nested keys.
+          idx = Path('src/i18n/index.ts')
+          s = idx.read_text(encoding='utf-8')
+          if 'uiTranslations' not in s:
+              s = s.replace('import { coreTranslations } from "./core";', 'import { coreTranslations } from "./core";\nimport { uiTranslations } from "./uiTranslations";')
+              s = re.sub(r'const mergeLocale = \(base: any, extra: any\) => \(\{.*?\n\}\);', '''const mergeLocale = (base: any, extra: any) => {
+            const merge = (a: any, b: any): any => {
+              const out = { ...a };
+              Object.entries(b || {}).forEach(([key, value]) => {
+                out[key] = value && typeof value === 'object' && !Array.isArray(value)
+                  ? merge(out[key] || {}, value)
+                  : value;
+              });
+              return out;
+            };
+            return merge(merge(base, extra), uiTranslations[(extra === coreTranslations.ru ? 'ru' : extra === coreTranslations.en ? 'en' : extra === coreTranslations.kk ? 'kk' : 'az') as keyof typeof uiTranslations]);
+          };''', s, flags=re.S)
+              idx.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit refactor
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src .github/workflows/finish-i18n-refactor.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "fix(i18n): remove hardcoded agent and CEO UI text"
+            git push origin HEAD:main
+          fi
