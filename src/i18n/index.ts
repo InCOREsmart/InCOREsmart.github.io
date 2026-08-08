@@ -7,19 +7,24 @@ import en from "./locales/en.json";
 import kk from "./locales/kk.json";
 import az from "./locales/az.json";
 import { coreTranslations } from "./core";
+import { uiTranslations } from "./uiTranslations";
 
-const mergeLocale = (base: any, extra: any) => ({
+const mergeLocale = (base: any, extra: any, ui: any) => ({
   ...base,
   ...extra,
-  agent: { ...(base.agent || {}), ...(extra.agent || {}) },
-  payouts: { ...(base.payouts || {}), ...(extra.payouts || {}) },
+  ...ui,
+  layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}) },
+  accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}) },
+  agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}) },
+  payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}) },
+  ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}) },
 });
 
 const resources = {
-  ru: { translation: mergeLocale(ru, coreTranslations.ru) },
-  en: { translation: mergeLocale(en, coreTranslations.en) },
-  kk: { translation: mergeLocale(kk, coreTranslations.kk) },
-  az: { translation: mergeLocale(az, coreTranslations.az) },
+  ru: { translation: mergeLocale(ru, coreTranslations.ru, uiTranslations.ru) },
+  en: { translation: mergeLocale(en, coreTranslations.en, uiTranslations.en) },
+  kk: { translation: mergeLocale(kk, coreTranslations.kk, uiTranslations.kk) },
+  az: { translation: mergeLocale(az, coreTranslations.az, uiTranslations.az) },
 };
 
 i18n
@@ -33,9 +38,7 @@ i18n
     cleanCode: true,
     load: "languageOnly",
     defaultNS: "translation",
-    interpolation: {
-      escapeValue: false,
-    },
+    interpolation: { escapeValue: false },
     detection: {
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
@@ -44,9 +47,7 @@ i18n
     returnNull: false,
     returnEmptyString: false,
     saveMissing: false,
-    react: {
-      useSuspense: false,
-    },
+    react: { useSuspense: false },
     missingKeyHandler: (lngs, namespace, key) => {
       if (import.meta.env.DEV) {
         console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs);
