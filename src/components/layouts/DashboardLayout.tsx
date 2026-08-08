@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { 
   LogOut, 
   User, 
@@ -23,6 +24,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,17 +37,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   const menuItems = [
-    { path: '/ceo', label: 'Финансовое ядро', icon: BarChart3, role: 'ceo' },
-    { path: '/ceo/contracts', label: 'Контракты', icon: FileText, role: 'ceo' },
-    { path: '/ceo/agents', label: 'Агенты', icon: Users, role: 'ceo' },
-    { path: '/ceo/disputes', label: 'Арбитраж', icon: Scale, role: 'ceo' },
-    { path: '/ceo/integrations', label: 'Интеграции', icon: ShieldCheck, role: 'ceo' },
-    { path: '/ceo/accounting', label: 'Бухгалтерия', icon: DollarSign, role: 'ceo' },
-    { path: '/ceo/settings', label: 'Настройки', icon: Settings, role: 'ceo' },
-    { path: '/agent', label: 'Моя панель', icon: BarChart3, role: 'agent' },
-    { path: '/agent/contracts', label: 'Мои контракты', icon: FileText, role: 'agent' },
-    { path: '/agent/payouts', label: 'Выплаты', icon: DollarSign, role: 'agent' },
-    { path: '/agent/settings', label: 'Мои данные', icon: Settings, role: 'agent' },
+    { path: '/ceo', label: t('layout.financialCore'), icon: BarChart3, role: 'ceo' },
+    { path: '/ceo/contracts', label: t('layout.contracts'), icon: FileText, role: 'ceo' },
+    { path: '/ceo/agents', label: t('layout.agents'), icon: Users, role: 'ceo' },
+    { path: '/ceo/disputes', label: t('layout.disputes'), icon: Scale, role: 'ceo' },
+    { path: '/ceo/integrations', label: t('layout.integrations'), icon: ShieldCheck, role: 'ceo' },
+    { path: '/ceo/accounting', label: t('layout.accounting'), icon: DollarSign, role: 'ceo' },
+    { path: '/ceo/settings', label: t('layout.settings'), icon: Settings, role: 'ceo' },
+    { path: '/agent', label: t('layout.myDashboard'), icon: BarChart3, role: 'agent' },
+    { path: '/agent/contracts', label: t('layout.myContracts'), icon: FileText, role: 'agent' },
+    { path: '/agent/payouts', label: t('layout.payouts'), icon: DollarSign, role: 'agent' },
+    { path: '/agent/settings', label: t('layout.myData'), icon: Settings, role: 'agent' },
   ];
 
   const userRole = location.pathname.startsWith('/agent') ? 'agent' : 'ceo';
@@ -65,7 +67,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="p-6 border-b border-[#000052]/10 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-[#000052] tracking-tight">InCORE</h1>
-              <p className="text-xs text-[#000052]/60 mt-1">Smart Contracts Platform</p>
+              <p className="text-xs text-[#000052]/60 mt-1">{t('layout.platformSubtitle')}</p>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
@@ -106,10 +108,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#000052] truncate">
-                  {user?.email || 'Пользователь'}
+                  {user?.email || t('layout.user')}
                 </p>
                 <p className="text-xs text-[#000052]/60 truncate">
-                  {userRole === 'ceo' ? 'CEO / Администратор' : 'Агент'}
+                  {userRole === 'ceo' ? t('layout.ceoRole') : t('layout.agentRole')}
                 </p>
               </div>
             </div>
@@ -118,7 +120,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg text-sm font-medium transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span>Выйти</span>
+              <span>{t('layout.logout')}</span>
             </button>
           </div>
         </div>
@@ -135,7 +137,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
         </header>
 
-        {/* Верхняя панель с языком и уведомлениями (только для десктопа) */}
         <header className="hidden md:flex items-center justify-end p-4 bg-white border-b border-[#000052]/10 gap-4">
           <LanguageSwitcher />
           <NotificationBell />
