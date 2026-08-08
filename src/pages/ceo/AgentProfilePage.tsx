@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Users, Mail, Phone, DollarSign, Target, ShieldCheck, Clock, FileText, Filter } from 'lucide-react';
+import { ArrowLeft, Users, Mail, Phone, DollarSign, Target, ShieldCheck, Clock, FileText, Filter, Award } from 'lucide-react';
 import { DemoContract, calculateAgentKPI, calculateContractKPI, getDemoAgentById } from '../../lib/demoData';
+import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -77,6 +78,7 @@ export function AgentProfilePage() {
   const kpi = isDemo ? calculateAgentKPI(agent) : 0;
   const totalRevenue = contracts.reduce((sum, contract) => sum + Number(contract.revenue || contract.planned_revenue || 0), 0);
   const activeContracts = contracts.filter(contract => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS').length;
+  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -98,6 +100,12 @@ export function AgentProfilePage() {
         <div className="bg-[#B8860B] text-white p-5 rounded-xl"><div className="flex justify-between mb-3"><span className="text-sm opacity-80">Общая выручка</span><DollarSign className="w-5 h-5" /></div><p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p></div>
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10"><div className="flex justify-between mb-3"><span className="text-sm text-[#000052]/70">Активные контракты</span><ShieldCheck className="w-5 h-5 text-[#B8860B]" /></div><p className="text-2xl font-bold">{activeContracts}</p></div>
         <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10"><div className="flex justify-between mb-3"><span className="text-sm text-[#000052]/70">Всего контрактов</span><FileText className="w-5 h-5 text-[#B8860B]" /></div><p className="text-2xl font-bold">{contracts.length}</p></div>
+      </div>
+
+      <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
+        <div className="flex items-center justify-between gap-4 mb-3"><div><h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />Годовой бонус · {annualBonus.year}</h2><p className="text-sm text-[#000052]/60 mt-1">Накопление по результатам выполнения плана продаж. В эскроу не входит.</p></div><div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">из ${annualBonus.maxBonus.toLocaleString()}</div></div></div>
+        <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div>
+        <div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>Выполнение плана: {annualBonus.planAchievementPercent}%</span><span>Накоплено: {annualBonus.progressPercent}%</span></div>
       </div>
 
       <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
