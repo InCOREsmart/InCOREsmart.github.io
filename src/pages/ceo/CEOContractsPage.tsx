@@ -7,6 +7,9 @@ import { Plus, Search, Filter, DollarSign, Users, ShieldCheck, FileText } from '
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
 import { DEMO_AGENTS } from '../../lib/demoData';
 
+const isActiveContract = (contract: any) =>
+  contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS';
+
 export function CEOContractsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -25,68 +28,53 @@ export function CEOContractsPage() {
       }
 
       try {
+        const demoContracts = DEMO_AGENTS.flatMap(agent =>
+          agent.contracts.map(contract => ({
+            ...contract,
+            agent_name: agent.full_name,
+            agent_id: agent.id,
+            is_demo: true,
+          }))
+        );
+
         const { data: companyData } = await supabase
           .from('companies')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        let realContracts: any[] = [];
+
         if (companyData) {
-          const { data: realContracts } = await supabase
+          const { data } = await supabase
             .from('contracts')
             .select('*')
             .eq('company_id', companyData.id)
             .order('created_at', { ascending: false });
 
-          const contractsList: any[] = [];
+          realContracts = data || [];
 
-          if (realContracts && realContracts.length > 0) {
-            const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
-            
-            let agentsMap = new Map();
-            if (agentIds.length > 0) {
-              const { data: agentsData } = await supabase
-                .from('agents')
-                .select('id, full_name')
-                .in('id', agentIds);
-              
-              if (agentsData) {
-                agentsData.forEach(a => agentsMap.set(a.id, a.full_name));
-              }
-            }
+          const agentIds = [...new Set(realContracts.map(c => c.agent_id).filter(Boolean))];
+          if (agentIds.length > 0) {
+            const { data: agentsData } = await supabase
+              .from('agents')
+              .select('id, full_name')
+              .in('id', agentIds);
 
-            const mappedRealContracts = realContracts.map(c => ({
+            const agentsMap = new Map((agentsData || []).map(a => [a.id, a.full_name]));
+            realContracts = realContracts.map(c => ({
               ...c,
               agent_name: agentsMap.get(c.agent_id) || 'Не назначен',
               is_demo: false,
             }));
-            contractsList.push(...mappedRealContracts);
           }
-
-          if (contractsList.length < 8) {
-            const demoContracts = DEMO_AGENTS.flatMap(agent => 
-              agent.contracts.map(contract => ({
-                ...contract,
-                agent_name: agent.full_name,
-                agent_id: agent.id,
-                is_demo: true,
-              }))
-            );
-            contractsList.push(...demoContracts);
-          }
-
-          setContracts(contractsList);
-        } else {
-          const demoContracts = DEMO_AGENTS.flatMap(agent => 
-            agent.contracts.map(contract => ({
-              ...contract,
-              agent_name: agent.full_name,
-              agent_id: agent.id,
-              is_demo: true,
-            }))
-          );
-          setContracts(demoContracts);
         }
+
+        // Всегда объединяем реальные и демо-контракты.
+        // Старое условие "если меньше 8" скрывало демо-данные при наличии достаточного числа реальных записей.
+        const byId = new Map<string, any>();
+        [...demoContracts, ...realContracts].forEach(contract => byId.set(contract.id, contract));
+        setContracts(Array.from(byId.values()));
       } catch (err) {
         console.error('Ошибка загрузки контрактов:', err);
       } finally {
@@ -103,14 +91,14 @@ export function CEOContractsPage() {
 
   const filteredContracts = contracts.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         c.agent_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      c.agent_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const totalGMV = contracts.reduce((sum, c) => sum + (c.revenue || 0), 0);
-  const totalEscrow = contracts.reduce((sum, c) => sum + (c.escrow_amount || 0), 0);
-  const activeCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
+  const totalGMV = contracts.reduce((sum, c) => sum + Number(c.revenue || c.planned_revenue || 0), 0);
+  const totalEscrow = contracts.reduce((sum, c) => sum + Number(c.escrow_amount || 0), 0);
+  const activeCount = contracts.filter(isActiveContract).length;
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { bg: string; text: string; label: string }> = {
@@ -242,12 +230,7 @@ export function CEOContractsPage() {
                     className="hover:bg-[#000052]/5 cursor-pointer transition"
                   >
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-[#000052] text-sm flex items-center gap-2">
-                        {contract.title}
-                        {contract.is_demo && (
-                          <span className="text-xs bg-[#B8860B]/10 text-[#B8860B] px-2 py-0.5 rounded font-normal">демо</span>
-                        )}
-                      </div>
+                      <div className="font-semibold text-[#000052] text-sm">{contract.title}</div>
                       <div className="text-xs text-[#000052]/60 mt-1">
                         Создан: {new Date(contract.start_date || contract.created_at).toLocaleDateString('ru-RU')}
                       </div>
@@ -261,10 +244,10 @@ export function CEOContractsPage() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="text-sm font-bold text-[#000052]">${(contract.revenue || 0).toLocaleString()}</div>
+                      <div className="text-sm font-bold text-[#000052]">${Number(contract.revenue || contract.planned_revenue || 0).toLocaleString()}</div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="text-sm font-bold text-[#B8860B]">${(contract.escrow_amount || 0).toLocaleString()}</div>
+                      <div className="text-sm font-bold text-[#B8860B]">${Number(contract.escrow_amount || 0).toLocaleString()}</div>
                       <div className="text-xs text-[#000052]/60">Заблокировано</div>
                     </td>
                     <td className="py-4 px-4">
