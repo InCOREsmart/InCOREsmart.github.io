@@ -30,21 +30,11 @@ const transitionTargets: Record<ContractStatus, ContractStatus[]> = {
   [ContractStatus.CANCELLED]: [],
 };
 
-export function evaluateContractTransition(
-  context: ContractEngineContext,
-  targetStatus: ContractStatus,
-): ContractTransitionResult {
+export function evaluateContractTransition(context: ContractEngineContext, targetStatus: ContractStatus): ContractTransitionResult {
   if (!canTransition(context.currentStatus, targetStatus)) {
-    return {
-      allowed: false,
-      reason: `Transition ${context.currentStatus} -> ${targetStatus} is not allowed`,
-    };
+    return { allowed: false, reason: `Transition ${context.currentStatus} -> ${targetStatus} is not allowed` };
   }
-
-  return {
-    allowed: true,
-    transition: { from: context.currentStatus, to: targetStatus },
-  };
+  return { allowed: true, transition: { from: context.currentStatus, to: targetStatus } };
 }
 
 export function getContractTransitions(status: ContractStatus): StateTransition[] {
