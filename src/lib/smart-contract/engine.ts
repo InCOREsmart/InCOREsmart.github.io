@@ -52,6 +52,7 @@ function createCorrelationId(): string {
 /**
  * Single persistence boundary for contract status changes.
  * UI actions can use this function without duplicating validation and history writes.
+ * If the audit history cannot be persisted, the contract status is rolled back.
  */
 export async function transitionContractStatus(input: {
   contractId: string;
@@ -110,6 +111,18 @@ export async function transitionContractStatus(input: {
 
     if (history.error) {
       console.error('Contract status history write failed:', history.error);
+      const { error: rollbackError } = await supabase
+        .from('contracts')
+        .update({ status: currentStatus })
+        .eq('id', input.contractId)
+        .eq('status', input.targetStatus);
+      if (rollbackError) {
+        return {
+          success: false,
+          error: `${history.error.message}; rollback failed: ${rollbackError.message}`,
+          correlationId,
+        };
+      }
       return { success: false, error: history.error.message, correlationId };
     }
 
