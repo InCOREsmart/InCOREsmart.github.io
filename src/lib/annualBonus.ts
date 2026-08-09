@@ -16,16 +16,27 @@ function clamp(value: number, min = 0, max = 1): number {
 }
 
 function contractAchievement(contract: any): number {
+  const plannedRevenue = Number(
+    contract.sales_plan ??
+    contract.annual_sales_plan ??
+    contract.target_revenue ??
+    contract.kpi_revenue ??
+    contract.planned_revenue ??
+    0,
+  );
+  const actualRevenue = Number(
+    contract.actual_revenue ??
+    contract.sales_amount ??
+    contract.revenue ??
+    0,
+  );
+
+  if (plannedRevenue > 0) {
+    return clamp(actualRevenue / plannedRevenue);
+  }
+
   if (contract.target_clients && contract.actual_clients != null) {
     return clamp(Number(contract.actual_clients) / Number(contract.target_clients));
-  }
-
-  if (contract.planned_revenue && contract.revenue != null) {
-    return clamp(Number(contract.revenue) / Number(contract.planned_revenue));
-  }
-
-  if (contract.kpi_revenue && contract.revenue != null) {
-    return clamp(Number(contract.revenue) / Number(contract.kpi_revenue));
   }
 
   if (contract.client_payment_confirmed) return 1;
@@ -42,21 +53,59 @@ export function calculateAnnualBonusProgress(
     return new Date(dateValue).getFullYear() === year;
   });
 
-  const monthly = new Map<string, number>();
-  yearContracts.forEach(contract => {
-    const dateValue = contract.start_date || contract.start_at || contract.created_at;
-    const date = new Date(dateValue);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    monthly.set(key, Math.max(monthly.get(key) || 0, contractAchievement(contract)));
-  });
+  // Годовой бонус не является payout stream и не попадает в escrow.
+  // Он накапливается только по фактическому выполнению годового плана продаж.
+  const plannedAnnualSales = yearContracts.reduce((sum, contract) => {
+    return sum + Number(
+      contract.sales_plan ??
+      contract.annual_sales_plan ??
+      contract.target_revenue ??
+      contract.kpi_revenue ??
+      contract.planned_revenue ??
+      0,
+    );
+  }, 0);
 
-  const monthsCounted = monthly.size;
-  const planAchievement = monthsCounted > 0
-    ? Array.from(monthly.values()).reduce((sum, value) => sum + value, 0) / monthsCounted
+  const actualAnnualSales = yearContracts.reduce((sum, contract) => {
+    return sum + Number(
+      contract.actual_revenue ??
+      contract.sales_amount ??
+      contract.revenue ??
+      0,
+    );
+  }, 0);
+
+  const revenueBasedAchievement = plannedAnnualSales > 0
+    ? clamp(actualAnnualSales / plannedAnnualSales)
+    : null;
+
+  // Если в конкретном демо-контракте нет денежного плана, используем KPI клиентов.
+  const fallbackAchievements = yearContracts
+    .filter(contract => !Number(
+      contract.sales_plan ??
+      contract.annual_sales_plan ??
+      contract.target_revenue ??
+      contract.kpi_revenue ??
+      contract.planned_revenue ??
+      0,
+    ))
+    .map(contractAchievement);
+
+  const fallbackAchievement = fallbackAchievements.length
+    ? fallbackAchievements.reduce((sum, value) => sum + value, 0) / fallbackAchievements.length
     : 0;
 
-  const accruedBonus = Math.round(ANNUAL_BONUS_MAX * Array.from(monthly.values()).reduce((sum, value) => sum + value, 0) / 12);
-  const progressPercent = Math.round((accruedBonus / ANNUAL_BONUS_MAX) * 100);
+  const planAchievement = revenueBasedAchievement ?? fallbackAchievement;
+  const accruedBonus = Math.round(ANNUAL_BONUS_MAX * planAchievement);
+  const progressPercent = Math.round(planAchievement * 100);
+
+  const months = new Set(
+    yearContracts.map(contract => {
+      const dateValue = contract.start_date || contract.start_at || contract.created_at;
+      const date = new Date(dateValue);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }),
+  );
 
   return {
     year,
@@ -64,7 +113,7 @@ export function calculateAnnualBonusProgress(
     accruedBonus,
     progressPercent,
     planAchievementPercent: Math.round(planAchievement * 100),
-    monthsCounted,
+    monthsCounted: months.size,
   };
 }
 
