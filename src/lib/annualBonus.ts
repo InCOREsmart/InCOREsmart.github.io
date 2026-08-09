@@ -15,8 +15,8 @@ function clamp(value: number, min = 0, max = 1): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function contractAchievement(contract: any): number {
-  const plannedRevenue = Number(
+function getPlannedRevenue(contract: any): number {
+  return Number(
     contract.sales_plan ??
     contract.annual_sales_plan ??
     contract.target_revenue ??
@@ -24,12 +24,31 @@ function contractAchievement(contract: any): number {
     contract.planned_revenue ??
     0,
   );
-  const actualRevenue = Number(
+}
+
+function getActualRevenue(contract: any): number {
+  const explicitActual = Number(
     contract.actual_revenue ??
     contract.sales_amount ??
-    contract.revenue ??
     0,
   );
+
+  if (explicitActual > 0) return explicitActual;
+
+  // В демо revenue = плановая выручка. Для годового бонуса это нельзя
+  // считать фактическими продажами, иначе каждый месяц автоматически даёт 100%.
+  if (contract.target_clients && contract.actual_clients != null && Number(contract.revenue) > 0) {
+    return Number(contract.revenue) * clamp(
+      Number(contract.actual_clients) / Number(contract.target_clients),
+    );
+  }
+
+  return Number(contract.revenue ?? 0);
+}
+
+function contractAchievement(contract: any): number {
+  const plannedRevenue = getPlannedRevenue(contract);
+  const actualRevenue = getActualRevenue(contract);
 
   if (plannedRevenue > 0) {
     return clamp(actualRevenue / plannedRevenue);
@@ -54,41 +73,21 @@ export function calculateAnnualBonusProgress(
   });
 
   // Годовой бонус не является payout stream и не попадает в escrow.
-  // Он накапливается только по фактическому выполнению годового плана продаж.
+  // Он накапливается по фактическому выполнению годового плана продаж.
   const plannedAnnualSales = yearContracts.reduce((sum, contract) => {
-    return sum + Number(
-      contract.sales_plan ??
-      contract.annual_sales_plan ??
-      contract.target_revenue ??
-      contract.kpi_revenue ??
-      contract.planned_revenue ??
-      0,
-    );
+    return sum + getPlannedRevenue(contract);
   }, 0);
 
   const actualAnnualSales = yearContracts.reduce((sum, contract) => {
-    return sum + Number(
-      contract.actual_revenue ??
-      contract.sales_amount ??
-      contract.revenue ??
-      0,
-    );
+    return sum + getActualRevenue(contract);
   }, 0);
 
   const revenueBasedAchievement = plannedAnnualSales > 0
     ? clamp(actualAnnualSales / plannedAnnualSales)
     : null;
 
-  // Если в конкретном демо-контракте нет денежного плана, используем KPI клиентов.
   const fallbackAchievements = yearContracts
-    .filter(contract => !Number(
-      contract.sales_plan ??
-      contract.annual_sales_plan ??
-      contract.target_revenue ??
-      contract.kpi_revenue ??
-      contract.planned_revenue ??
-      0,
-    ))
+    .filter(contract => getPlannedRevenue(contract) <= 0)
     .map(contractAchievement);
 
   const fallbackAchievement = fallbackAchievements.length
