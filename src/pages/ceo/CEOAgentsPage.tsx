@@ -61,7 +61,7 @@ export function CEOAgentsPage() {
             realAgents.forEach(agent => { agent.kpi_achievement = realKPI(agent.contracts); agent.annual_bonus = getAnnualBonusForAgent(agent, 2026); });
           }
         }
-        setAgents(realAgents.length ? realAgents : demoAgents);
+        setAgents([...demoAgents, ...realAgents]);
       } catch (error) {
         console.error(error);
         setAgents(DEMO_AGENTS.map(agent => ({ ...agent, contracts_count: agent.contracts.length, total_revenue: agent.contracts.reduce((sum, contract) => sum + contract.revenue, 0), kpi_achievement: demoKPI(agent), active_contracts: agent.contracts.filter(contract => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS').length, annual_bonus: getAnnualBonusForAgent(agent, 2026) })));
