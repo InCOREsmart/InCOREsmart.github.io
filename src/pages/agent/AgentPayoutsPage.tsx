@@ -22,7 +22,12 @@ export function AgentPayoutsPage() {
         const { data: contractsData } = await supabase.from('contracts').select('*').eq('agent_id', agentData.id);
         setContracts(contractsData || []);
         if (contractsData?.length) {
-          const { data: streamsData } = await supabase.from('contract_payout_streams').select('*').in('contract_id', contractsData.map(c => c.id)).order('created_at', { ascending: false });
+          const { data: streamsData } = await supabase
+            .from('contract_payout_streams')
+            .select('*')
+            .in('contract_id', contractsData.map(c => c.id))
+            .neq('stream_key', 'annual')
+            .order('created_at', { ascending: false });
           setStreams(streamsData || []);
         }
       } catch (err) { console.error(err); } finally { setLoading(false); }
@@ -33,6 +38,8 @@ export function AgentPayoutsPage() {
   if (loading) return <div className="p-8 text-center"><div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]" /><p className="mt-4 text-[#000052]">{t('common.loading')}</p></div>;
   if (!agent) return <div className="p-8 text-center"><p className="text-lg text-[#000052]">{t('ui.agentNotFound')}</p></div>;
 
+  // Годовой бонус намеренно отсутствует здесь: это не payout и не escrow.
+  // Он рассчитывается отдельно и отображается на Dashboard агента и в профиле CEO.
   const total = streams.reduce((sum, s) => sum + (s.amount || 0), 0);
   const paid = streams.filter(s => s.status === 'PAID').reduce((sum, s) => sum + (s.amount || 0), 0);
   const clawback = streams.filter(s => s.status === 'CLAWED_BACK').reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -45,6 +52,7 @@ export function AgentPayoutsPage() {
       PAYABLE: { label: t('ui.payableStatus'), icon: DollarSign, className: 'text-emerald-600' },
       LOCKED: { label: t('ui.lockedStatus'), icon: Lock, className: 'text-gray-500' },
       PENDING: { label: t('ui.pendingVerificationStatus'), icon: Clock, className: 'text-yellow-600' },
+      PENDING_VERIFICATION: { label: t('ui.pendingVerificationStatus'), icon: Clock, className: 'text-yellow-600' },
       CLAWED_BACK: { label: t('ui.clawback'), icon: Ban, className: 'text-red-600' },
       CANCELLED: { label: t('ui.cancelledStatus'), icon: AlertTriangle, className: 'text-gray-500' },
     };
