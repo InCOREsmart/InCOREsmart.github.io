@@ -1,0 +1,61 @@
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../../lib/supabase';
+import { X, Save } from 'lucide-react';
+
+export function EditDraftContractModal({ contract, isOpen, onClose, onSaved }: { contract: any; isOpen: boolean; onClose: () => void; onSaved: (contract: any) => void }) {
+  const { t } = useTranslation();
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ title: '', description: '', revenue: '', deadline: '', kpi_calls: '', kpi_meetings: '', kpi_proposals: '', target_clients: '' });
+
+  useEffect(() => {
+    if (!contract) return;
+    setForm({
+      title: contract.title || '', description: contract.description || '',
+      revenue: String(contract.revenue ?? contract.planned_revenue ?? ''),
+      deadline: contract.deadline ? String(contract.deadline).slice(0, 10) : '',
+      kpi_calls: String(contract.kpi_calls ?? ''), kpi_meetings: String(contract.kpi_meetings ?? ''),
+      kpi_proposals: String(contract.kpi_proposals ?? ''), target_clients: String(contract.target_clients ?? '')
+    });
+  }, [contract]);
+
+  if (!isOpen || !contract) return null;
+  const change = (name: string, value: string) => setForm(prev => ({ ...prev, [name]: value }));
+  const save = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        title: form.title.trim(), description: form.description.trim() || null,
+        revenue: Number(form.revenue || 0), planned_revenue: Number(form.revenue || 0),
+        deadline: form.deadline || null,
+        kpi_calls: Number(form.kpi_calls || 0), kpi_meetings: Number(form.kpi_meetings || 0),
+        kpi_proposals: Number(form.kpi_proposals || 0), target_clients: Number(form.target_clients || 0)
+      };
+      const { data, error } = await supabase.from('contracts').update(payload).eq('id', contract.id).eq('status', 'DRAFT').select('*').single();
+      if (error) throw error;
+      onSaved(data);
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert(t('common.error'));
+    } finally { setSaving(false); }
+  };
+  const input = (name: keyof typeof form, type = 'text') => <input type={type} value={form[name]} onChange={e => change(name, e.target.value)} className="w-full px-4 py-2.5 border border-[#000052]/15 rounded-lg" />;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
+      <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-[#000052]">{t('contract.statuses.DRAFT')}</h2><button onClick={onClose}><X className="w-5 h-5" /></button></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label className="md:col-span-2 text-sm font-semibold text-[#000052]">{t('ui.contractName')}{input('title')}</label>
+        <label className="md:col-span-2 text-sm font-semibold text-[#000052]">{t('ui.description')}{input('description')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('ui.revenue')}{input('revenue','number')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('ui.deadline')}{input('deadline','date')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('contractDetail.calls')}{input('kpi_calls','number')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('contractDetail.meetings')}{input('kpi_meetings','number')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('contractDetail.proposals')}{input('kpi_proposals','number')}</label>
+        <label className="text-sm font-semibold text-[#000052]">{t('contractDetail.clients')}{input('target_clients','number')}</label>
+      </div>
+      <div className="flex gap-3 mt-6"><button onClick={onClose} className="flex-1 py-3 bg-[#000052]/5 rounded-lg font-semibold">{t('common.cancel')}</button><button onClick={save} disabled={saving || !form.title.trim()} className="flex-1 py-3 bg-[#B8860B] text-white rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"><Save className="w-4 h-4" />{saving ? t('common.loading') : t('common.save')}</button></div>
+    </div>
+  </div>;
+}
