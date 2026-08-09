@@ -17,31 +17,15 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any) => ({
   payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}), ...(supplement.payouts || {}) },
   ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}), ...(supplement.ceo || {}) },
   ui: { ...(base.ui || {}), ...(extra.ui || {}), ...(ui.ui || {}), ...(supplement.ui || {}) },
+  contractDetail: { ...(base.contractDetail || {}), ...(extra.contractDetail || {}), ...(ui.contractDetail || {}), ...(supplement.contractDetail || {}) },
 });
 
 const ruTranslation = mergeLocale(ru, coreTranslations.ru, uiTranslations.ru, uiSupplement.ru);
 const enTranslation = mergeLocale(en, coreTranslations.en, uiTranslations.en, uiSupplement.en);
 const kkTranslation = mergeLocale(kk, coreTranslations.kk, uiTranslations.kk, uiSupplement.kk);
 const azTranslation = mergeLocale(az, coreTranslations.az, uiTranslations.az, uiSupplement.az);
-
 const resources = { ru: { translation: ruTranslation }, en: { translation: enTranslation }, kk: { translation: kkTranslation }, kz: { translation: kkTranslation }, az: { translation: azTranslation } };
 
-i18n.use(LanguageDetector).use(initReactI18next).init({
-  resources,
-  supportedLngs: ["ru", "en", "kk", "kz", "az"],
-  fallbackLng: "ru",
-  nonExplicitSupportedLngs: true,
-  cleanCode: true,
-  load: "languageOnly",
-  defaultNS: "translation",
-  interpolation: { escapeValue: false },
-  detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
-  returnNull: false,
-  returnEmptyString: false,
-  saveMissing: false,
-  react: { useSuspense: false },
-  missingKeyHandler: (lngs, namespace, key) => { if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs); },
-  parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
-});
+i18n.use(LanguageDetector).use(initReactI18next).init({ resources, supportedLngs: ["ru", "en", "kk", "kz", "az"], fallbackLng: "ru", nonExplicitSupportedLngs: true, cleanCode: true, load: "languageOnly", defaultNS: "translation", interpolation: { escapeValue: false }, detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" }, returnNull: false, returnEmptyString: false, saveMissing: false, react: { useSuspense: false }, missingKeyHandler: (lngs, namespace, key) => { if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs); }, parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "" });
 
 export default i18n;
