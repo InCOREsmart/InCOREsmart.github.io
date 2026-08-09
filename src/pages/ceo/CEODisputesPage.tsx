@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { Scale, AlertCircle, CheckCircle, Clock, XCircle, Plus, Search, Filter, ShieldCheck, DollarSign, Users } from 'lucide-react';
 
 const DEMO_DISPUTES = [
