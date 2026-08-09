@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { DollarSign, Shield, TrendingUp, CheckCircle, BarChart3, Wallet, Award } from 'lucide-react';
 import { DEMO_AGENTS } from '../../lib/demoData';
 import { calculateAnnualBonusProgress, getEscrowAmount, getPaidAmount } from '../../lib/annualBonus';
+import { PLATFORM_FEE_PERCENT } from '../../lib/smartContractLogic';
 
 const n = (v: any) => Number(v || 0);
 const active = (c: any) => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS';
@@ -55,7 +56,11 @@ export function CEODashboard() {
           const financialStreams = ps.filter((s: any) => s.stream_key !== 'annual');
           const escrowFromStreams = getEscrowAmount(c, ps); const escrow = escrowFromStreams || n(c.escrow_amount); const paid = getPaidAmount(ps);
           const currentPending = financialStreams.filter((s: any) => (s.status === 'UNLOCKED' || s.status === 'PAYABLE') && inAugust(s)).reduce((sum: number, x: any) => sum + n(x.amount), 0);
-          const revenue = n(c.revenue || c.planned_revenue); const companyProfit = c.is_demo ? revenue - escrow : n(c.company_profit || revenue - escrow);
+          const revenue = n(c.revenue || c.planned_revenue);
+          const platformFee = Math.round(escrow * PLATFORM_FEE_PERCENT / 100);
+          // Единая финансовая модель: выручка минус обязательства агентам и комиссия InCORE.
+          // annual bonus не участвует в escrow и поэтому здесь тоже не учитывается.
+          const companyProfit = revenue - escrow - platformFee;
           const roi = c.roi_percentage != null ? n(c.roi_percentage) : revenue > 0 ? Math.round(companyProfit / revenue * 100) : 0;
           totalRevenue += revenue; totalEscrow += escrow; totalPaid += paid; profit += companyProfit; pending += currentPending; if (revenue > 0) { roiSum += roi; roiCount++; }
           financialStreams.forEach((s: any) => {
