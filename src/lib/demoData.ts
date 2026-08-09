@@ -85,7 +85,6 @@ export interface DemoContract {
 const DEMO_AS_OF_DATE = new Date('2026-08-08T23:59:59Z');
 const PLATFORM_FEE_PERCENT = 12;
 
-// Единый сценарий демо-контракта, соответствующий текущей форме создания контракта.
 const SALES_PLAN = {
   clients: 10,
   averageCheck: 375,
@@ -95,19 +94,22 @@ const SALES_PLAN = {
   proposals: 40,
 };
 
+// Процентные потоки считаются от всей плановой выручки.
+// Годовой бонус отображается отдельно и никогда не входит в escrow.
 const STREAM_CONFIG = [
-  { key: 'new_sales_property' as const, title: 'Новые продажи: Имущество/риски', percent: 20, amount: 750, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'new_sales_casco' as const, title: 'Новые продажи: Автопарки (КАСКО)', percent: 15, amount: 563, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'new_sales_dms' as const, title: 'Новые продажи: Медицина (ДМС)', percent: 10, amount: 375, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'renewal' as const, title: 'Продление договоров', percent: 15, amount: 563, condition: 'Подписание доп. соглашения в CRM' },
-  { key: 'cross_sell' as const, title: 'Кросс-продажи', percent: 10, amount: 375, condition: 'Продажа дополнительного продукта подтверждена' },
-  { key: 'plan_bonus' as const, title: 'Бонус за выполнение плана', percent: 10, amount: 1875, condition: '100% выполнение KPI квартала' },
+  { key: 'new_sales_property' as const, title: 'Новые продажи: Имущество/риски', percent: 20, amount: roundMoney(SALES_PLAN.revenue * 0.20), condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'new_sales_casco' as const, title: 'Новые продажи: Автопарки (КАСКО)', percent: 15, amount: roundMoney(SALES_PLAN.revenue * 0.15), condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'new_sales_dms' as const, title: 'Новые продажи: Медицина (ДМС)', percent: 10, amount: roundMoney(SALES_PLAN.revenue * 0.10), condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'renewal' as const, title: 'Продление договоров', percent: 15, amount: roundMoney(SALES_PLAN.revenue * 0.15), condition: 'Подписание доп. соглашения в CRM' },
+  { key: 'cross_sell' as const, title: 'Кросс-продажи', percent: 10, amount: roundMoney(SALES_PLAN.revenue * 0.10), condition: 'Продажа дополнительного продукта подтверждена' },
+  { key: 'plan_bonus' as const, title: 'Бонус за выполнение плана', percent: 10, amount: roundMoney(SALES_PLAN.revenue * 0.10), condition: '100% выполнение KPI квартала' },
   { key: 'retention' as const, title: 'Удержание 90 дней', percent: 0, amount: 200, condition: 'Клиент активен более 90 дней' },
   { key: 'annual' as const, title: 'Годовой бонус', percent: 0, amount: 7000, condition: 'Годовой KPI подтверждён в CRM' },
 ];
 
-// В эскроу входит всё, кроме годового бонуса.
-const ESCROW_PER_CONTRACT = 750 + 563 + 375 + 563 + 375 + 1875 + 200;
+const ESCROW_PER_CONTRACT = STREAM_CONFIG
+  .filter(stream => stream.key !== 'annual')
+  .reduce((sum, stream) => sum + stream.amount, 0);
 
 function roundMoney(value: number): number {
   return Math.round(value);
@@ -171,8 +173,6 @@ function buildPayoutStreams(
 
     if (config.key === 'new_sales_property') {
       if (isCurrentMonth) {
-        // Демонстрация текущего реального сценария: $1,250 выплачено по реальному контракту отдельно;
-        // демо-контракт сохраняет ту же механику, но свои суммы.
         status = 'PAID';
         unlockedAt = toDate(clientPaymentDate);
         paidAt = toDate(new Date(clientPaymentDate.getTime() + 86400000));
@@ -212,10 +212,8 @@ function buildPayoutStreams(
         paidAt = isCompleted ? toDate(new Date(deadline.getTime() + 86400000)) : null;
       }
     } else if (config.key === 'retention') {
-      // 90-day retention is not part of the current escrow release until the retention period passes.
       status = 'LOCKED';
     } else if (config.key === 'annual') {
-      // Annual bonus is visual accrual only and never enters escrow.
       status = 'LOCKED';
     }
 
@@ -341,25 +339,14 @@ function generateMonthlyContracts(
     const actualClients = Math.max(0, Math.round(targetClients * performance));
 
     const contractId = `contract-${agentId}-${index}`;
-    const payoutStreams = buildPayoutStreams(
-      contractId,
-      contractStart,
-      contractDeadline,
-      actualClients,
-      performance,
-      isCurrentMonth,
-      isCompleted,
-    );
-
+    const payoutStreams = buildPayoutStreams(contractId, contractStart, contractDeadline, actualClients, performance, isCurrentMonth, isCompleted);
     const escrowAmount = ESCROW_PER_CONTRACT;
-    const totalPaid = payoutStreams
-      .filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual')
-      .reduce((sum, stream) => sum + stream.amount, 0);
-    const totalLocked = payoutStreams
-      .filter(stream => stream.status === 'LOCKED' && stream.stream_key !== 'annual')
-      .reduce((sum, stream) => sum + stream.amount, 0);
+    const totalPaid = payoutStreams.filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
+    const totalLocked = payoutStreams.filter(stream => stream.status === 'LOCKED' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
     const platformFee = roundMoney(escrowAmount * PLATFORM_FEE_PERCENT / 100);
-    const companyProfit = SALES_PLAN.revenue - escrowAmount;
+    // Та же финансовая формула, что и в smartContractLogic:
+    // выручка - escrow - комиссия InCORE. Годовой бонус не участвует.
+    const companyProfit = SALES_PLAN.revenue - escrowAmount - platformFee;
 
     const contract: DemoContract = {
       id: contractId,
@@ -428,55 +415,11 @@ export function getDemoContractById(id: string): DemoContract | null {
 }
 
 export function calculateContractKPI(contract: Pick<DemoContract, 'actual_calls' | 'kpi_calls' | 'actual_meetings' | 'kpi_meetings' | 'actual_proposals' | 'kpi_proposals' | 'actual_clients' | 'target_clients'>): number {
-  const calls = contract.kpi_calls > 0 ? contract.actual_calls / contract.kpi_calls : 0;
-  const meetings = contract.kpi_meetings > 0 ? contract.actual_meetings / contract.kpi_meetings : 0;
-  const proposals = contract.kpi_proposals > 0 ? contract.actual_proposals / contract.kpi_proposals : 0;
-  const clients = contract.target_clients > 0 ? contract.actual_clients / contract.target_clients : 0;
-  return Math.round(((calls + meetings + proposals + clients) / 4) * 100);
-}
-
-export function calculateAgentKPI(agent: { contracts: Array<Pick<DemoContract, 'actual_calls' | 'kpi_calls' | 'actual_meetings' | 'kpi_meetings' | 'actual_proposals' | 'kpi_proposals' | 'actual_clients' | 'target_clients'>> }): number {
-  if (agent.contracts.length === 0) return 0;
-  const total = agent.contracts.reduce((sum, contract) => sum + calculateContractKPI(contract), 0);
-  return Math.round(total / agent.contracts.length);
-}
-
-export function calculateRevenueByMonth(): { month: string; value: number; label: string }[] {
-  const months = [
-    { key: '2026-01', label: 'Янв' },
-    { key: '2026-02', label: 'Фев' },
-    { key: '2026-03', label: 'Мар' },
-    { key: '2026-04', label: 'Апр' },
-    { key: '2026-05', label: 'Май' },
-    { key: '2026-06', label: 'Июн' },
-    { key: '2026-07', label: 'Июл' },
-    { key: '2026-08', label: 'Авг' },
+  const values = [
+    contract.kpi_calls > 0 ? contract.actual_calls / contract.kpi_calls : 0,
+    contract.kpi_meetings > 0 ? contract.actual_meetings / contract.kpi_meetings : 0,
+    contract.kpi_proposals > 0 ? contract.actual_proposals / contract.kpi_proposals : 0,
+    contract.target_clients > 0 ? contract.actual_clients / contract.target_clients : 0,
   ];
-
-  return months.map(month => {
-    const value = DEMO_AGENTS.reduce((sum, agent) =>
-      sum + agent.contracts
-        .filter(contract => contract.month === month.key)
-        .reduce((contractSum, contract) => contractSum + contract.revenue, 0), 0);
-    return { month: month.key, value, label: month.label };
-  });
-}
-
-export function calculateTotalBitrixDeals(): number {
-  return DEMO_AGENTS.reduce(
-    (sum, agent) => sum + agent.contracts.reduce((contractSum, contract) => contractSum + contract.bitrix_deals.length, 0),
-    0
-  );
-}
-
-export function calculateSalesGoalAchievement(): { planned: number; actual: number; percent: number } {
-  const currentMonth = '2026-08';
-  const contracts = DEMO_AGENTS.flatMap(agent => agent.contracts.filter(contract => contract.month === currentMonth));
-  const planned = contracts.reduce((sum, contract) => sum + contract.revenue, 0);
-  const actual = contracts.reduce((sum, contract) => sum + contract.revenue * (contract.actual_clients / Math.max(contract.target_clients, 1)), 0);
-  return {
-    planned: roundMoney(planned),
-    actual: roundMoney(actual),
-    percent: planned > 0 ? Math.round((actual / planned) * 100) : 0,
-  };
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 100);
 }
