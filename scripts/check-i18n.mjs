@@ -10,8 +10,7 @@ const localeFiles = {
   kk: path.join(localeDir, 'kk.json'),
   az: path.join(localeDir, 'az.json'),
 };
-const sourceFiles = [
-  ...Object.values(localeFiles),
+const translationSources = [
   path.join(srcDir, 'i18n', 'core.ts'),
   path.join(srcDir, 'i18n', 'uiTranslations.ts'),
   path.join(srcDir, 'i18n', 'uiSupplement.ts'),
@@ -38,31 +37,70 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
-function keysFromSource(text) {
-  const keys = new Set();
-  for (const match of text.matchAll(/['"]([A-Za-z][A-Za-z0-9_.-]+)['"]\s*:/g)) keys.add(match[1]);
-  return keys;
+function extractBalancedObject(text, start) {
+  const open = text.indexOf('{', start);
+  if (open < 0) return '';
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let i = open; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '{') depth += 1;
+    if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(open, i + 1);
+    }
+  }
+  return '';
 }
 
-const localeText = {};
+function extractLocaleBlock(text, locale) {
+  const marker = new RegExp(`\\b${locale}\\s*:`).exec(text);
+  return marker ? extractBalancedObject(text, marker.index) : '';
+}
+
+function hasTranslationKey(sourceText, key) {
+  const parts = key.split('.');
+  if (parts.length === 1) {
+    return new RegExp(`(?:["']${parts[0]}["']|\\b${parts[0]})\\s*:`).test(sourceText);
+  }
+
+  const group = parts[0];
+  const leaf = parts[parts.length - 1];
+  const groupMarker = new RegExp(`(?:["']${group}["']|\\b${group})\\s*:`).exec(sourceText);
+  if (!groupMarker) return false;
+  const groupBlock = extractBalancedObject(sourceText, groupMarker.index);
+  if (!groupBlock) return false;
+
+  if (parts.length === 2) {
+    return new RegExp(`(?:["']${leaf}["']|\\b${leaf})\\s*:`).test(groupBlock);
+  }
+
+  return hasTranslationKey(groupBlock, parts.slice(1).join('.'));
+}
+
 const localeKeys = {};
+const localeSourceText = { ru: [], en: [], kk: [], az: [] };
+
 for (const [locale, file] of Object.entries(localeFiles)) {
-  const text = fs.readFileSync(file, 'utf8');
-  localeText[locale] = text;
-  localeKeys[locale] = flatten(JSON.parse(text));
+  localeKeys[locale] = flatten(JSON.parse(fs.readFileSync(file, 'utf8')));
 }
 
-for (const extra of sourceFiles.slice(4)) {
-  const text = fs.readFileSync(extra, 'utf8');
-  const name = path.basename(extra);
-  const groups = ['ru', 'en', 'kk', 'az'];
-  for (const locale of groups) {
-    const marker = new RegExp(`${locale}\\s*:\\s*\\{`);
-    const match = marker.exec(text);
-    if (!match) continue;
-    const rest = text.slice(match.index);
-    const keys = keysFromSource(rest.slice(0, rest.indexOf(`\n  ${groups.find(g => g !== locale)}:`) > -1 ? rest.indexOf(`\n  ${groups.find(g => g !== locale)}:`) : rest.length));
-    for (const key of keys) localeText[locale] += ` ${key}:`;
+for (const file of translationSources) {
+  const text = fs.readFileSync(file, 'utf8');
+  for (const locale of Object.keys(localeSourceText)) {
+    const block = extractLocaleBlock(text, locale);
+    if (block) localeSourceText[locale].push(block);
   }
 }
 
@@ -83,8 +121,10 @@ const missing = [];
 for (const [key, filesUsing] of used) {
   for (const locale of Object.keys(localeFiles)) {
     const jsonHas = localeKeys[locale].has(key);
-    const extraHas = new RegExp(`(?:["'])${key.replaceAll('.', '\\.')}(?:["'])\\s*:`).test(localeText[locale]);
-    if (!jsonHas && !extraHas) missing.push(`${locale}: ${key} (${[...filesUsing].join(', ')})`);
+    const sourceHas = localeSourceText[locale].some((source) => hasTranslationKey(source, key));
+    if (!jsonHas && !sourceHas) {
+      missing.push(`${locale}: ${key} (${[...filesUsing].join(', ')})`);
+    }
   }
 }
 
