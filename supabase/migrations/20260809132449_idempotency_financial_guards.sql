@@ -64,7 +64,46 @@ BEFORE UPDATE OF status ON public.contract_payout_streams
 FOR EACH ROW
 EXECUTE FUNCTION public.prevent_duplicate_payout_transition();
 
--- 4. Money values must never be negative.
+-- 4. A payout ledger event is valid only when its stream is actually PAID.
+--    This closes the second-request race in the current client code: even if
+--    the status update loses a race, a duplicate PAYOUT_TO_AGENT event cannot
+--    be inserted afterwards.
+CREATE OR REPLACE FUNCTION public.validate_payout_ledger_event()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  stream_id uuid;
+  stream_status text;
+BEGIN
+  IF NEW.event_type = 'PAYOUT_TO_AGENT' THEN
+    stream_id := NULLIF(NEW.metadata ->> 'stream_id', '')::uuid;
+
+    SELECT status
+      INTO stream_status
+      FROM public.contract_payout_streams
+     WHERE id = stream_id
+       AND contract_id = NEW.contract_id;
+
+    IF stream_status IS DISTINCT FROM 'PAID' THEN
+      RAISE EXCEPTION 'Cannot create payout ledger event for stream % because status is %', stream_id, COALESCE(stream_status, 'NOT_FOUND')
+        USING ERRCODE = 'P0001';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_validate_payout_ledger_event
+  ON public.escrow_events;
+
+CREATE TRIGGER trg_validate_payout_ledger_event
+BEFORE INSERT ON public.escrow_events
+FOR EACH ROW
+EXECUTE FUNCTION public.validate_payout_ledger_event();
+
+-- 5. Money values must never be negative.
 ALTER TABLE public.contract_payout_streams
   DROP CONSTRAINT IF EXISTS contract_payout_streams_amount_nonnegative;
 
