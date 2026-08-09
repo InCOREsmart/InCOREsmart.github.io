@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Activity, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getOracleTrustLevel } from '../../lib/smart-contract/oracleTrust';
 import { checkContractHealth } from '../../lib/smart-contract/healthCheck';
 
@@ -8,31 +7,25 @@ type Props = { contract: any };
 
 export function ContractTrustHealthPanel({ contract }: Props) {
   const { t } = useTranslation();
-  const [trust, setTrust] = useState<any>(null);
-  const [health, setHealth] = useState<any>(null);
+  const health = checkContractHealth({
+    id: contract?.id || '',
+    status: contract?.status,
+    engineVersion: contract?.engine_version || '1.0',
+    version: contract?.version ?? 1,
+  });
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const [trustResult, healthResult] = await Promise.all([
-          getOracleTrustLevel(contract?.id),
-          checkContractHealth(contract)
-        ]);
-        if (active) {
-          setTrust(trustResult);
-          setHealth(healthResult);
-        }
-      } catch (error) {
-        console.error('Contract trust/health check failed:', error);
-      }
-    };
-    if (contract?.id) load();
-    return () => { active = false; };
-  }, [contract]);
+  const latestOracle = Array.isArray(contract?.oracle_events)
+    ? contract.oracle_events[contract.oracle_events.length - 1]
+    : null;
+  const trust = getOracleTrustLevel({
+    confirmed: latestOracle ? latestOracle.event_type !== 'ORACLE_ERROR' : true,
+    signatureValid: latestOracle?.signature_valid,
+    duplicate: latestOracle?.duplicate === true,
+    stale: latestOracle?.stale === true,
+  });
 
-  const trustLabel = trust?.level ? String(trust.level) : t('common.loading');
-  const healthy = health?.healthy !== false;
+  const healthy = health.healthy;
+  const trustLabel = t(trust.labelKey, trust.level);
 
   return (
     <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
@@ -54,6 +47,7 @@ export function ContractTrustHealthPanel({ contract }: Props) {
           <span className="text-sm font-semibold">
             {healthy ? t('smartContract.healthy', 'Healthy') : t('smartContract.unhealthy', 'Attention required')}
           </span>
+          {health.issues.length > 0 && <ul className="mt-2 text-xs text-red-600 space-y-1">{health.issues.map(issue => <li key={issue}>• {issue}</li>)}</ul>}
         </div>
       </div>
     </div>
