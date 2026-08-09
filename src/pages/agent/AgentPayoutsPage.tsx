@@ -48,7 +48,7 @@ export function AgentPayoutsPage() {
       case 'UNLOCKED': return { icon: Unlock, color: 'text-green-600', bg: 'bg-green-100', label: t('ui.unlockedStatus') };
       case 'PAYABLE': return { icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-100', label: t('ui.payableStatus') };
       case 'PAID': return { icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-200', label: t('ui.paidStatus') };
-      case 'CLAWED_BACK': return { icon: Ban, color: 'text-red-600', bg: 'bg-red-100', label: 'Clawback' };
+      case 'CLAWED_BACK': return { icon: Ban, color: 'text-red-600', bg: 'bg-red-100', label: t('ui.clawback') };
       case 'CANCELLED': return { icon: Ban, color: 'text-gray-600', bg: 'bg-gray-200', label: t('ui.cancelledStatus') };
       default: return { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-100', label: status };
     }
@@ -86,11 +86,11 @@ export function AgentPayoutsPage() {
           <p className="text-xl font-bold">${totalAmount.toLocaleString()}</p>
         </div>
         <div className="bg-green-600 text-white p-4 rounded-xl">
-          <p className="text-xs opacity-80 mb-1">Выплачено</p>
+          <p className="text-xs opacity-80 mb-1">{t('ui.paid')}</p>
           <p className="text-xl font-bold">${totalPaid.toLocaleString()}</p>
         </div>
         <div className="bg-[#B8860B] text-white p-4 rounded-xl">
-          <p className="text-xs opacity-80 mb-1">Заблокировано</p>
+          <p className="text-xs opacity-80 mb-1">{t('ui.lockedAmount')}</p>
           <p className="text-xl font-bold">${totalLocked.toLocaleString()}</p>
         </div>
         <div className="bg-red-600 text-white p-4 rounded-xl">
@@ -132,31 +132,19 @@ export function AgentPayoutsPage() {
                         <div className="font-semibold text-[#000052] text-sm">{stream.title}</div>
                         <div className="text-xs text-[#000052]/60">{stream.stream_key}</div>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm text-[#000052]">{getContractTitle(stream.contract_id)}</div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm font-bold text-[#000052]">${stream.amount.toLocaleString()}</div>
-                      </td>
+                      <td className="py-4 px-4"><div className="text-sm text-[#000052]">{getContractTitle(stream.contract_id)}</div></td>
+                      <td className="py-4 px-4"><div className="text-sm font-bold text-[#000052]">${stream.amount.toLocaleString()}</div></td>
                       <td className="py-4 px-4">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${statusInfo.bg} ${statusInfo.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {statusInfo.label}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="text-xs text-[#000052]/70 max-w-xs">
-                          {stream.unlock_condition || '—'}
-                        </div>
-                      </td>
+                      <td className="py-4 px-4"><div className="text-xs text-[#000052]/70 max-w-xs">{stream.unlock_condition || '—'}</div></td>
                       <td className="py-4 px-4">
                         <div className="text-xs text-[#000052]/70">
-                          {stream.unlocked_at && (
-                            <div>Разб.: {new Date(stream.unlocked_at).toLocaleDateString('ru-RU')}</div>
-                          )}
-                          {stream.paid_at && (
-                            <div className="text-green-600">Выпл.: {new Date(stream.paid_at).toLocaleDateString('ru-RU')}</div>
-                          )}
+                          {stream.unlocked_at && <div>{t('ui.unlockedShort')} {new Date(stream.unlocked_at).toLocaleDateString()}</div>}
+                          {stream.paid_at && <div className="text-green-600">{t('ui.paidShort')} {new Date(stream.paid_at).toLocaleDateString()}</div>}
                         </div>
                       </td>
                     </tr>
@@ -174,9 +162,7 @@ export function AgentPayoutsPage() {
             <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-bold text-yellow-800 mb-1">{t('ui.clawbackWarningTitle')}</h3>
-              <p className="text-sm text-yellow-700">
-                {t('agent.clawbackWarning')}
-              </p>
+              <p className="text-sm text-yellow-700">{t('agent.clawbackWarning')}</p>
             </div>
           </div>
         </div>
