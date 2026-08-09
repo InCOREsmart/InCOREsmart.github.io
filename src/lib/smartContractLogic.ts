@@ -70,7 +70,8 @@ export const PAYOUT_STREAMS_CONFIG = {
 export const PLATFORM_FEE_PERCENT = 12; // Комиссия InCORE 12% от эскроу
 
 // ============================================
-// ФУНКЦИЯ 1: Создание 6 потоков выплат для контракта
+// ФУНКЦИЯ 1: Создание потоков выплат для контракта
+// Годовой бонус НЕ является потоком эскроу.
 // ============================================
 
 export async function createPayoutStreamsForContract(
@@ -81,10 +82,12 @@ export async function createPayoutStreamsForContract(
   targetClientsCrossSell: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Расчёт сумм по каждому потоку
-    const newSalesRevenue = (plannedRevenue / 3) * 1; // 1/3 от общей выручки на новые продажи
-    const renewalRevenue = (plannedRevenue / 3) * 1;
-    const crossSellRevenue = (plannedRevenue / 3) * 1;
+    // Расчёт сумм по каждому эскроу-потоку.
+    // Годовой бонус намеренно НЕ создаётся в contract_payout_streams:
+    // он рассчитывается отдельно и только отображается в кабинетах агента и CEO.
+    const newSalesRevenue = plannedRevenue / 3;
+    const renewalRevenue = plannedRevenue / 3;
+    const crossSellRevenue = plannedRevenue / 3;
 
     const streams = [
       {
@@ -92,7 +95,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'new_sales_property',
         title: PAYOUT_STREAMS_CONFIG.new_sales_property.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_property.percent,
-        amount: Math.round(newSalesRevenue * 0.20), // 20% от суммы договоров
+        amount: Math.round(newSalesRevenue * 0.20),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_property.unlock_condition,
       },
@@ -101,7 +104,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'new_sales_casco',
         title: PAYOUT_STREAMS_CONFIG.new_sales_casco.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_casco.percent,
-        amount: Math.round(newSalesRevenue * 0.15), // 15%
+        amount: Math.round(newSalesRevenue * 0.15),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_casco.unlock_condition,
       },
@@ -110,7 +113,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'new_sales_dms',
         title: PAYOUT_STREAMS_CONFIG.new_sales_dms.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_dms.percent,
-        amount: Math.round(newSalesRevenue * 0.10), // 10%
+        amount: Math.round(newSalesRevenue * 0.10),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_dms.unlock_condition,
       },
@@ -119,7 +122,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'renewal',
         title: PAYOUT_STREAMS_CONFIG.renewal.title,
         percent: PAYOUT_STREAMS_CONFIG.renewal.percent,
-        amount: Math.round(renewalRevenue * 0.15), // 15%
+        amount: Math.round(renewalRevenue * 0.15),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.renewal.unlock_condition,
       },
@@ -128,7 +131,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'cross_sell',
         title: PAYOUT_STREAMS_CONFIG.cross_sell.title,
         percent: PAYOUT_STREAMS_CONFIG.cross_sell.percent,
-        amount: Math.round(crossSellRevenue * 0.10), // 10%
+        amount: Math.round(crossSellRevenue * 0.10),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.cross_sell.unlock_condition,
       },
@@ -137,7 +140,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'plan_bonus',
         title: PAYOUT_STREAMS_CONFIG.plan_bonus.title,
         percent: PAYOUT_STREAMS_CONFIG.plan_bonus.percent,
-        amount: Math.round(plannedRevenue * 0.10), // 10% от общей выручки
+        amount: Math.round(plannedRevenue * 0.10),
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.plan_bonus.unlock_condition,
       },
@@ -150,29 +153,21 @@ export async function createPayoutStreamsForContract(
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.retention.unlock_condition,
       },
-      {
-        contract_id: contractId,
-        stream_key: 'annual',
-        title: PAYOUT_STREAMS_CONFIG.annual.title,
-        percent: 0,
-        amount: PAYOUT_STREAMS_CONFIG.annual.fixed_amount || 7000,
-        status: 'LOCKED',
-        unlock_condition: PAYOUT_STREAMS_CONFIG.annual.unlock_condition,
-      },
     ];
 
     const { error } = await supabase.from('contract_payout_streams').insert(streams);
     if (error) throw error;
 
-    // Записываем событие ESCROW_CREATED в журнал
+    // В эскроу попадают только реальные payout streams. Годовой бонус сюда не входит.
     const totalEscrow = streams.reduce((sum, s) => sum + s.amount, 0);
-    await supabase.from('escrow_events').insert({
+    const { error: escrowError } = await supabase.from('escrow_events').insert({
       contract_id: contractId,
       event_type: 'ESCROW_CREATED',
       amount: totalEscrow,
       actor_role: 'SYSTEM',
-      metadata: { streams_count: streams.length, total_escrow: totalEscrow },
+      metadata: { streams_count: streams.length, total_escrow: totalEscrow, annual_bonus_excluded: true },
     });
+    if (escrowError) throw escrowError;
 
     return { success: true };
   } catch (err) {
@@ -191,7 +186,6 @@ export async function simulateOracleEvent(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // 1. Записываем событие в oracle_events
     const { error: oracleError } = await supabase.from('oracle_events').insert({
       contract_id: contractId,
       event_type: eventType,
@@ -202,7 +196,6 @@ export async function simulateOracleEvent(
     });
     if (oracleError) throw oracleError;
 
-    // 2. Обрабатываем событие в зависимости от типа
     switch (eventType) {
       case 'CLIENT_PAYMENT_CONFIRMED':
         await handleClientPaymentConfirmed(contractId, userId);
@@ -223,11 +216,11 @@ export async function simulateOracleEvent(
         await handlePlanAchieved(contractId, userId);
         break;
       case 'ANNUAL_BONUS_CONFIRMED':
-        await handleAnnualBonusConfirmed(contractId, userId);
+        // Годовой бонус не разблокирует и не создаёт эскроу-платёж.
+        // Событие сохраняется только как Oracle/audit-событие.
         break;
       case 'DISPUTE_OPENED':
       case 'DISPUTE_RESOLVED':
-        // Обрабатывается отдельно через таблицу disputes
         break;
     }
 
@@ -243,28 +236,25 @@ export async function simulateOracleEvent(
 // ============================================
 
 async function handleClientPaymentConfirmed(contractId: string, userId: string) {
-  // Обновляем контракт
   await supabase
     .from('contracts')
-    .update({ 
-      client_payment_confirmed: true, 
+    .update({
+      client_payment_confirmed: true,
       client_payment_date: new Date().toISOString(),
       oracle_status: 'VERIFIED',
       escrow_status: 'FUNDED'
     })
     .eq('id', contractId);
 
-  // Разблокируем потоки новых продаж (все 3 типа)
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
+    .update({
+      status: 'UNLOCKED',
+      unlocked_at: new Date().toISOString()
     })
     .eq('contract_id', contractId)
     .in('stream_key', ['new_sales_property', 'new_sales_casco', 'new_sales_dms']);
 
-  // Записываем в журнал эскроу
   const { data: streams } = await supabase
     .from('contract_payout_streams')
     .select('amount')
@@ -284,23 +274,20 @@ async function handleClientPaymentConfirmed(contractId: string, userId: string) 
 }
 
 async function handleClientChurnedBefore90Days(contractId: string, userId: string) {
-  // Применяем clawback к retention-потоку
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'CLAWED_BACK', 
+    .update({
+      status: 'CLAWED_BACK',
       clawback_reason: 'Клиент ушёл до 90 дней. Бонус за удержание не выплачивается.'
     })
     .eq('contract_id', contractId)
     .eq('stream_key', 'retention');
 
-  // Обновляем контракт
   await supabase
     .from('contracts')
     .update({ clawback_applied: true })
     .eq('id', contractId);
 
-  // Записываем в журнал
   await supabase.from('escrow_events').insert({
     contract_id: contractId,
     event_type: 'CLAWBACK',
@@ -312,12 +299,11 @@ async function handleClientChurnedBefore90Days(contractId: string, userId: strin
 }
 
 async function handleRetentionPeriodPassed(contractId: string, userId: string) {
-  // Разблокируем retention-поток
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
+    .update({
+      status: 'UNLOCKED',
+      unlocked_at: new Date().toISOString()
     })
     .eq('contract_id', contractId)
     .eq('stream_key', 'retention');
@@ -335,9 +321,9 @@ async function handleRetentionPeriodPassed(contractId: string, userId: string) {
 async function handleRenewalConfirmed(contractId: string, userId: string) {
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
+    .update({
+      status: 'UNLOCKED',
+      unlocked_at: new Date().toISOString()
     })
     .eq('contract_id', contractId)
     .eq('stream_key', 'renewal');
@@ -362,9 +348,9 @@ async function handleRenewalConfirmed(contractId: string, userId: string) {
 async function handleCrossSellConfirmed(contractId: string, userId: string) {
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
+    .update({
+      status: 'UNLOCKED',
+      unlocked_at: new Date().toISOString()
     })
     .eq('contract_id', contractId)
     .eq('stream_key', 'cross_sell');
@@ -389,9 +375,9 @@ async function handleCrossSellConfirmed(contractId: string, userId: string) {
 async function handlePlanAchieved(contractId: string, userId: string) {
   await supabase
     .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
+    .update({
+      status: 'UNLOCKED',
+      unlocked_at: new Date().toISOString()
     })
     .eq('contract_id', contractId)
     .eq('stream_key', 'plan_bonus');
@@ -413,31 +399,16 @@ async function handlePlanAchieved(contractId: string, userId: string) {
   });
 }
 
+// ============================================
+// ГОДОВОЙ БОНУС
+// Не является payout stream и никогда не попадает в escrow.
+// Расчёт выполняется в annualBonus.ts и отображается отдельно.
+// ============================================
+
 async function handleAnnualBonusConfirmed(contractId: string, userId: string) {
-  await supabase
-    .from('contract_payout_streams')
-    .update({ 
-      status: 'UNLOCKED', 
-      unlocked_at: new Date().toISOString() 
-    })
-    .eq('contract_id', contractId)
-    .eq('stream_key', 'annual');
-
-  const { data: stream } = await supabase
-    .from('contract_payout_streams')
-    .select('amount')
-    .eq('contract_id', contractId)
-    .eq('stream_key', 'annual')
-    .single();
-
-  await supabase.from('escrow_events').insert({
-    contract_id: contractId,
-    event_type: 'PARTIAL_RELEASE',
-    amount: stream?.amount || 0,
-    actor_role: 'ORACLE',
-    actor_id: userId,
-    metadata: { event: 'ANNUAL_BONUS_CONFIRMED', unlock_date: '2027-01-15' },
-  });
+  // Никаких изменений contract_payout_streams и escrow_events.
+  // Сам факт подтверждения уже сохранён выше в oracle_events.
+  console.info('Annual bonus confirmed for visual/audit purposes only', { contractId, userId });
 }
 
 // ============================================
@@ -446,7 +417,6 @@ async function handleAnnualBonusConfirmed(contractId: string, userId: string) {
 
 export async function getContractFullData(contractId: string) {
   try {
-    // 1. Контракт
     const { data: contract, error: contractError } = await supabase
       .from('contracts')
       .select('*')
@@ -455,7 +425,6 @@ export async function getContractFullData(contractId: string) {
 
     if (contractError) throw contractError;
 
-    // 2. Потоки выплат
     const { data: streams, error: streamsError } = await supabase
       .from('contract_payout_streams')
       .select('*')
@@ -464,7 +433,6 @@ export async function getContractFullData(contractId: string) {
 
     if (streamsError) throw streamsError;
 
-    // 3. События эскроу
     const { data: escrowEvents, error: escrowError } = await supabase
       .from('escrow_events')
       .select('*')
@@ -473,7 +441,6 @@ export async function getContractFullData(contractId: string) {
 
     if (escrowError) throw escrowError;
 
-    // 4. События Oracle
     const { data: oracleEvents, error: oracleError } = await supabase
       .from('oracle_events')
       .select('*')
@@ -482,7 +449,6 @@ export async function getContractFullData(contractId: string) {
 
     if (oracleError) throw oracleError;
 
-    // 5. Споры
     const { data: disputes, error: disputesError } = await supabase
       .from('disputes')
       .select('*')
@@ -491,7 +457,6 @@ export async function getContractFullData(contractId: string) {
 
     if (disputesError) throw disputesError;
 
-    // 6. Агент
     let agent = null;
     if (contract.agent_id) {
       const { data: agentData } = await supabase
@@ -502,12 +467,18 @@ export async function getContractFullData(contractId: string) {
       agent = agentData;
     }
 
-    // 7. Расчёт финансовых показателей
-    const totalEscrow = (streams || []).reduce((sum, s) => sum + (s.amount || 0), 0);
-    const totalUnlocked = (streams || []).filter(s => s.status === 'UNLOCKED' || s.status === 'PAYABLE' || s.status === 'PAID').reduce((sum, s) => sum + (s.amount || 0), 0);
-    const totalLocked = totalEscrow - totalUnlocked;
+    // Защита старых записей: если annual stream был создан предыдущей версией,
+    // он всё равно никогда не учитывается как escrow.
+    const escrowStreams = (streams || []).filter(stream => stream.stream_key !== 'annual');
+    const totalEscrow = escrowStreams.reduce((sum, s) => sum + (s.amount || 0), 0);
+    const totalUnlocked = escrowStreams
+      .filter(s => s.status === 'UNLOCKED' || s.status === 'PAYABLE' || s.status === 'PAID')
+      .reduce((sum, s) => sum + (s.amount || 0), 0);
+    const totalLocked = escrowStreams
+      .filter(s => s.status === 'LOCKED')
+      .reduce((sum, s) => sum + (s.amount || 0), 0);
     const platformFee = Math.round(totalEscrow * PLATFORM_FEE_PERCENT / 100);
-    const companyProfit = totalEscrow - (streams || []).reduce((sum, s) => sum + (s.amount || 0), 0) + platformFee;
+    const companyProfit = totalEscrow - escrowStreams.reduce((sum, s) => sum + (s.amount || 0), 0) + platformFee;
 
     return {
       contract,
@@ -589,16 +560,18 @@ export async function releasePayment(
       .eq('id', streamId)
       .single();
 
-    if (!stream || stream.status !== 'UNLOCKED') {
-      return { success: false, error: 'Поток не разблокирован' };
+    if (!stream || stream.status !== 'UNLOCKED' || stream.stream_key === 'annual') {
+      return { success: false, error: 'Поток не разблокирован или не является выплатой из эскроу' };
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('contract_payout_streams')
       .update({ status: 'PAID', paid_at: new Date().toISOString() })
       .eq('id', streamId);
 
-    await supabase.from('escrow_events').insert({
+    if (updateError) throw updateError;
+
+    const { error: eventError } = await supabase.from('escrow_events').insert({
       contract_id: contractId,
       event_type: 'PAYOUT_TO_AGENT',
       amount: stream.amount,
@@ -606,6 +579,8 @@ export async function releasePayment(
       actor_id: userId,
       metadata: { stream_key: stream.stream_key, stream_id: streamId },
     });
+
+    if (eventError) throw eventError;
 
     return { success: true };
   } catch (err) {
