@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, DollarSign, ShieldCheck, CheckCircle, Clock } from 'lucide-react';
+import { evaluateContractTransition } from '../../lib/smart-contract/engine';
+import { createCorrelationId } from '../../lib/smart-contract/audit';
+import { recordContractStatusChange } from '../../lib/smart-contract/statusHistory';
+import { ContractStatus } from '../../lib/smart-contract/stateMachine';
 
 export function AgentContractDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,23 +31,70 @@ export function AgentContractDetailPage() {
   }, [user, id, t]);
 
   const handleAccept = async () => {
-    if (!contract) return;
+    if (!contract || !user) return;
     setAccepting(true);
+    const fromStatus = contract.status as ContractStatus;
+    const targetStatus = ContractStatus.ACTIVE;
+    const transition = evaluateContractTransition({
+      contractId: contract.id,
+      currentStatus: fromStatus,
+      actorRole: 'agent',
+      engineVersion: contract.engine_version || '1.0',
+    }, targetStatus);
+
+    if (!transition.allowed) {
+      setAccepting(false);
+      alert(`${t('agentContractDetail.errorTitle')}: ${transition.reason}`);
+      return;
+    }
+
+    const correlationId = createCorrelationId();
     try {
-      const { error } = await supabase.from('contracts').update({ status: 'ACTIVE' }).eq('id', contract.id);
-      if (error) throw error;
-      setContract({ ...contract, status: 'ACTIVE' });
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({ status: targetStatus })
+        .eq('id', contract.id)
+        .eq('status', fromStatus);
+      if (updateError) throw updateError;
+
+      const history = await recordContractStatusChange({
+        contractId: contract.id,
+        fromStatus,
+        toStatus: targetStatus,
+        actorId: user.id,
+        correlationId,
+        reason: 'agent_acceptance',
+      });
+      if (history.error) throw history.error;
+
+      setContract({ ...contract, status: targetStatus, engine_version: contract.engine_version || '1.0' });
       alert(t('agentContractDetail.accepted'));
-    } catch (err: any) { alert(`${t('agentContractDetail.errorTitle')}: ${err.message}`); } finally { setAccepting(false); }
+    } catch (err: any) {
+      await supabase.from('contracts').update({ status: fromStatus }).eq('id', contract.id).eq('status', targetStatus);
+      alert(`${t('agentContractDetail.errorTitle')}: ${err.message}`);
+    } finally {
+      setAccepting(false);
+    }
   };
 
   const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'az' ? 'az-AZ' : i18n.language === 'kk' || i18n.language === 'kz' ? 'kk-KZ' : 'en-US';
   if (loading) return <div className="p-8 text-center text-[#000052]"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]" /><p className="mt-2">{t('common.loading')}</p></div>;
   if (error || !contract) return <div className="p-8 max-w-2xl mx-auto"><div className="bg-[#000052]/5 border border-[#000052]/10 rounded-xl p-6"><h3 className="text-lg font-bold text-[#000052] mb-2">{t('agentContractDetail.errorTitle')}</h3><p className="text-sm text-[#000052]/70 mb-4">{error || t('contract.noContracts')}</p><button onClick={() => navigate('/agent/contracts')} className="px-4 py-2 bg-[#000052] text-white rounded-lg text-sm">{t('agentContractDetail.backShort')}</button></div></div>;
 
-  const gmv = contract.revenue || contract.kpi_revenue || 0; const escrow = contract.escrow_amount || 0;
-  const streams = [{ label: t('agentContractDetail.newSales'), value: gmv * 0.50 }, { label: t('agentContractDetail.renewal'), value: gmv * 0.15 }, { label: t('agentContractDetail.crossSell'), value: gmv * 0.10 }, { label: t('agentContractDetail.planBonus'), value: gmv * 0.10 }, { label: t('agentContractDetail.retention'), value: gmv * 0.10, condition: true }, { label: t('agentContractDetail.annualBonus'), value: gmv * 0.05 }];
-  const deadlineDate = new Date(contract.deadline); const daysLeft = Math.ceil((deadlineDate.getTime() - Date.now()) / 86400000); const isExpired = daysLeft <= 0; const isCompleted = contract.status === 'COMPLETED';
+  const gmv = contract.revenue || contract.kpi_revenue || 0;
+  const escrow = contract.escrow_amount || 0;
+  const streams = [
+    { label: t('agentContractDetail.newSales'), value: gmv * 0.50 },
+    { label: t('agentContractDetail.renewal'), value: gmv * 0.15 },
+    { label: t('agentContractDetail.crossSell'), value: gmv * 0.10 },
+    { label: t('agentContractDetail.planBonus'), value: gmv * 0.10 },
+    { label: t('agentContractDetail.retention'), value: gmv * 0.10, condition: true },
+    { label: t('agentContractDetail.annualBonus'), value: gmv * 0.05 },
+  ];
+  const deadlineDate = new Date(contract.deadline);
+  const daysLeft = Math.ceil((deadlineDate.getTime() - Date.now()) / 86400000);
+  const isExpired = daysLeft <= 0;
+  const isCompleted = contract.status === 'COMPLETED';
   const status = isCompleted ? t('agentContractDetail.completed') : isExpired ? t('agentContractDetail.expired') : t(`contract.statuses.${contract.status}`);
 
   return <div className="p-6 space-y-6 max-w-5xl mx-auto">
