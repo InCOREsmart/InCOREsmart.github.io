@@ -477,8 +477,15 @@ export async function getContractFullData(contractId: string) {
     const totalLocked = escrowStreams
       .filter(s => s.status === 'LOCKED')
       .reduce((sum, s) => sum + (s.amount || 0), 0);
+    const plannedRevenue = Number(contract.planned_revenue || contract.revenue || 0);
     const platformFee = Math.round(totalEscrow * PLATFORM_FEE_PERCENT / 100);
-    const companyProfit = totalEscrow - escrowStreams.reduce((sum, s) => sum + (s.amount || 0), 0) + platformFee;
+
+    // Финансовая модель:
+    // revenue = валовая выручка контракта
+    // escrow = обязательства перед агентом по payout streams
+    // platformFee = отдельная стоимость InCORE для компании
+    // companyProfit = остаток после обязательств агента и комиссии платформы.
+    const companyProfit = plannedRevenue - totalEscrow - platformFee;
 
     return {
       contract,
@@ -493,7 +500,7 @@ export async function getContractFullData(contractId: string) {
         totalLocked,
         platformFee,
         companyProfit,
-        plannedRevenue: contract.planned_revenue || contract.revenue || 0,
+        plannedRevenue,
       },
     };
   } catch (err) {
