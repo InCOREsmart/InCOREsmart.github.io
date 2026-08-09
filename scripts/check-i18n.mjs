@@ -18,6 +18,10 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
+function addAll(target, values) {
+  for (const value of values) target.add(value);
+}
+
 function extractObjectLiteral(text, start) {
   const open = text.indexOf('{', start);
   if (open < 0) return null;
@@ -64,14 +68,14 @@ function loadRuntimeTranslations(file) {
 const resources = { ru: new Set(), en: new Set(), kk: new Set(), az: new Set() };
 for (const [lang, file] of Object.entries(localeFiles)) {
   const full = path.join(localeDir, file);
-  if (fs.existsSync(full)) Object.assign(resources[lang], flatten(JSON.parse(fs.readFileSync(full, 'utf8'))));
+  if (fs.existsSync(full)) addAll(resources[lang], flatten(JSON.parse(fs.readFileSync(full, 'utf8'))));
 }
 for (const fileName of translationSources) {
   const full = path.join(srcDir, 'i18n', fileName);
   if (!fs.existsSync(full)) continue;
   const runtime = loadRuntimeTranslations(full);
   for (const lang of Object.keys(resources)) {
-    if (runtime[lang]) for (const key of flatten(runtime[lang])) resources[lang].add(key);
+    if (runtime[lang]) addAll(resources[lang], flatten(runtime[lang]));
   }
 }
 
