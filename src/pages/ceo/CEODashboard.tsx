@@ -47,13 +47,13 @@ export function CEODashboard() {
         let totalRevenue = 0, totalEscrow = 0, totalPaid = 0, profit = 0, roiSum = 0, roiCount = 0, pending = 0, periodPaid = 0;
         const people: Record<string, any> = {};
         all.forEach(c => {
-          const ps = c.is_demo ? (c.payout_streams || []) : payoutStreams.filter(s => s.contract_id === c.id);
+          const ps: any[] = c.is_demo ? (c.payout_streams || []) : payoutStreams.filter((s: any) => s.contract_id === c.id);
           const escrowFromStreams = getEscrowAmount(c, ps); const escrow = escrowFromStreams || n(c.escrow_amount); const paid = getPaidAmount(ps);
-          const currentPending = ps.filter(s => (s.status === 'UNLOCKED' || s.status === 'PAYABLE') && inAugust(s)).reduce((sum, x) => sum + n(x.amount), 0);
+          const currentPending = ps.filter((s: any) => (s.status === 'UNLOCKED' || s.status === 'PAYABLE') && inAugust(s)).reduce((sum: number, x: any) => sum + n(x.amount), 0);
           const revenue = n(c.revenue || c.planned_revenue); const companyProfit = c.is_demo ? revenue - escrow : n(c.company_profit || revenue - escrow);
           const roi = c.roi_percentage != null ? n(c.roi_percentage) : revenue > 0 ? Math.round(companyProfit / revenue * 100) : 0;
           totalRevenue += revenue; totalEscrow += escrow; totalPaid += paid; profit += companyProfit; pending += currentPending; if (revenue > 0) { roiSum += roi; roiCount++; }
-          ps.filter(s => s.stream_key !== 'annual').forEach(s => { if (s.status === 'PAID' && inAugust(s)) periodPaid += n(s.amount); });
+          ps.filter((s: any) => s.stream_key !== 'annual').forEach((s: any) => { if (s.status === 'PAID' && inAugust(s)) periodPaid += n(s.amount); });
           const key = c.agent_id || c.agent_name || c.id; if (!people[key]) people[key] = { name: c.agent_name || t('agent.agentNotFound'), total: 0, count: 0 }; people[key].total += c.is_demo ? demoKPI(c) : realKPI(c); people[key].count++;
         });
         agents.forEach(a => { if (!people[a.id]) people[a.id] = { name: a.full_name || a.name || a.email || t('agent.agentNotFound'), total: 0, count: 0 }; });
