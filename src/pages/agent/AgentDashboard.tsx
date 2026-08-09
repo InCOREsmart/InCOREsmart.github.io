@@ -31,7 +31,7 @@ export function AgentDashboard() {
         if (contractsData && contractsData.length > 0) {
           const contractIds = contractsData.map(c => c.id);
           const { data: streamsData } = await supabase
-            .from('contract_payout_streams').select('*').in('contract_id', contractIds);
+            .from('contract_payout_streams').select('*').in('contract_id', contractIds).neq('stream_key', 'annual');
           setStreams(streamsData || []);
         }
       } catch (err) {
@@ -60,14 +60,14 @@ export function AgentDashboard() {
     );
   }
 
-  const escrowStreams = streams.filter(stream => stream.stream_key !== 'annual');
+  const escrowStreams = streams;
   const totalEarned = escrowStreams.reduce((sum, s) => sum + (s.status === 'PAID' ? Number(s.amount || 0) : 0), 0);
   const availableForWithdrawal = escrowStreams.reduce((sum, s) => sum + (s.status === 'UNLOCKED' || s.status === 'PAYABLE' ? Number(s.amount || 0) : 0), 0);
   const pendingVerification = escrowStreams.reduce((sum, s) => sum + (s.status === 'PENDING_VERIFICATION' ? Number(s.amount || 0) : 0), 0);
   const escrowBalance = escrowStreams.reduce((sum, s) => sum + (s.status === 'LOCKED' ? Number(s.amount || 0) : 0), 0);
   const retentionLocked = escrowStreams.filter(s => s.stream_key === 'retention' && s.status === 'LOCKED').reduce((sum, s) => sum + Number(s.amount || 0), 0);
   const clawedBack = escrowStreams.reduce((sum, s) => sum + (s.status === 'CLAWED_BACK' ? Number(s.amount || 0) : 0), 0);
-  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
+  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts });
 
   const kpis = [
     { label: t('agent.totalEarned'), value: totalEarned, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white' },
@@ -123,25 +123,13 @@ export function AgentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/agent/contracts')}
-          className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="w-6 h-6 text-[#B8860B]" />
-            <h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3>
-          </div>
+        <button onClick={() => navigate('/agent/contracts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left">
+          <div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3></div>
           <p className="text-sm text-[#000052]/70">{contracts.length} {t('agent.activeContracts')}</p>
         </button>
 
-        <button
-          onClick={() => navigate('/agent/payouts')}
-          className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <DollarSign className="w-6 h-6 text-[#B8860B]" />
-            <h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3>
-          </div>
+        <button onClick={() => navigate('/agent/payouts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left">
+          <div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3></div>
           <p className="text-sm text-[#000052]/70">{t('payouts.subtitle')}</p>
         </button>
       </div>
