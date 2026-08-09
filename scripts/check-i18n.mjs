@@ -1,31 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 const root = process.cwd();
 const srcDir = path.join(root, 'src');
 const localeDir = path.join(srcDir, 'i18n', 'locales');
-const localeFiles = {
-  ru: path.join(localeDir, 'ru.json'),
-  en: path.join(localeDir, 'en.json'),
-  kk: path.join(localeDir, 'kk.json'),
-  az: path.join(localeDir, 'az.json'),
-};
-const translationSources = [
-  path.join(srcDir, 'i18n', 'core.ts'),
-  path.join(srcDir, 'i18n', 'uiTranslations.ts'),
-  path.join(srcDir, 'i18n', 'uiSupplement.ts'),
-];
-
-function walk(dir) {
-  const result = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', 'dist', '.git'].includes(entry.name)) continue;
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) result.push(...walk(full));
-    else if (/\.(ts|tsx)$/.test(entry.name)) result.push(full);
-  }
-  return result;
-}
+const localeFiles = { ru: 'ru.json', en: 'en.json', kk: 'kk.json', az: 'az.json' };
+const translationSources = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts'];
 
 function flatten(value, prefix = '', out = new Set()) {
   if (!value || typeof value !== 'object') return out;
@@ -37,9 +18,9 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
-function extractBalancedObject(text, start) {
+function extractObjectLiteral(text, start) {
   const open = text.indexOf('{', start);
-  if (open < 0) return '';
+  if (open < 0) return null;
   let depth = 0;
   let quote = null;
   let escaped = false;
@@ -53,73 +34,85 @@ function extractBalancedObject(text, start) {
     }
     if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
     if (ch === '{') depth += 1;
-    if (ch === '}') {
+    else if (ch === '}') {
       depth -= 1;
       if (depth === 0) return text.slice(open, i + 1);
     }
   }
-  return '';
+  return null;
 }
 
-function extractLocaleBlocks(text, locale) {
-  const blocks = [];
-  const re = new RegExp(`\\b${locale}\\s*:`,'g');
+function loadRuntimeTranslations(file) {
+  const text = fs.readFileSync(file, 'utf8');
+  const result = {};
+  const re = /export\s+const\s+[A-Za-z_$][\w$]*\s*=\s*\{/g;
   let match;
   while ((match = re.exec(text))) {
-    const block = extractBalancedObject(text, match.index);
-    if (block) blocks.push(block);
+    const literal = extractObjectLiteral(text, match.index);
+    if (!literal) continue;
+    try {
+      const value = vm.runInNewContext(`(${literal})`, Object.create(null), { timeout: 1000 });
+      if (value && typeof value === 'object') Object.assign(result, value);
+    } catch (error) {
+      console.error(`Cannot parse translation source ${file}: ${error.message}`);
+      process.exit(1);
+    }
   }
-  return blocks;
+  return result;
 }
 
-function hasTranslationKey(sourceText, key) {
-  const parts = key.split('.');
-  let block = sourceText;
-  for (const part of parts) {
-    const marker = new RegExp(`(?:["']${part}["']|\\b${part})\\s*:`).exec(block);
-    if (!marker) return false;
-    block = extractBalancedObject(block, marker.index) || block.slice(marker.index, marker.index + 1000);
-  }
-  return true;
+const resources = { ru: new Set(), en: new Set(), kk: new Set(), az: new Set() };
+for (const [lang, file] of Object.entries(localeFiles)) {
+  const full = path.join(localeDir, file);
+  if (fs.existsSync(full)) Object.assign(resources[lang], flatten(JSON.parse(fs.readFileSync(full, 'utf8'))));
 }
-
-const localeKeys = {};
-const localeSourceBlocks = { ru: [], en: [], kk: [], az: [] };
-for (const [locale, file] of Object.entries(localeFiles)) {
-  localeKeys[locale] = flatten(JSON.parse(fs.readFileSync(file, 'utf8')));
-}
-for (const file of translationSources) {
-  const text = fs.readFileSync(file, 'utf8');
-  for (const locale of Object.keys(localeSourceBlocks)) {
-    localeSourceBlocks[locale].push(...extractLocaleBlocks(text, locale));
+for (const fileName of translationSources) {
+  const full = path.join(srcDir, 'i18n', fileName);
+  if (!fs.existsSync(full)) continue;
+  const runtime = loadRuntimeTranslations(full);
+  for (const lang of Object.keys(resources)) {
+    if (runtime[lang]) for (const key of flatten(runtime[lang])) resources[lang].add(key);
   }
 }
 
-const files = walk(srcDir);
+function walk(dir) {
+  const result = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', 'dist', '.git'].includes(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) result.push(...walk(full));
+    else if (/\.(ts|tsx|js|jsx)$/.test(entry.name)) result.push(full);
+  }
+  return result;
+}
+
 const used = new Map();
-for (const file of files) {
+for (const file of walk(srcDir)) {
   if (file.includes(`${path.sep}i18n${path.sep}`)) continue;
   const text = fs.readFileSync(file, 'utf8');
-  const rel = path.relative(root, file).replaceAll(path.sep, '/');
-  for (const match of text.matchAll(/\bt\(\s*[`'\"]([^`'\"]+)[`'\"]\s*[,)]/g)) {
-    const key = match[1];
-    if (key.includes('${') || key.startsWith('http')) continue;
-    if (!used.has(key)) used.set(key, new Set());
-    used.get(key).add(rel);
+  const relative = path.relative(root, file).replaceAll(path.sep, '/');
+  for (const pattern of [/\bt\(\s*['"]([^'"]+)['"]/g, /\bi18n\.t\(\s*['"]([^'"]+)['"]/g]) {
+    let match;
+    while ((match = pattern.exec(text))) {
+      const key = match[1];
+      if (!key.includes('${')) {
+        if (!used.has(key)) used.set(key, new Set());
+        used.get(key).add(relative);
+      }
+    }
   }
 }
 
 const missing = [];
-for (const [key, filesUsing] of used) {
-  for (const locale of Object.keys(localeFiles)) {
-    const exists = localeKeys[locale].has(key) || localeSourceBlocks[locale].some(block => hasTranslationKey(block, key));
-    if (!exists) missing.push(`${locale}: ${key} (${[...filesUsing].join(', ')})`);
+for (const [key, files] of used) {
+  for (const lang of Object.keys(resources)) {
+    if (!resources[lang].has(key)) missing.push(`${lang}: ${key} (${[...files].join(', ')})`);
   }
 }
 
 if (missing.length) {
-  console.error('Missing i18n keys:');
-  missing.sort().forEach(item => console.error(`- ${item}`));
+  console.error(`Missing i18n keys: ${missing.length}`);
+  for (const item of missing.sort()) console.error(`- ${item}`);
   process.exit(1);
 }
 console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KZ/AZ.`);
