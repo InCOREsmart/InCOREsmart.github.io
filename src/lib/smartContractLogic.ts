@@ -205,105 +205,151 @@ export async function simulateOracleEvent(
 }
 
 async function handleClientPaymentConfirmed(contractId: string, userId: string) {
-  await supabase.from('contracts').update({
+  const now = new Date().toISOString();
+  const { error: contractError } = await supabase.from('contracts').update({
     client_payment_confirmed: true,
-    client_payment_date: new Date().toISOString(),
+    client_payment_date: now,
     oracle_status: 'VERIFIED',
     escrow_status: 'FUNDED'
   }).eq('id', contractId);
+  if (contractError) throw contractError;
 
-  await supabase.from('contract_payout_streams').update({
-    status: 'UNLOCKED', unlocked_at: new Date().toISOString()
-  }).eq('contract_id', contractId)
-    .in('stream_key', ['new_sales_property', 'new_sales_casco', 'new_sales_dms']);
+  // Идемпотентность: только LOCKED-потоки могут быть разблокированы этим событием.
+  // Повторное событие не создаёт повторный PARTIAL_RELEASE.
+  const streamKeys = ['new_sales_property', 'new_sales_casco', 'new_sales_dms'];
+  const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
+    .update({ status: 'UNLOCKED', unlocked_at: now })
+    .eq('contract_id', contractId)
+    .eq('status', 'LOCKED')
+    .in('stream_key', streamKeys)
+    .select('id, amount, stream_key');
+  if (updateError) throw updateError;
 
-  const { data: streams } = await supabase.from('contract_payout_streams')
-    .select('amount').eq('contract_id', contractId)
-    .in('stream_key', ['new_sales_property', 'new_sales_casco', 'new_sales_dms']);
+  if (!unlockedStreams?.length) return;
 
-  const totalReleased = streams?.reduce((sum, stream) => sum + (stream.amount || 0), 0) || 0;
-  await supabase.from('escrow_events').insert({
+  const totalReleased = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: eventError } = await supabase.from('escrow_events').insert({
     contract_id: contractId,
     event_type: 'PARTIAL_RELEASE',
     amount: totalReleased,
     actor_role: 'ORACLE',
     actor_id: userId,
-    metadata: { event: 'CLIENT_PAYMENT_CONFIRMED', streams: ['new_sales_property', 'new_sales_casco', 'new_sales_dms'] },
+    metadata: { event: 'CLIENT_PAYMENT_CONFIRMED', streams: unlockedStreams.map(stream => stream.stream_key) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handleClientChurnedBefore90Days(contractId: string, userId: string) {
-  await supabase.from('contract_payout_streams').update({
+  // Только ещё не обработанный retention-поток может быть clawed back.
+  const { data: clawedStreams, error: updateError } = await supabase.from('contract_payout_streams').update({
     status: 'CLAWED_BACK',
     clawback_reason: 'Клиент ушёл до 90 дней. Бонус за удержание не выплачивается.'
-  }).eq('contract_id', contractId).eq('stream_key', 'retention');
+  }).eq('contract_id', contractId).eq('stream_key', 'retention').in('status', ['LOCKED', 'UNLOCKED', 'PAYABLE']).select('id, amount');
+  if (updateError) throw updateError;
 
-  await supabase.from('contracts').update({ clawback_applied: true }).eq('id', contractId);
-  await supabase.from('escrow_events').insert({
+  if (!clawedStreams?.length) return;
+
+  const amount = clawedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: contractError } = await supabase.from('contracts').update({ clawback_applied: true }).eq('id', contractId);
+  if (contractError) throw contractError;
+
+  const { error: eventError } = await supabase.from('escrow_events').insert({
     contract_id: contractId,
     event_type: 'CLAWBACK',
-    amount: 200,
+    amount,
     actor_role: 'ORACLE',
     actor_id: userId,
-    metadata: { reason: 'CLIENT_CHURNED_BEFORE_90_DAYS' },
+    metadata: { reason: 'CLIENT_CHURNED_BEFORE_90_DAYS', stream_ids: clawedStreams.map(stream => stream.id) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handleRetentionPeriodPassed(contractId: string, userId: string) {
-  const { data: stream } = await supabase.from('contract_payout_streams')
-    .select('amount').eq('contract_id', contractId).eq('stream_key', 'retention').maybeSingle();
-  const amount = Number(stream?.amount || PAYOUT_STREAMS_CONFIG.retention.fixed_amount || 200);
+  const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
+    .update({ status: 'UNLOCKED', unlocked_at: new Date().toISOString() })
+    .eq('contract_id', contractId)
+    .eq('stream_key', 'retention')
+    .eq('status', 'LOCKED')
+    .select('id, amount');
+  if (updateError) throw updateError;
+  if (!unlockedStreams?.length) return;
 
-  await supabase.from('contract_payout_streams').update({
-    status: 'UNLOCKED', unlocked_at: new Date().toISOString()
-  }).eq('contract_id', contractId).eq('stream_key', 'retention');
-
-  await supabase.from('escrow_events').insert({
-    contract_id: contractId, event_type: 'PARTIAL_RELEASE', amount,
-    actor_role: 'ORACLE', actor_id: userId, metadata: { event: 'RETENTION_PERIOD_PASSED' },
+  const amount = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: eventError } = await supabase.from('escrow_events').insert({
+    contract_id: contractId,
+    event_type: 'PARTIAL_RELEASE',
+    amount,
+    actor_role: 'ORACLE',
+    actor_id: userId,
+    metadata: { event: 'RETENTION_PERIOD_PASSED', stream_ids: unlockedStreams.map(stream => stream.id) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handleRenewalConfirmed(contractId: string, userId: string) {
-  await supabase.from('contract_payout_streams').update({
-    status: 'UNLOCKED', unlocked_at: new Date().toISOString()
-  }).eq('contract_id', contractId).eq('stream_key', 'renewal');
+  const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
+    .update({ status: 'UNLOCKED', unlocked_at: new Date().toISOString() })
+    .eq('contract_id', contractId)
+    .eq('stream_key', 'renewal')
+    .eq('status', 'LOCKED')
+    .select('id, amount');
+  if (updateError) throw updateError;
+  if (!unlockedStreams?.length) return;
 
-  const { data: stream } = await supabase.from('contract_payout_streams')
-    .select('amount').eq('contract_id', contractId).eq('stream_key', 'renewal').single();
-
-  await supabase.from('escrow_events').insert({
-    contract_id: contractId, event_type: 'PARTIAL_RELEASE', amount: stream?.amount || 0,
-    actor_role: 'ORACLE', actor_id: userId, metadata: { event: 'RENEWAL_CONFIRMED' },
+  const amount = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: eventError } = await supabase.from('escrow_events').insert({
+    contract_id: contractId,
+    event_type: 'PARTIAL_RELEASE',
+    amount,
+    actor_role: 'ORACLE',
+    actor_id: userId,
+    metadata: { event: 'RENEWAL_CONFIRMED', stream_ids: unlockedStreams.map(stream => stream.id) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handleCrossSellConfirmed(contractId: string, userId: string) {
-  await supabase.from('contract_payout_streams').update({
-    status: 'UNLOCKED', unlocked_at: new Date().toISOString()
-  }).eq('contract_id', contractId).eq('stream_key', 'cross_sell');
+  const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
+    .update({ status: 'UNLOCKED', unlocked_at: new Date().toISOString() })
+    .eq('contract_id', contractId)
+    .eq('stream_key', 'cross_sell')
+    .eq('status', 'LOCKED')
+    .select('id, amount');
+  if (updateError) throw updateError;
+  if (!unlockedStreams?.length) return;
 
-  const { data: stream } = await supabase.from('contract_payout_streams')
-    .select('amount').eq('contract_id', contractId).eq('stream_key', 'cross_sell').single();
-
-  await supabase.from('escrow_events').insert({
-    contract_id: contractId, event_type: 'PARTIAL_RELEASE', amount: stream?.amount || 0,
-    actor_role: 'ORACLE', actor_id: userId, metadata: { event: 'CROSS_SELL_CONFIRMED' },
+  const amount = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: eventError } = await supabase.from('escrow_events').insert({
+    contract_id: contractId,
+    event_type: 'PARTIAL_RELEASE',
+    amount,
+    actor_role: 'ORACLE',
+    actor_id: userId,
+    metadata: { event: 'CROSS_SELL_CONFIRMED', stream_ids: unlockedStreams.map(stream => stream.id) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handlePlanAchieved(contractId: string, userId: string) {
-  await supabase.from('contract_payout_streams').update({
-    status: 'UNLOCKED', unlocked_at: new Date().toISOString()
-  }).eq('contract_id', contractId).eq('stream_key', 'plan_bonus');
+  const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
+    .update({ status: 'UNLOCKED', unlocked_at: new Date().toISOString() })
+    .eq('contract_id', contractId)
+    .eq('stream_key', 'plan_bonus')
+    .eq('status', 'LOCKED')
+    .select('id, amount');
+  if (updateError) throw updateError;
+  if (!unlockedStreams?.length) return;
 
-  const { data: stream } = await supabase.from('contract_payout_streams')
-    .select('amount').eq('contract_id', contractId).eq('stream_key', 'plan_bonus').single();
-
-  await supabase.from('escrow_events').insert({
-    contract_id: contractId, event_type: 'PARTIAL_RELEASE', amount: stream?.amount || 0,
-    actor_role: 'ORACLE', actor_id: userId, metadata: { event: 'PLAN_ACHIEVED' },
+  const amount = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  const { error: eventError } = await supabase.from('escrow_events').insert({
+    contract_id: contractId,
+    event_type: 'PARTIAL_RELEASE',
+    amount,
+    actor_role: 'ORACLE',
+    actor_id: userId,
+    metadata: { event: 'PLAN_ACHIEVED', stream_ids: unlockedStreams.map(stream => stream.id) },
   });
+  if (eventError) throw eventError;
 }
 
 async function handleAnnualBonusConfirmed(contractId: string, userId: string) {
@@ -387,7 +433,6 @@ export async function releasePayment(contractId: string, streamId: string, userI
   const correlationId = `payout_${contractId}_${streamId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   try {
-    // Важно: проверяем принадлежность потока конкретному контракту.
     const { data: stream, error: streamError } = await supabase.from('contract_payout_streams')
       .select('*').eq('id', streamId).eq('contract_id', contractId).single();
     if (streamError) throw streamError;
@@ -400,9 +445,6 @@ export async function releasePayment(contractId: string, streamId: string, userI
       return { success: false, error: 'Поток уже выплачен, заблокирован или недоступен для выплаты' };
     }
 
-    // Критично: UPDATE содержит условие status=UNLOCKED.
-    // При двух одновременных запросах только один из них сможет перевести
-    // поток в PAID. Второй получит 0 изменённых строк и не создаст вторую выплату.
     const { data: updatedStream, error: updateError } = await supabase
       .from('contract_payout_streams')
       .update({ status: 'PAID', paid_at: paidAt })
@@ -433,8 +475,6 @@ export async function releasePayment(contractId: string, streamId: string, userI
     });
 
     if (eventError) {
-      // Не оставляем поток PAID без аудиторского события.
-      // Откат возможен только для той самой записи, которую изменили мы.
       await supabase.from('contract_payout_streams')
         .update({ status: 'UNLOCKED', paid_at: null })
         .eq('id', streamId)
