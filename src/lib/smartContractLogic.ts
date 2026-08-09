@@ -74,6 +74,47 @@ export async function createPayoutStreamsForContract(
       return { success: false, error: 'Некорректная плановая выручка' };
     }
 
+    // Защита от повторного создания финансовых обязательств при повторном вызове.
+    // Если потоки уже существуют, не вставляем их второй раз. Если потоков нет,
+    // создаём единственный набор из 7 escrow-потоков. Годовой бонус сюда не входит.
+    const { data: existingStreams, error: existingStreamsError } = await supabase
+      .from('contract_payout_streams')
+      .select('id, stream_key, amount, status')
+      .eq('contract_id', contractId);
+    if (existingStreamsError) throw existingStreamsError;
+
+    if (existingStreams?.length) {
+      const { data: existingEscrowEvent, error: escrowLookupError } = await supabase
+        .from('escrow_events')
+        .select('id')
+        .eq('contract_id', contractId)
+        .eq('event_type', 'ESCROW_CREATED')
+        .limit(1)
+        .maybeSingle();
+      if (escrowLookupError) throw escrowLookupError;
+
+      if (!existingEscrowEvent) {
+        const existingEscrow = existingStreams
+          .filter(stream => stream.stream_key !== 'annual')
+          .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+        const { error: escrowRepairError } = await supabase.from('escrow_events').insert({
+          contract_id: contractId,
+          event_type: 'ESCROW_CREATED',
+          amount: existingEscrow,
+          actor_role: 'SYSTEM',
+          metadata: {
+            streams_count: existingStreams.filter(stream => stream.stream_key !== 'annual').length,
+            total_escrow: existingEscrow,
+            annual_bonus_excluded: true,
+            repaired_on_retry: true,
+          },
+        });
+        if (escrowRepairError) throw escrowRepairError;
+      }
+
+      return { success: true };
+    }
+
     const percentageAmount = (percent: number) => Math.round(revenue * percent / 100);
 
     // Годовой бонус НЕ является escrow-потоком. Он начисляется отдельно
@@ -214,8 +255,6 @@ async function handleClientPaymentConfirmed(contractId: string, userId: string) 
   }).eq('id', contractId);
   if (contractError) throw contractError;
 
-  // Идемпотентность: только LOCKED-потоки могут быть разблокированы этим событием.
-  // Повторное событие не создаёт повторный PARTIAL_RELEASE.
   const streamKeys = ['new_sales_property', 'new_sales_casco', 'new_sales_dms'];
   const { data: unlockedStreams, error: updateError } = await supabase.from('contract_payout_streams')
     .update({ status: 'UNLOCKED', unlocked_at: now })
@@ -224,7 +263,6 @@ async function handleClientPaymentConfirmed(contractId: string, userId: string) 
     .in('stream_key', streamKeys)
     .select('id, amount, stream_key');
   if (updateError) throw updateError;
-
   if (!unlockedStreams?.length) return;
 
   const totalReleased = unlockedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
@@ -240,13 +278,11 @@ async function handleClientPaymentConfirmed(contractId: string, userId: string) 
 }
 
 async function handleClientChurnedBefore90Days(contractId: string, userId: string) {
-  // Только ещё не обработанный retention-поток может быть clawed back.
   const { data: clawedStreams, error: updateError } = await supabase.from('contract_payout_streams').update({
     status: 'CLAWED_BACK',
     clawback_reason: 'Клиент ушёл до 90 дней. Бонус за удержание не выплачивается.'
   }).eq('contract_id', contractId).eq('stream_key', 'retention').in('status', ['LOCKED', 'UNLOCKED', 'PAYABLE']).select('id, amount');
   if (updateError) throw updateError;
-
   if (!clawedStreams?.length) return;
 
   const amount = clawedStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
@@ -353,7 +389,6 @@ async function handlePlanAchieved(contractId: string, userId: string) {
 }
 
 async function handleAnnualBonusConfirmed(contractId: string, userId: string) {
-  // Только аудит/визуальный прогресс. В escrow и payout streams годовой бонус не попадает.
   console.info('Annual bonus confirmed for visual/audit purposes only', { contractId, userId });
 }
 
@@ -455,10 +490,7 @@ export async function releasePayment(contractId: string, streamId: string, userI
       .maybeSingle();
 
     if (updateError) throw updateError;
-
-    if (!updatedStream) {
-      return { success: false, error: 'Выплата уже была обработана другим запросом' };
-    }
+    if (!updatedStream) return { success: false, error: 'Выплата уже была обработана другим запросом' };
 
     const { error: eventError } = await supabase.from('escrow_events').insert({
       contract_id: contractId,
