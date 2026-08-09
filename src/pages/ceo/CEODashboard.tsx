@@ -46,7 +46,10 @@ export function CEODashboard() {
         }
         const names = new Map(agents.map(a => [a.id, a.full_name || a.name || a.email || t('agent.agentNotFound')]));
         const real = contracts.map(c => ({ ...c, agent_name: names.get(c.agent_id) || t('agent.agentNotFound'), is_demo: false }));
-        const all = [...currentDemo, ...real];
+        // Демо-данные показываем только в демо-режиме. Если у CEO есть компания,
+        // реальные контракты и агенты не должны смешиваться с демонстрационными цифрами.
+        const useDemo = !company?.id || (agents.length === 0 && contracts.length === 0);
+        const all = useDemo ? currentDemo : real;
         let totalRevenue = 0, totalEscrow = 0, totalPaid = 0, profit = 0, roiSum = 0, roiCount = 0, pending = 0, periodPaid = 0, locked = 0, released = 0, liability = 0;
         const people: Record<string, any> = {};
         const income: Record<string, any> = {};
