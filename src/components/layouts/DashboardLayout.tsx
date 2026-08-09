@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const filteredMenu = menuItems.filter(item => item.role === userRole);
 
   return (
-    <div className="flex h-screen bg-[#F8F9FA]">
+    <div className="flex h-screen bg-[#F4F5F7]">
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -62,22 +62,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
       )}
 
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-[#000052]/10 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-[#000052]/10 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-[#000052] tracking-tight">InCORE</h1>
-              <p className="text-xs text-[#000052]/60 mt-1">{t('layout.platformSubtitle')}</p>
+          <div className="px-3 pt-6 pb-4 border-b border-gray-100 flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="w-full h-12 bg-white rounded-xl flex items-center justify-center overflow-hidden">
+                <img src="/logo.png" alt="InCORE" className="h-full w-full object-contain" />
+              </div>
+              <p className="text-xs text-gray-400 mt-2 px-1">{t('layout.platformSubtitle')}</p>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-1 text-[#000052] hover:bg-[#000052]/5 rounded"
+              className="md:hidden p-1 text-[#000052] hover:bg-[#000052]/5 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
             {filteredMenu.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -88,10 +90,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     navigate(item.path);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 ${
                     active
-                      ? 'bg-[#B8860B] text-white'
-                      : 'text-[#000052]/70 hover:bg-[#000052]/5 hover:text-[#000052]'
+                      ? 'bg-[#000052] text-white shadow-[0_4px_16px_rgba(0,0,82,0.25)]'
+                      : 'text-gray-500 hover:bg-[#000052]/5 hover:text-[#000052]'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -101,23 +103,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          <div className="p-4 border-t border-[#000052]/10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-[#B8860B]" />
+          <div className="p-4 border-t border-gray-100">
+            <div className="flex items-center gap-3 mb-3 px-2">
+              <div className="w-10 h-10 rounded-full bg-[#000052]/5 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-[#000052]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#000052] truncate">
                   {user?.email || t('layout.user')}
                 </p>
-                <p className="text-xs text-[#000052]/60 truncate">
+                <p className="text-xs text-gray-400 truncate">
                   {userRole === 'ceo' ? t('layout.ceoRole') : t('layout.agentRole')}
                 </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg text-sm font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:border-[#000052] hover:bg-[#000052]/5 text-[#000052] rounded-xl text-sm font-medium transition-all duration-200"
             >
               <LogOut className="w-4 h-4" />
               <span>{t('layout.logout')}</span>
@@ -127,8 +129,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-[#000052]/10">
-          <h1 className="text-lg font-bold text-[#000052]">InCORE</h1>
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+          <img src="/logo.png" alt="InCORE" className="h-8 w-auto" />
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 text-[#000052] hover:bg-[#000052]/5 rounded-lg"
@@ -137,7 +139,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </button>
         </header>
 
-        <header className="hidden md:flex items-center justify-end p-4 bg-white border-b border-[#000052]/10 gap-4">
+        <header className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-gray-100 gap-4">
           <LanguageSwitcher />
           <NotificationBell />
         </header>

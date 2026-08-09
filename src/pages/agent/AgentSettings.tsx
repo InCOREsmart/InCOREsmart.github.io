@@ -5,22 +5,200 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Save, Upload, CheckCircle, AlertCircle, FileText, ShieldCheck, User } from 'lucide-react';
 
 export function AgentSettings() {
-  const { t } = useTranslation(); const { user } = useAuth(); const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ full_name: '', phone: '', email: '', tax_status: 'self_employed', inn: '', snils: '', bank_name: '', bik: '', correspondent_account: '', settlement_account: '', country: 'RU' });
   const [documents, setDocuments] = useState({ passport: { uploaded: false, name: '', verified: false }, tax_doc: { uploaded: false, name: '', verified: false }, snils_doc: { uploaded: false, name: '', verified: false } });
-  useEffect(() => { const fetchAgent = async () => { if (!user) return; setLoading(true); try { const { data } = await supabase.from('agents').select('*').eq('user_id', user.id).maybeSingle(); if (data) { setFormData(prev => ({ ...prev, full_name: data.full_name || '', phone: data.phone || '', email: data.email || '', tax_status: data.tax_status || 'self_employed', inn: data.inn || '', snils: data.snils || '', bank_name: data.bank_name || '', bik: data.bik || '', correspondent_account: data.correspondent_account || '', settlement_account: data.settlement_account || '', country: data.country || 'RU' })); setDocuments({ passport: { uploaded: !!data.passport_uploaded, name: data.passport_file_name || '', verified: !!data.passport_verified }, tax_doc: { uploaded: !!data.tax_doc_uploaded, name: data.tax_doc_file_name || '', verified: !!data.tax_doc_verified }, snils_doc: { uploaded: !!data.snils_uploaded, name: data.snils_file_name || '', verified: !!data.snils_verified } }); } } catch (err) { console.error(err); } finally { setLoading(false); } }; fetchAgent(); }, [user]);
+
+  useEffect(() => {
+    const fetchAgent = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const { data } = await supabase.from('agents').select('*').eq('user_id', user.id).maybeSingle();
+        if (data) {
+          setFormData(prev => ({ ...prev, full_name: data.full_name || '', phone: data.phone || '', email: data.email || '', tax_status: data.tax_status || 'self_employed', inn: data.inn || '', snils: data.snils || '', bank_name: data.bank_name || '', bik: data.bik || '', correspondent_account: data.correspondent_account || '', settlement_account: data.settlement_account || '', country: data.country || 'RU' }));
+          setDocuments({ passport: { uploaded: !!data.passport_uploaded, name: data.passport_file_name || '', verified: !!data.passport_verified }, tax_doc: { uploaded: !!data.tax_doc_uploaded, name: data.tax_doc_file_name || '', verified: !!data.tax_doc_verified }, snils_doc: { uploaded: !!data.snils_uploaded, name: data.snils_file_name || '', verified: !!data.snils_verified } });
+        }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
+    };
+    fetchAgent();
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handleSave = async (e: React.FormEvent) => { e.preventDefault(); if (!user) return; setSaving(true); try { const { data: existing } = await supabase.from('agents').select('id').eq('user_id', user.id).maybeSingle(); if (existing) await supabase.from('agents').update(formData).eq('user_id', user.id); else await supabase.from('agents').insert({ ...formData, user_id: user.id, status: 'ACTIVE' }); alert(t('common.success')); } catch (err) { console.error(err); alert(t('common.error')); } finally { setSaving(false); } };
-  const handleFileUpload = (docType: 'passport' | 'tax_doc' | 'snils_doc') => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.pdf,.jpg,.jpeg,.png'; input.onchange = (e: any) => { const file = e.target.files?.[0]; if (!file) return; setDocuments(prev => ({ ...prev, [docType]: { uploaded: true, name: file.name, verified: false } })); alert(t('common.success')); }; input.click(); };
-  const req = (() => { switch (formData.country) { case 'KZ': return { passport: t('ui.passportKz'), tax: t('ui.taxDocKz'), extra: t('ui.taxStatus'), options: [{ value: 'self_employed', label: t('ui.selfEmployedKz') }, { value: 'ip', label: t('ui.ipKz') }] }; case 'AZ': return { passport: t('ui.passportAz'), tax: t('ui.taxDocAz'), extra: t('ui.taxStatus'), options: [{ value: 'self_employed', label: t('ui.selfEmployedAz') }, { value: 'ip', label: t('ui.ipAz') }] }; default: return { passport: t('ui.passportRu'), tax: t('ui.taxDocRu'), extra: t('ui.snils'), options: [{ value: 'self_employed', label: t('ui.selfEmployedRu') }, { value: 'ip', label: t('ui.ipRu') }] }; } })();
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase.from('agents').select('id').eq('user_id', user.id).maybeSingle();
+      if (existing) await supabase.from('agents').update(formData).eq('user_id', user.id);
+      else await supabase.from('agents').insert({ ...formData, user_id: user.id, status: 'ACTIVE' });
+      alert(t('common.success'));
+    } catch (err) { console.error(err); alert(t('common.error')); } finally { setSaving(false); }
+  };
+
+  const handleFileUpload = (docType: 'passport' | 'tax_doc' | 'snils_doc') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.jpg,.jpeg,.png';
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setDocuments(prev => ({ ...prev, [docType]: { uploaded: true, name: file.name, verified: false } }));
+      alert(t('common.success'));
+    };
+    input.click();
+  };
+
+  const req = (() => {
+    switch (formData.country) {
+      case 'KZ': return { passport: t('ui.passportKz'), tax: t('ui.taxDocKz'), extra: t('ui.taxStatus'), options: [{ value: 'self_employed', label: t('ui.selfEmployedKz') }, { value: 'ip', label: t('ui.ipKz') }] };
+      case 'AZ': return { passport: t('ui.passportAz'), tax: t('ui.taxDocAz'), extra: t('ui.taxStatus'), options: [{ value: 'self_employed', label: t('ui.selfEmployedAz') }, { value: 'ip', label: t('ui.ipAz') }] };
+      default: return { passport: t('ui.passportRu'), tax: t('ui.taxDocRu'), extra: t('ui.snils'), options: [{ value: 'self_employed', label: t('ui.selfEmployedRu') }, { value: 'ip', label: t('ui.ipRu') }] };
+    }
+  })();
+
   if (loading) return <div className="p-8 text-center text-[#000052]"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]" /><p className="mt-2">{t('common.loading')}</p></div>;
+
   const countryOptions = [['RU', t('ui.countryRu')], ['KZ', t('ui.countryKz')], ['AZ', t('ui.countryAz')]];
-  const documentRow = (type: 'passport' | 'tax_doc' | 'snils_doc', label: string) => { const doc = documents[type]; return <div className="flex items-center justify-between p-4 bg-[#000052]/5 rounded-lg border border-[#000052]/10"><div className="flex items-center gap-3"><FileText className="w-5 h-5 text-[#000052]" /><div><p className="text-sm font-semibold text-[#000052]">{label}</p>{doc.uploaded && <p className="text-xs text-[#000052]/60 mt-1">{doc.name}</p>}</div></div><div className="flex items-center gap-3">{doc.verified ? <span className="px-3 py-1 bg-[#B8860B]/10 text-[#B8860B] rounded-full text-xs font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" />{t('ui.completed')}</span> : doc.uploaded ? <span className="px-3 py-1 bg-[#000052]/10 text-[#000052] rounded-full text-xs font-semibold flex items-center gap-1"><AlertCircle className="w-3 h-3" />{t('ui.pendingVerificationStatus')}</span> : null}<button type="button" onClick={() => handleFileUpload(type)} className="px-4 py-2 bg-[#000052] text-white rounded-lg text-xs font-semibold flex items-center gap-1"><Upload className="w-3 h-3" />{t('ui.upload')}</button></div></div>; };
-  return <div className="p-4 md:p-6 space-y-6 max-w-4xl"><div><h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('agent.title')}</h1><p className="text-sm text-[#000052]/70 mt-1">{t('agent.subtitle')}</p></div><form onSubmit={handleSave} className="space-y-6">
-    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><User className="w-5 h-5 text-[#B8860B]" />{t('ui.personalData')}</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label>{t('ui.fullName')} *</label><input name="full_name" value={formData.full_name} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" required /></div><div><label>{t('ui.phone')} *</label><input name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" required /></div><div><label>Email *</label><input name="email" type="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" required /></div><div><label>{t('ui.country')} *</label><select name="country" value={formData.country} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg">{countryOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div></div>
-    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><h2 className="text-lg font-bold text-[#000052] mb-4">{t('ui.taxStatus')}</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label>{t('ui.taxStatus')}</label><select name="tax_status" value={formData.tax_status} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg">{req.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div><div><label>{t('ui.inn')}</label><input name="inn" value={formData.inn} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" /></div><div><label>{req.extra}</label><input name="snils" value={formData.snils} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" /></div></div></div>
-    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><h2 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-[#B8860B]" />{t('ui.documentVerification')}</h2><p className="text-sm text-[#000052]/70 mb-4">{t('ui.documentVerificationDescription')}</p><div className="space-y-4">{documentRow('passport', req.passport)}{documentRow('tax_doc', req.tax)}{documentRow('snils_doc', req.extra)}</div></div>
-    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><h2 className="text-lg font-bold text-[#000052] mb-4">{t('ui.paymentDetails')}</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-4">{['bank_name','bik','correspondent_account','settlement_account'].map(name => <div key={name}><label>{t(`ui.${name === 'bank_name' ? 'bankName' : name === 'bik' ? 'bik' : name === 'correspondent_account' ? 'correspondentAccount' : 'settlementAccount'}`)}</label><input name={name} value={(formData as any)[name]} onChange={handleChange} className="w-full px-4 py-2.5 border rounded-lg" /></div>)}</div></div>
-    <button type="submit" disabled={saving} className="w-full py-3 px-4 bg-[#B8860B] text-white rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"><Save className="w-5 h-5" />{saving ? t('common.loading') : t('common.save')}</button>
-  </form></div>;
+  const labelCls = 'block text-sm font-medium text-[#000052] mb-2';
+  const inputCls = 'w-full px-4 py-3 border border-gray-200 rounded-[12px] text-[#000052] placeholder-gray-400 focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition';
+
+  const documentRow = (type: 'passport' | 'tax_doc' | 'snils_doc', label: string) => {
+    const doc = documents[type];
+    return (
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-[#F4F5F7] rounded-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[12px] bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5 text-[#000052]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#000052]">{label}</p>
+            {doc.uploaded && <p className="text-xs text-gray-400 mt-0.5">{doc.name}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {doc.verified ? (
+            <span className="px-3 py-1 bg-[#B8860B]/10 text-[#B8860B] rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+              <CheckCircle className="w-3.5 h-3.5" />
+              {t('ui.completed')}
+            </span>
+          ) : doc.uploaded ? (
+            <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+              <AlertCircle className="w-3.5 h-3.5" />
+              {t('ui.pendingVerificationStatus')}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => handleFileUpload(type)}
+            className="px-4 py-2 bg-[#000052] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {t('ui.upload')}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl">
+      <div>
+        <h1 className="text-[26px] md:text-3xl font-bold text-[#000052] tracking-tight">{t('agent.title')}</h1>
+        <p className="text-sm text-gray-400 mt-1">{t('agent.subtitle')}</p>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-bold text-[#000052] mb-5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[12px] bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-[#B8860B]" />
+            </div>
+            {t('ui.personalData')}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>{t('ui.fullName')} *</label>
+              <input name="full_name" value={formData.full_name} onChange={handleChange} className={inputCls} required />
+            </div>
+            <div>
+              <label className={labelCls}>{t('ui.phone')} *</label>
+              <input name="phone" value={formData.phone} onChange={handleChange} className={inputCls} required />
+            </div>
+            <div>
+              <label className={labelCls}>Email *</label>
+              <input name="email" type="email" value={formData.email} onChange={handleChange} className={inputCls} required />
+            </div>
+            <div>
+              <label className={labelCls}>{t('ui.country')} *</label>
+              <select name="country" value={formData.country} onChange={handleChange} className={inputCls}>
+                {countryOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-bold text-[#000052] mb-5">{t('ui.taxStatus')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>{t('ui.taxStatus')}</label>
+              <select name="tax_status" value={formData.tax_status} onChange={handleChange} className={inputCls}>
+                {req.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t('ui.inn')}</label>
+              <input name="inn" value={formData.inn} onChange={handleChange} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>{req.extra}</label>
+              <input name="snils" value={formData.snils} onChange={handleChange} className={inputCls} />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-bold text-[#000052] mb-2 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[12px] bg-[#B8860B]/10 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 text-[#B8860B]" />
+            </div>
+            {t('ui.documentVerification')}
+          </h2>
+          <p className="text-sm text-gray-400 mb-5">{t('ui.documentVerificationDescription')}</p>
+          <div className="space-y-3">
+            {documentRow('passport', req.passport)}
+            {documentRow('tax_doc', req.tax)}
+            {documentRow('snils_doc', req.extra)}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm">
+          <h2 className="text-lg font-bold text-[#000052] mb-5">{t('ui.paymentDetails')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['bank_name', 'bik', 'correspondent_account', 'settlement_account'].map(name => (
+              <div key={name}>
+                <label className={labelCls}>{t(`ui.${name === 'bank_name' ? 'bankName' : name === 'bik' ? 'bik' : name === 'correspondent_account' ? 'correspondentAccount' : 'settlementAccount'}`)}</label>
+                <input name={name} value={(formData as any)[name]} onChange={handleChange} className={inputCls} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full py-3.5 px-4 bg-[#000052] text-white rounded-[14px] font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? t('common.loading') : t('common.save')}
+        </button>
+      </form>
+    </div>
+  );
 }
