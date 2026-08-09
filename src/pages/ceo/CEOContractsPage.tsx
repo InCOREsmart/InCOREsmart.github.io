@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, Search, Filter, DollarSign, Users, ShieldCheck, FileText } from 'lucide-react';
+import { Plus, Search, Filter, DollarSign, Users, ShieldCheck, FileText, Pencil } from 'lucide-react';
 import { CreateContractModal } from '../../components/ui/CreateContractModal';
+import { EditDraftContractModal } from '../../components/ui/EditDraftContractModal';
 import { DEMO_AGENTS } from '../../lib/demoData';
 
 const isActiveContract = (contract: any) => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS';
@@ -16,6 +17,7 @@ export function CEOContractsPage() {
   const [loading, setLoading] = useState(true);
   const [contracts, setContracts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -46,7 +48,7 @@ export function CEOContractsPage() {
 
   const filteredContracts = contracts.filter(c => {
     const q = searchQuery.toLowerCase();
-    return (c.title || '').toLowerCase().includes(q) && (statusFilter === 'all' || c.status === statusFilter) || (c.agent_name || '').toLowerCase().includes(q) && (statusFilter === 'all' || c.status === statusFilter);
+    return ((c.title || '').toLowerCase().includes(q) || (c.agent_name || '').toLowerCase().includes(q)) && (statusFilter === 'all' || c.status === statusFilter);
   });
   const totalGMV = contracts.reduce((sum, c) => sum + Number(c.revenue || c.planned_revenue || 0), 0);
   const totalEscrow = contracts.reduce((sum, c) => sum + Number(c.escrow_amount || 0), 0);
@@ -68,6 +70,11 @@ export function CEOContractsPage() {
     return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>{badge.label}</span>;
   };
 
+  const updateContractInList = (updated: any) => {
+    setContracts(previous => previous.map(contract => contract.id === updated.id ? { ...contract, ...updated } : contract));
+    setEditingDraft(null);
+  };
+
   if (loading) return <div className="p-8 text-center text-[#000052]"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]" /><p className="mt-2">{t('common.loading')}</p></div>;
 
   return <div className="p-4 md:p-6 space-y-6">
@@ -78,7 +85,8 @@ export function CEOContractsPage() {
       <div className="bg-white text-[#000052] p-5 rounded-xl border border-[#000052]/10"><div className="flex items-center justify-between mb-3"><h3 className="text-sm font-medium text-[#000052]/70">{t('ui.activeContracts')}</h3><Users className="w-5 h-5 text-[#B8860B]" /></div><p className="text-2xl font-bold">{activeCount}</p><p className="text-xs text-[#000052]/60 mt-1">{t('ui.activeContractsWork')}</p></div>
     </div>
     <div className="bg-white p-4 rounded-xl border border-[#000052]/10"><div className="flex flex-col md:flex-row gap-3"><div className="flex-1 relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#000052]/40" /><input type="text" placeholder={t('ui.searchContracts')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm" /></div><div className="relative"><Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#000052]/40" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="pl-10 pr-8 py-2 bg-[#000052]/5 border border-[#000052]/10 rounded-lg text-sm appearance-none"><option value="all">{t('ui.allStatuses')}</option>{Object.keys({ ACTIVE: 1, IN_PROGRESS: 1, PENDING_APPROVAL: 1, COMPLETED: 1, DRAFT: 1 }).map(status => <option key={status} value={status}>{t(`contract.statuses.${status}`)}</option>)}</select></div></div></div>
-    <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">{filteredContracts.length === 0 ? <div className="text-center py-12 text-[#000052]/60"><FileText className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" /><p className="text-lg font-medium mb-2">{t('contract.noContracts')}</p><p className="text-sm">{t('contract.createFirst')}</p></div> : <div className="overflow-x-auto"><table className="w-full min-w-[800px]"><thead className="bg-[#000052]/5"><tr>{['contractName','agent','gmv','escrow','deadline','status'].map(key => <th key={key} className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{key === 'escrow' ? t('ui.escrow') : key === 'deadline' ? t('ui.deadline') : key === 'status' ? t('ui.status') : t(`ui.${key}`)}</th>)}</tr></thead><tbody className="divide-y divide-[#000052]/5">{filteredContracts.map(contract => <tr key={contract.id} onClick={() => navigate(`/ceo/contracts/${contract.id}`)} className="hover:bg-[#000052]/5 cursor-pointer transition"><td className="py-4 px-4"><div className="font-semibold text-[#000052] text-sm">{contract.title}</div><div className="text-xs text-[#000052]/60 mt-1">{t('ui.created')}: {formatDate(contract.start_date || contract.created_at)}</div></td><td className="py-4 px-4"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-[#B8860B]/10 flex items-center justify-center"><Users className="w-4 h-4 text-[#B8860B]" /></div><span className="text-sm text-[#000052]">{contract.agent_name || t('ui.notAssigned')}</span></div></td><td className="py-4 px-4"><div className="text-sm font-bold">${Number(contract.revenue || contract.planned_revenue || 0).toLocaleString()}</div></td><td className="py-4 px-4"><div className="text-sm font-bold text-[#B8860B]">${Number(contract.escrow_amount || 0).toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('ui.locked')}</div></td><td className="py-4 px-4"><div className="text-sm">{formatDate(contract.deadline)}</div></td><td className="py-4 px-4">{getStatusBadge(contract.status)}</td></tr>)}</tbody></table></div>}</div>
+    <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">{filteredContracts.length === 0 ? <div className="text-center py-12 text-[#000052]/60"><FileText className="w-16 h-16 mx-auto mb-4 text-[#000052]/20" /><p className="text-lg font-medium mb-2">{t('contract.noContracts')}</p><p className="text-sm">{t('contract.createFirst')}</p></div> : <div className="overflow-x-auto"><table className="w-full min-w-[850px]"><thead className="bg-[#000052]/5"><tr>{['contractName','agent','gmv','escrow','deadline','status','actions'].map(key => <th key={key} className="text-left py-3 px-4 text-xs font-bold text-[#000052] uppercase tracking-wider">{key === 'escrow' ? t('ui.escrow') : key === 'deadline' ? t('ui.deadline') : key === 'status' ? t('ui.status') : key === 'actions' ? t('actions.actions') : t(`ui.${key}`)}</th>)}</tr></thead><tbody className="divide-y divide-[#000052]/5">{filteredContracts.map(contract => <tr key={contract.id} onClick={() => navigate(`/ceo/contracts/${contract.id}`)} className="hover:bg-[#000052]/5 cursor-pointer transition"><td className="py-4 px-4"><div className="font-semibold text-[#000052] text-sm">{contract.title}</div><div className="text-xs text-[#000052]/60 mt-1">{t('ui.created')}: {formatDate(contract.start_date || contract.created_at)}</div></td><td className="py-4 px-4"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-[#B8860B]/10 flex items-center justify-center"><Users className="w-4 h-4 text-[#B8860B]" /></div><span className="text-sm text-[#000052]">{contract.agent_name || t('ui.notAssigned')}</span></div></td><td className="py-4 px-4"><div className="text-sm font-bold">${Number(contract.revenue || contract.planned_revenue || 0).toLocaleString()}</div></td><td className="py-4 px-4"><div className="text-sm font-bold text-[#B8860B]">${Number(contract.escrow_amount || 0).toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('ui.locked')}</div></td><td className="py-4 px-4"><div className="text-sm">{formatDate(contract.deadline)}</div></td><td className="py-4 px-4">{getStatusBadge(contract.status)}</td><td className="py-4 px-4">{contract.status === 'DRAFT' && !contract.is_demo ? <button onClick={event => { event.stopPropagation(); setEditingDraft(contract); }} className="inline-flex items-center gap-2 px-3 py-2 bg-[#000052] text-white rounded-lg text-xs font-semibold"><Pencil className="w-4 h-4" />{t('actions.editDraft')}</button> : <span className="text-xs text-[#000052]/40">—</span>}</td></tr>)}</tbody></table></div>}</div>
     <CreateContractModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={() => window.location.reload()} />
+    <EditDraftContractModal contract={editingDraft} isOpen={Boolean(editingDraft)} onClose={() => setEditingDraft(null)} onSaved={updateContractInList} />
   </div>;
 }
