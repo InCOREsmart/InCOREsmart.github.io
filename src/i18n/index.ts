@@ -20,11 +20,17 @@ const mergeLocale = (base: any, extra: any, ui: any) => ({
   ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}) },
 });
 
+const ruTranslation = mergeLocale(ru, coreTranslations.ru, uiTranslations.ru);
+const enTranslation = mergeLocale(en, coreTranslations.en, uiTranslations.en);
+const kkTranslation = mergeLocale(kk, coreTranslations.kk, uiTranslations.kk);
+const azTranslation = mergeLocale(az, coreTranslations.az, uiTranslations.az);
+
 const resources = {
-  ru: { translation: mergeLocale(ru, coreTranslations.ru, uiTranslations.ru) },
-  en: { translation: mergeLocale(en, coreTranslations.en, uiTranslations.en) },
-  kk: { translation: mergeLocale(kk, coreTranslations.kk, uiTranslations.kk) },
-  az: { translation: mergeLocale(az, coreTranslations.az, uiTranslations.az) },
+  ru: { translation: ruTranslation },
+  en: { translation: enTranslation },
+  kk: { translation: kkTranslation },
+  kz: { translation: kkTranslation },
+  az: { translation: azTranslation },
 };
 
 i18n
@@ -32,7 +38,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    supportedLngs: ["ru", "en", "kk", "az"],
+    supportedLngs: ["ru", "en", "kk", "kz", "az"],
     fallbackLng: "ru",
     nonExplicitSupportedLngs: true,
     cleanCode: true,
