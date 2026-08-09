@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 
 const root = process.cwd();
 const srcDir = path.join(root, 'src');
@@ -18,48 +19,47 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
-function balancedObject(text, start) {
-  const open = text.indexOf('{', start);
-  if (open < 0) return '';
-  let depth = 0;
-  let quote = null;
-  let escaped = false;
-  for (let i = open; i < text.length; i++) {
-    const ch = text[i];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) return text.slice(open + 1, i);
-    }
-  }
-  return '';
+function propertyName(node) {
+  if (!node.name) return null;
+  if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isNumericLiteral(node.name)) return node.name.text;
+  return null;
 }
 
-function languageBlock(text, language) {
-  const re = new RegExp(`\\b${language}\\s*:\\s*\\{`);
-  const match = re.exec(text);
-  return match ? balancedObject(text, match.index) : '';
+function collectObjectKeys(node, prefix = '', out = new Set()) {
+  if (!ts.isObjectLiteralExpression(node)) return out;
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const name = propertyName(property);
+    if (!name) continue;
+    const full = prefix ? `${prefix}.${name}` : name;
+    if (ts.isObjectLiteralExpression(property.initializer)) collectObjectKeys(property.initializer, full, out);
+    else out.add(full);
+  }
+  return out;
 }
 
-function namespaceKeys(block) {
-  const result = new Set();
-  const re = /\b([A-Za-z_$][\w$]*)\s*:\s*\{/g;
-  let match;
-  while ((match = re.exec(block))) {
-    const namespace = match[1];
-    const object = balancedObject(block, match.index);
-    if (!object) continue;
-    const leaf = /\b([A-Za-z_$][\w$]*)\s*:/g;
-    let item;
-    while ((item = leaf.exec(object))) result.add(`${namespace}.${item[1]}`);
+function collectRuntimeKeys(file) {
+  const text = fs.readFileSync(file, 'utf8');
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const result = Object.fromEntries(languages.map(lang => [lang, new Set()]));
+
+  function visit(node) {
+    if (ts.isVariableDeclaration(node) && node.initializer && ts.isObjectLiteralExpression(node.initializer)) {
+      const languageProperties = new Map();
+      for (const property of node.initializer.properties) {
+        const name = propertyName(property);
+        if (name && languages.includes(name) && ts.isObjectLiteralExpression(property.initializer)) {
+          languageProperties.set(name, property.initializer);
+        }
+      }
+      for (const [lang, object] of languageProperties) {
+        for (const key of collectObjectKeys(object)) result[lang].add(key);
+      }
+    }
+    ts.forEachChild(node, visit);
   }
+
+  visit(source);
   return result;
 }
 
@@ -74,11 +74,8 @@ for (const [lang, file] of Object.entries(localeFiles)) {
 for (const source of sourceFiles) {
   const full = path.join(srcDir, 'i18n', source);
   if (!fs.existsSync(full)) continue;
-  const text = fs.readFileSync(full, 'utf8');
-  for (const lang of languages) {
-    const block = languageBlock(text, lang);
-    for (const key of namespaceKeys(block)) resources[lang].add(key);
-  }
+  const runtime = collectRuntimeKeys(full);
+  for (const lang of languages) for (const key of runtime[lang]) resources[lang].add(key);
 }
 
 function walk(dir) {
