@@ -21,6 +21,7 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any) => ({
   agentContractDetail: { ...(base.agentContractDetail || {}), ...(extra.agentContractDetail || {}), ...(ui.agentContractDetail || {}), ...(supplement.agentContractDetail || {}) },
   agentProfile: { ...(base.agentProfile || {}), ...(extra.agentProfile || {}), ...(ui.agentProfile || {}), ...(supplement.agentProfile || {}) },
   company: { ...(base.company || {}), ...(extra.company || {}), ...(ui.company || {}), ...(supplement.company || {}) },
+  disputes: { ...(base.disputes || {}), ...(extra.disputes || {}), ...(ui.disputes || {}), ...(supplement.disputes || {}) },
 });
 
 const ruTranslation = mergeLocale(ru, coreTranslations.ru, uiTranslations.ru, uiSupplement.ru);
