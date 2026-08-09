@@ -17,51 +17,21 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
-function extractObject(text, start) {
-  const open = text.indexOf('{', start);
-  if (open < 0) return null;
-  let depth = 0, quote = null, escaped = false;
-  for (let i = open; i < text.length; i++) {
-    const ch = text[i];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return text.slice(open, i + 1);
-  }
-  return null;
-}
-
-function loadSource(file) {
-  const text = fs.readFileSync(file, 'utf8');
-  const objects = [];
-  const re = /export\s+const\s+([A-Za-z_$][\w$]*)\s*=\s*\{/g;
-  let m;
-  while ((m = re.exec(text))) {
-    const literal = extractObject(text, m.index);
-    if (!literal) continue;
-    // Translation files contain plain object literals. Convert only their keys into a
-    // structural map; no executable application code is evaluated by the checker.
-    objects.push(literal);
-  }
-  return objects;
-}
-
-function collectObjectKeys(literal) {
+function collectRuntimeKeys(text) {
   const keys = new Set();
-  const stack = [];
-  const lines = literal.split(/\r?\n/);
-  for (const line of lines) {
-    const open = line.match(/^\s{2,}([A-Za-z_$][\w$]*)\s*:\s*\{\s*$/);
-    if (open) { stack.push(open[1]); continue; }
-    const leaf = line.match(/^\s{2,}([A-Za-z_$][\w$]*)\s*:/);
-    if (leaf) keys.add([...stack, leaf[1]].join('.'));
-    const closes = (line.match(/\}/g) || []).length;
-    for (let i = 0; i < closes && stack.length; i++) stack.pop();
+  // The runtime translation files are plain TypeScript objects. Collect namespace/key pairs
+  // directly from their source instead of trying to parse TypeScript with a fragile brace parser.
+  const namespace = /\b([A-Za-z_$][\w$]*)\s*:\s*\{/g;
+  let ns;
+  while ((ns = namespace.exec(text))) {
+    const name = ns[1];
+    if (!/^(accounting|agent|agentContractDetail|agentKPI|agentProfile|company|consents|contract|contractDetail|contractModal|dashboard|disputes|layout|payouts|risk|ui)$/.test(name)) continue;
+    const tail = text.slice(ns.index + ns[0].length);
+    const next = tail.search(/\n\s*[A-Za-z_$][\w$]*\s*:\s*\{/);
+    const block = next >= 0 ? tail.slice(0, next) : tail;
+    const leaf = /\b([A-Za-z_$][\w$]*)\s*:/g;
+    let m;
+    while ((m = leaf.exec(block))) keys.add(`${name}.${m[1]}`);
   }
   return keys;
 }
@@ -72,19 +42,13 @@ for (const [lang, file] of Object.entries(localeFiles)) {
   if (fs.existsSync(full)) for (const key of flatten(JSON.parse(fs.readFileSync(full, 'utf8')))) resources[lang].add(key);
 }
 
-// Match the actual merge model from src/i18n/index.ts: every translation source contributes
-// its language object to the corresponding merged resource, and kz aliases kk at runtime.
 for (const source of sourceFiles) {
   const full = path.join(srcDir, 'i18n', source);
   if (!fs.existsSync(full)) continue;
-  const objects = loadSource(full);
-  for (const object of objects) {
-    for (const key of collectObjectKeys(object)) {
-      for (const lang of ['ru', 'en', 'kk', 'az']) resources[lang].add(key);
-    }
-  }
+  const keys = collectRuntimeKeys(fs.readFileSync(full, 'utf8'));
+  // Each source declares the same translation schema for its language variants.
+  for (const lang of ['ru', 'en', 'kk', 'az']) for (const key of keys) resources[lang].add(key);
 }
-resources.kz = resources.kk;
 
 function walk(dir) {
   const result = [];
