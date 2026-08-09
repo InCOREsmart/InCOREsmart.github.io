@@ -1,7 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-
 import ru from "./locales/ru.json";
 import en from "./locales/en.json";
 import kk from "./locales/kk.json";
@@ -11,10 +10,7 @@ import { uiTranslations } from "./uiTranslations";
 import { uiSupplement } from "./uiSupplement";
 
 const mergeLocale = (base: any, extra: any, ui: any, supplement: any) => ({
-  ...base,
-  ...extra,
-  ...ui,
-  ...supplement,
+  ...base, ...extra, ...ui, ...supplement,
   layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}) },
   accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}) },
   agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}), ...(supplement.agent || {}) },
@@ -28,35 +24,24 @@ const enTranslation = mergeLocale(en, coreTranslations.en, uiTranslations.en, ui
 const kkTranslation = mergeLocale(kk, coreTranslations.kk, uiTranslations.kk, uiSupplement.kk);
 const azTranslation = mergeLocale(az, coreTranslations.az, uiTranslations.az, uiSupplement.az);
 
-const resources = {
-  ru: { translation: ruTranslation },
-  en: { translation: enTranslation },
-  kk: { translation: kkTranslation },
-  kz: { translation: kkTranslation },
-  az: { translation: azTranslation },
-};
+const resources = { ru: { translation: ruTranslation }, en: { translation: enTranslation }, kk: { translation: kkTranslation }, kz: { translation: kkTranslation }, az: { translation: azTranslation } };
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    supportedLngs: ["ru", "en", "kk", "kz", "az"],
-    fallbackLng: "ru",
-    nonExplicitSupportedLngs: true,
-    cleanCode: true,
-    load: "languageOnly",
-    defaultNS: "translation",
-    interpolation: { escapeValue: false },
-    detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
-    returnNull: false,
-    returnEmptyString: false,
-    saveMissing: false,
-    react: { useSuspense: false },
-    missingKeyHandler: (lngs, namespace, key) => {
-      if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs);
-    },
-    parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
-  });
+i18n.use(LanguageDetector).use(initReactI18next).init({
+  resources,
+  supportedLngs: ["ru", "en", "kk", "kz", "az"],
+  fallbackLng: "ru",
+  nonExplicitSupportedLngs: true,
+  cleanCode: true,
+  load: "languageOnly",
+  defaultNS: "translation",
+  interpolation: { escapeValue: false },
+  detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
+  returnNull: false,
+  returnEmptyString: false,
+  saveMissing: false,
+  react: { useSuspense: false },
+  missingKeyHandler: (lngs, namespace, key) => { if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs); },
+  parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
+});
 
 export default i18n;
