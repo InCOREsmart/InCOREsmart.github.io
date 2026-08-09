@@ -8,22 +8,25 @@ import kk from "./locales/kk.json";
 import az from "./locales/az.json";
 import { coreTranslations } from "./core";
 import { uiTranslations } from "./uiTranslations";
+import { uiSupplement } from "./uiSupplement";
 
-const mergeLocale = (base: any, extra: any, ui: any) => ({
+const mergeLocale = (base: any, extra: any, ui: any, supplement: any) => ({
   ...base,
   ...extra,
   ...ui,
-  layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}) },
-  accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}) },
-  agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}) },
-  payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}) },
-  ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}) },
+  ...supplement,
+  layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}) },
+  accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}) },
+  agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}), ...(supplement.agent || {}) },
+  payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}), ...(supplement.payouts || {}) },
+  ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}), ...(supplement.ceo || {}) },
+  ui: { ...(base.ui || {}), ...(extra.ui || {}), ...(ui.ui || {}), ...(supplement.ui || {}) },
 });
 
-const ruTranslation = mergeLocale(ru, coreTranslations.ru, uiTranslations.ru);
-const enTranslation = mergeLocale(en, coreTranslations.en, uiTranslations.en);
-const kkTranslation = mergeLocale(kk, coreTranslations.kk, uiTranslations.kk);
-const azTranslation = mergeLocale(az, coreTranslations.az, uiTranslations.az);
+const ruTranslation = mergeLocale(ru, coreTranslations.ru, uiTranslations.ru, uiSupplement.ru);
+const enTranslation = mergeLocale(en, coreTranslations.en, uiTranslations.en, uiSupplement.en);
+const kkTranslation = mergeLocale(kk, coreTranslations.kk, uiTranslations.kk, uiSupplement.kk);
+const azTranslation = mergeLocale(az, coreTranslations.az, uiTranslations.az, uiSupplement.az);
 
 const resources = {
   ru: { translation: ruTranslation },
@@ -45,19 +48,13 @@ i18n
     load: "languageOnly",
     defaultNS: "translation",
     interpolation: { escapeValue: false },
-    detection: {
-      order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-      lookupLocalStorage: "i18nextLng",
-    },
+    detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
     returnNull: false,
     returnEmptyString: false,
     saveMissing: false,
     react: { useSuspense: false },
     missingKeyHandler: (lngs, namespace, key) => {
-      if (import.meta.env.DEV) {
-        console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs);
-      }
+      if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs);
     },
     parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
   });
