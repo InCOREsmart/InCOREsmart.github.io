@@ -74,11 +74,10 @@ export async function createPayoutStreamsForContract(
       return { success: false, error: 'Некорректная плановая выручка' };
     }
 
-    // Все процентные payout streams считаются от ОДНОЙ базы:
-    // plannedRevenue. Деление выручки на 3 здесь было ошибкой и занижало
-    // обязательства перед агентом в 3 раза для первых пяти потоков.
     const percentageAmount = (percent: number) => Math.round(revenue * percent / 100);
 
+    // Годовой бонус НЕ является escrow-потоком. Он начисляется отдельно
+    // и только визуально отображается в кабинетах агента и CEO.
     const streams = [
       {
         contract_id: contractId,
@@ -194,7 +193,7 @@ export async function simulateOracleEvent(
       case 'RENEWAL_CONFIRMED': await handleRenewalConfirmed(contractId, userId); break;
       case 'CROSS_SELL_CONFIRMED': await handleCrossSellConfirmed(contractId, userId); break;
       case 'PLAN_ACHIEVED': await handlePlanAchieved(contractId, userId); break;
-      case 'ANNUAL_BONUS_CONFIRMED': break;
+      case 'ANNUAL_BONUS_CONFIRMED': await handleAnnualBonusConfirmed(contractId, userId); break;
       case 'DISPUTE_OPENED':
       case 'DISPUTE_RESOLVED': break;
     }
@@ -307,8 +306,8 @@ async function handlePlanAchieved(contractId: string, userId: string) {
   });
 }
 
-// Годовой бонус не является payout stream и никогда не попадает в escrow.
 async function handleAnnualBonusConfirmed(contractId: string, userId: string) {
+  // Только аудит/визуальный прогресс. В escrow и payout streams годовой бонус не попадает.
   console.info('Annual bonus confirmed for visual/audit purposes only', { contractId, userId });
 }
 
@@ -384,31 +383,70 @@ export async function openDispute(contractId: string, openedBy: string, reason: 
 }
 
 export async function releasePayment(contractId: string, streamId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  const paidAt = new Date().toISOString();
+  const correlationId = `payout_${contractId}_${streamId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
   try {
+    // Важно: проверяем принадлежность потока конкретному контракту.
     const { data: stream, error: streamError } = await supabase.from('contract_payout_streams')
-      .select('*').eq('id', streamId).single();
+      .select('*').eq('id', streamId).eq('contract_id', contractId).single();
     if (streamError) throw streamError;
 
-    if (!stream || stream.status !== 'UNLOCKED' || stream.stream_key === 'annual') {
-      return { success: false, error: 'Поток не разблокирован или не является выплатой из эскроу' };
+    if (!stream || stream.stream_key === 'annual') {
+      return { success: false, error: 'Годовой бонус не является выплатой из эскроу' };
     }
 
-    const { error: updateError } = await supabase.from('contract_payout_streams')
-      .update({ status: 'PAID', paid_at: new Date().toISOString() }).eq('id', streamId);
+    if (stream.status !== 'UNLOCKED') {
+      return { success: false, error: 'Поток уже выплачен, заблокирован или недоступен для выплаты' };
+    }
+
+    // Критично: UPDATE содержит условие status=UNLOCKED.
+    // При двух одновременных запросах только один из них сможет перевести
+    // поток в PAID. Второй получит 0 изменённых строк и не создаст вторую выплату.
+    const { data: updatedStream, error: updateError } = await supabase
+      .from('contract_payout_streams')
+      .update({ status: 'PAID', paid_at: paidAt })
+      .eq('id', streamId)
+      .eq('contract_id', contractId)
+      .eq('status', 'UNLOCKED')
+      .select('*')
+      .maybeSingle();
+
     if (updateError) throw updateError;
+
+    if (!updatedStream) {
+      return { success: false, error: 'Выплата уже была обработана другим запросом' };
+    }
 
     const { error: eventError } = await supabase.from('escrow_events').insert({
       contract_id: contractId,
       event_type: 'PAYOUT_TO_AGENT',
-      amount: stream.amount,
-      actor_role: 'ORACLE',
+      amount: Number(updatedStream.amount || 0),
+      actor_role: 'CEO',
       actor_id: userId,
-      metadata: { stream_key: stream.stream_key, stream_id: streamId },
+      metadata: {
+        stream_key: updatedStream.stream_key,
+        stream_id: streamId,
+        correlation_id: correlationId,
+        payout_status_transition: 'UNLOCKED_TO_PAID',
+      },
     });
-    if (eventError) throw eventError;
+
+    if (eventError) {
+      // Не оставляем поток PAID без аудиторского события.
+      // Откат возможен только для той самой записи, которую изменили мы.
+      await supabase.from('contract_payout_streams')
+        .update({ status: 'UNLOCKED', paid_at: null })
+        .eq('id', streamId)
+        .eq('contract_id', contractId)
+        .eq('status', 'PAID')
+        .eq('paid_at', paidAt);
+      throw eventError;
+    }
 
     return { success: true };
   } catch (err) {
+    console.error('Ошибка выплаты:', err);
     return { success: false, error: (err as Error).message };
   }
 }
