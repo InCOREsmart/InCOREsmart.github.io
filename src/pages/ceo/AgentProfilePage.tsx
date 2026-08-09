@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Users, Mail, Phone, DollarSign, Target, ShieldCheck, Clock, FileText, Filter, Award, Pencil } from 'lucide-react';
-import { DemoContract, calculateAgentKPI, calculateContractKPI, getDemoAgentById } from '../../lib/demoData';
+import { DemoContract, calculateContractKPI, getDemoAgentById } from '../../lib/demoData';
 import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +11,13 @@ import { EditAgentModal } from '../../components/ui/EditAgentModal';
 type ContractFilter = 'ALL' | 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED';
 const getContractStart = (contract: any) => contract.start_date || contract.start_at || contract.startDate || contract.created_at;
 const getContractDeadline = (contract: any) => contract.deadline || contract.end_date || contract.end_at || contract.endDate;
+
+function calculateAgentKPI(agent: { contracts?: Array<any> }): number {
+  const contracts = agent.contracts || [];
+  if (!contracts.length) return 0;
+  const values = contracts.map(contract => calculateContractKPI(contract));
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
 
 export function AgentProfilePage() {
   const { id } = useParams<{ id: string }>(); const { t, i18n } = useTranslation(); const { user } = useAuth(); const navigate = useNavigate();
