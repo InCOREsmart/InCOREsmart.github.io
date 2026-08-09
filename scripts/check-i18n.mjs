@@ -6,8 +6,8 @@ const root = process.cwd();
 const srcDir = path.join(root, 'src');
 const localeDir = path.join(srcDir, 'i18n', 'locales');
 const localeFiles = { ru: 'ru.json', en: 'en.json', kk: 'kk.json', az: 'az.json' };
-const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts'];
 const languages = Object.keys(localeFiles);
+const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts'];
 
 function flatten(value, prefix = '', out = new Set()) {
   if (!value || typeof value !== 'object') return out;
@@ -19,20 +19,20 @@ function flatten(value, prefix = '', out = new Set()) {
   return out;
 }
 
-function propertyName(node) {
-  if (!node.name) return null;
+function nameOf(node) {
+  if (!node?.name) return null;
   if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isNumericLiteral(node.name)) return node.name.text;
   return null;
 }
 
-function collectObjectKeys(node, prefix = '', out = new Set()) {
+function collectLeaves(node, prefix = '', out = new Set()) {
   if (!ts.isObjectLiteralExpression(node)) return out;
   for (const property of node.properties) {
     if (!ts.isPropertyAssignment(property)) continue;
-    const name = propertyName(property);
+    const name = nameOf(property);
     if (!name) continue;
     const full = prefix ? `${prefix}.${name}` : name;
-    if (ts.isObjectLiteralExpression(property.initializer)) collectObjectKeys(property.initializer, full, out);
+    if (ts.isObjectLiteralExpression(property.initializer)) collectLeaves(property.initializer, full, out);
     else out.add(full);
   }
   return out;
@@ -44,16 +44,13 @@ function collectRuntimeKeys(file) {
   const result = Object.fromEntries(languages.map(lang => [lang, new Set()]));
 
   function visit(node) {
-    if (ts.isVariableDeclaration(node) && node.initializer && ts.isObjectLiteralExpression(node.initializer)) {
-      const languageProperties = new Map();
-      for (const property of node.initializer.properties) {
-        const name = propertyName(property);
-        if (name && languages.includes(name) && ts.isObjectLiteralExpression(property.initializer)) {
-          languageProperties.set(name, property.initializer);
+    if (ts.isObjectLiteralExpression(node)) {
+      for (const property of node.properties) {
+        if (!ts.isPropertyAssignment(property)) continue;
+        const lang = nameOf(property);
+        if (languages.includes(lang) && ts.isObjectLiteralExpression(property.initializer)) {
+          for (const key of collectLeaves(property.initializer)) result[lang].add(key);
         }
-      }
-      for (const [lang, object] of languageProperties) {
-        for (const key of collectObjectKeys(object)) result[lang].add(key);
       }
     }
     ts.forEachChild(node, visit);
@@ -66,11 +63,8 @@ function collectRuntimeKeys(file) {
 const resources = Object.fromEntries(languages.map(lang => [lang, new Set()]));
 for (const [lang, file] of Object.entries(localeFiles)) {
   const full = path.join(localeDir, file);
-  if (fs.existsSync(full)) {
-    for (const key of flatten(JSON.parse(fs.readFileSync(full, 'utf8')))) resources[lang].add(key);
-  }
+  if (fs.existsSync(full)) for (const key of flatten(JSON.parse(fs.readFileSync(full, 'utf8')))) resources[lang].add(key);
 }
-
 for (const source of sourceFiles) {
   const full = path.join(srcDir, 'i18n', source);
   if (!fs.existsSync(full)) continue;
@@ -104,9 +98,7 @@ for (const file of walk(srcDir)) {
 
 const missing = [];
 for (const key of [...used].sort()) {
-  for (const lang of languages) {
-    if (!resources[lang].has(key)) missing.push(`${lang}: ${key}`);
-  }
+  for (const lang of languages) if (!resources[lang].has(key)) missing.push(`${lang}: ${key}`);
 }
 
 if (missing.length) {
@@ -114,5 +106,4 @@ if (missing.length) {
   for (const item of missing) console.error(`- ${item}`);
   process.exit(1);
 }
-
 console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KZ/AZ.`);
