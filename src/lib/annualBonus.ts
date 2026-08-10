@@ -1,6 +1,7 @@
 import type { DemoAgent, DemoContract } from './demoData';
 
 export const ANNUAL_BONUS_MAX = 7000;
+const AS_OF_DATE = new Date('2026-08-10T23:59:59Z');
 
 export interface AnnualBonusProgress {
   year: number;
@@ -52,7 +53,14 @@ export function calculateAnnualBonusProgress(contracts: Array<DemoContract | any
   const monthlyPlan = monthlyPlans.length ? monthlyPlans.reduce((sum, value) => sum + value, 0) / monthlyPlans.length : 0;
   const annualTarget = explicitAnnualTarget > 0 ? explicitAnnualTarget : monthlyPlan * 12;
   const actualAnnualSales = yearContracts.reduce((sum, contract) => sum + getActualRevenue(contract), 0);
-  const planAchievement = annualTarget > 0 ? clamp(actualAnnualSales / annualTarget) : 0;
+
+  // Годовой бонус накапливается по мере прохождения года.
+  // В августе нельзя получить 100% годового бонуса только за один месяц.
+  const elapsedMonths = year === AS_OF_DATE.getUTCFullYear() ? AS_OF_DATE.getUTCMonth() + 1 : 12;
+  const ytdPlan = explicitAnnualTarget > 0
+    ? annualTarget * (elapsedMonths / 12)
+    : monthlyPlan * elapsedMonths;
+  const planAchievement = ytdPlan > 0 ? clamp(actualAnnualSales / ytdPlan) : 0;
 
   const months = new Set(yearContracts.map(contract => {
     const dateValue = contract.start_date || contract.start_at || contract.created_at;
