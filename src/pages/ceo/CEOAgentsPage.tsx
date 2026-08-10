@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Users, DollarSign, Target, ShieldCheck, Mail, Phone } from 'lucide-react';
@@ -14,16 +14,66 @@ const demoKPI = (agent: any) => {
   return Math.round(values.reduce((sum: number, value: number) => sum + value, 0) / values.length);
 };
 const realKPI = (contracts: any[]) => {
-  if (!contracts.length) return 0;
-  const values = contracts.map(contract => {
-    const pairs = [[contract.actual_calls, contract.kpi_calls], [contract.actual_meetings, contract.kpi_meetings], [contract.actual_proposals, contract.kpi_proposals], [contract.actual_clients, contract.target_clients]].filter(([, target]) => Number(target || 0) > 0);
-    if (pairs.length) return Math.round(pairs.reduce((sum, [actual, target]) => sum + (Number(actual || 0) / Number(target || 1)) * 100, 0) / pairs.length);
-    const planned = Number(contract.planned_revenue || contract.sales_plan || contract.target_revenue || 0);
-    return planned > 0 ? Math.round(Number(contract.actual_revenue || contract.revenue || contract.sales_amount || 0) / planned * 100) : 0;
+  const activeContracts = contracts.filter(contract =>
+    contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS'
+  );
+
+  if (!activeContracts.length) return 0;
+
+  const values = activeContracts.map(contract => {
+    const pairs = [
+      [contract.actual_calls, contract.kpi_calls],
+      [contract.actual_meetings, contract.kpi_meetings],
+      [contract.actual_proposals, contract.kpi_proposals],
+      [contract.actual_clients, contract.target_clients]
+    ].filter(([, target]) => Number(target || 0) > 0);
+
+    if (pairs.length) {
+      return Math.round(
+        pairs.reduce(
+          (sum, [actual, target]) =>
+            sum + (Number(actual || 0) / Number(target || 1)) * 100,
+          0
+        ) / pairs.length
+      );
+    }
+
+    const planned = Number(
+      contract.planned_revenue ||
+      contract.sales_plan ||
+      contract.target_revenue ||
+      0
+    );
+
+    return planned > 0
+      ? Math.round(
+          Number(
+            contract.actual_revenue ||
+            contract.revenue ||
+            contract.sales_amount ||
+            0
+          ) / planned * 100
+        )
+      : 0;
   });
-  return Math.round(values.reduce((sum, value: number) => sum + value, 0) / values.length);
+
+  return Math.round(
+    values.reduce((sum: number, value: number) => sum + value, 0) /
+    values.length
+  );
 };
 
+const displaySpecialization = (value: any) =>
+  value === 'insurance_b2b'
+    ? 'B2B Страхование'
+    : (value || '—');
+
+const displayStartDate = (agent: any, locale: string) => {
+  const value = agent.start_date || agent.created_at;
+  return value
+    ? new Date(value).toLocaleDateString(locale)
+    : '—';
+};
 export function CEOAgentsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -63,7 +113,7 @@ export function CEOAgentsPage() {
     loadAgents();
   }, [user]);
 
-  const filtered = useMemo(() => agents.filter(agent => agent.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || agent.email?.toLowerCase().includes(searchQuery.toLowerCase()) || agent.specialization?.toLowerCase().includes(searchQuery.toLowerCase())), [agents, searchQuery]);
+  const filtered = useMemo(() => agents.filter(agent => agent.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || agent.email?.toLowerCase().includes(searchQuery.toLowerCase()) || displaySpecialization(agent.specialization).toLowerCase().includes(searchQuery.toLowerCase())), [agents, searchQuery]);
   const totalRevenue = agents.reduce((sum, agent) => sum + Number(agent.total_revenue || 0), 0);
   const avgKpi = agents.length ? Math.round(agents.reduce((sum, agent) => sum + Number(agent.kpi_achievement || 0), 0) / agents.length) : 0;
   const activeContracts = agents.reduce((sum, agent) => sum + Number(agent.active_contracts || 0), 0);
@@ -143,16 +193,16 @@ export function CEOAgentsPage() {
                       <div>
                         <div className="font-semibold text-[#000052] text-sm">{agent.full_name}</div>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{agent.email || '—'}</span>
-                          <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{agent.phone || '—'}</span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{agent.email || 'вЂ”'}</span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{agent.phone || 'вЂ”'}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-5">
-                    <span className="px-3 py-1 bg-[#000052]/5 text-[#000052] rounded-full text-xs font-medium whitespace-nowrap">{agent.specialization || '—'}</span>
+                    <span className="px-3 py-1 bg-[#000052]/5 text-[#000052] rounded-full text-xs font-medium whitespace-nowrap">{agent.specialization || 'вЂ”'}</span>
                   </td>
-                  <td className="py-4 px-5 text-sm text-gray-500">{agent.start_date ? new Date(agent.start_date).toLocaleDateString(locale) : '—'}</td>
+                  <td className="py-4 px-5 text-sm text-gray-500">{agent.start_date ? new Date(agent.start_date).toLocaleDateString(locale) : 'вЂ”'}</td>
                   <td className="py-4 px-5"><span className="text-sm font-bold text-[#000052] tabular-nums">{agent.contracts_count || 0}</span></td>
                   <td className="py-4 px-5 text-right">
                     <span className={`text-sm font-bold tabular-nums ${Number(agent.total_revenue || 0) > 0 ? 'text-[#B8860B]' : 'text-[#64748B]'}`}>${Number(agent.total_revenue || 0).toLocaleString()}</span>
