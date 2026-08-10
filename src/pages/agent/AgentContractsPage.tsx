@@ -20,6 +20,7 @@ export function AgentContractsPage() {
   const [agent, setAgent] = useState<any>(null);
   const [contracts, setContracts] = useState<any[]>([]);
   const [streamsByContract, setStreamsByContract] = useState<Record<string, any[]>>({});
+  const [acceptingContractId, setAcceptingContractId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -40,6 +41,41 @@ export function AgentContractsPage() {
     };
     fetchData();
   }, [user]);
+
+  const handleAcceptContract = async (contractId: string) => {
+    if (!user || acceptingContractId) return;
+    setAcceptingContractId(contractId);
+    try {
+      const { data: contract, error: contractError } = await supabase
+        .from('contracts')
+        .select('id, company_id, title, status, escrow_status, agent_id')
+        .eq('id', contractId)
+        .eq('agent_id', agent.id)
+        .maybeSingle();
+      if (contractError) throw contractError;
+      if (!contract) throw new Error(t('ui.contractNotFound', 'Контракт не найден'));
+      if (!['DRAFT', 'PENDING_PAYMENT'].includes(contract.status)) {
+        setContracts(prev => prev.map(c => c.id === contractId ? { ...c, status: contract.status } : c));
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('contracts')
+        .update({ status: 'IN_PROGRESS' })
+        .eq('id', contractId)
+        .eq('agent_id', agent.id)
+        .in('status', ['DRAFT', 'PENDING_PAYMENT']);
+      if (updateError) throw updateError;
+
+      setContracts(prev => prev.map(c => c.id === contractId ? { ...c, status: 'IN_PROGRESS' } : c));
+      alert(t('ui.contractAccepted', 'Контракт принят и переведён в работу'));
+    } catch (err) {
+      console.error(err);
+      alert(t('ui.contractAcceptError', 'Не удалось принять контракт'));
+    } finally {
+      setAcceptingContractId(null);
+    }
+  };
 
   const handleSendWork = async (contractId: string) => {
     if (!window.confirm(t('ui.submitWorkConfirm'))) return;
@@ -92,9 +128,10 @@ export function AgentContractsPage() {
     <div className="bg-[#000052] p-5 rounded-2xl shadow-[0_4px_16px_rgba(0,0,82,0.25)]"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-[12px] bg-white/10 flex items-center justify-center flex-shrink-0"><Shield className="w-5 h-5 text-[#D4A017]" /></div><div><p className="font-bold text-sm text-white">{t('agent.fundsVerified')}</p><p className="text-xs text-white/70 mt-0.5">{t('agent.clawbackWarning')}</p></div></div></div>
     {contracts.length === 0 ? <div className="bg-white p-12 rounded-2xl shadow-sm text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#000052]/5 flex items-center justify-center"><FileText className="w-8 h-8 text-[#000052]/30" /></div><p className="text-lg font-semibold text-[#000052] mb-2">{t('ui.noContracts')}</p><p className="text-sm text-gray-400">{t('ui.noContractsDescription')}</p></div> : <div className="space-y-5">{contracts.map(contract => {
       const statusInfo = getStatusInfo(contract.status); const StatusIcon = statusInfo.icon; const revenue = Number(contract.revenue || 0); const rawStreams = streamsByContract[contract.id] || []; const streams = rawStreams.map(stream => ({ ...stream, amount: getStreamAmount(stream) })).filter(stream => stream.stream_key !== 'annual'); const totalStreamAmount = getContractEscrow(contract, rawStreams); const unlockedAmount = streams.filter(s => ['UNLOCKED', 'PAYABLE', 'PAID'].includes(s.status)).reduce((sum, s) => sum + s.amount, 0); const lockedAmount = streams.length ? streams.filter(s => s.status === 'LOCKED').reduce((sum, s) => sum + s.amount, 0) : totalStreamAmount; const paidAmount = streams.filter(s => s.status === 'PAID').reduce((sum, s) => sum + s.amount, 0);
+      const canAccept = contract.status === 'DRAFT' || contract.status === 'PENDING_PAYMENT';
       return <div key={contract.id} className="bg-white rounded-2xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-[0_12px_40px_rgba(0,0,82,0.12)]"><div className="p-5 md:p-6"><div className="flex items-start justify-between mb-4 gap-3"><div className="flex-1"><h3 className="font-bold text-[#000052] text-lg">{contract.title}</h3>{contract.description && <p className="text-sm text-gray-400 mt-1">{contract.description}</p>}</div><span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.color}`}><StatusIcon className="w-3.5 h-3.5" />{statusInfo.label}</span></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm"><div><div className="text-xs text-gray-400">{t('ui.revenue')}</div><div className="font-bold text-[#000052] mt-1">${revenue.toLocaleString()}</div></div><div><div className="text-xs text-gray-400">{t('ui.escrow')}</div><div className="font-bold text-[#B8860B] mt-1">${totalStreamAmount.toLocaleString()}</div></div><div><div className="text-xs text-gray-400">{t('ui.deadline')}</div><div className="font-bold text-[#000052] mt-1">{formatDate(contract.deadline)}</div></div><div><div className="text-xs text-gray-400">{t('ui.escrowStatus')}</div><div className="font-bold text-[#000052] mt-1 flex items-center gap-1.5">{contract.escrow_status === 'FUNDED' ? <><Unlock className="w-3.5 h-3.5 text-emerald-600" />{t('ui.locked')}</> : <><Lock className="w-3.5 h-3.5 text-gray-400" />{t('ui.notLocked')}</>}</div></div></div></div>
       {rawStreams.length > 0 && <div className="px-5 md:px-6 py-4 bg-[#F4F5F7] border-t border-gray-100"><div className="flex items-center justify-between"><h4 className="text-sm font-bold text-[#000052]">{t('ui.paymentStreams')} ({streams.length})</h4><div className="text-xs text-gray-400">{t('ui.unlocked')}: ${unlockedAmount.toLocaleString()} / ${totalStreamAmount.toLocaleString()}</div></div><div className="h-[10px] bg-gray-200/70 rounded-full overflow-hidden my-4"><div className="h-full bg-gradient-to-r from-[#B8860B] to-[#D4A017] rounded-full" style={{ width: `${totalStreamAmount > 0 ? Math.min((unlockedAmount / totalStreamAmount) * 100, 100) : 0}%` }} /></div><div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">{streams.slice(0, 4).map(stream => <div key={stream.id} className="bg-white p-3 rounded-xl border border-gray-100"><div className="text-gray-400 truncate">{stream.title}</div><div className="text-sm font-bold text-[#000052] mt-1">${stream.amount.toLocaleString()}</div><div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mt-1">{stream.status}</div></div>)}{streams.length > 4 && <div className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-center text-gray-400 font-semibold">+{streams.length - 4}</div>}</div><div className="mt-4 p-4 bg-white rounded-xl border border-gray-100"><div className="text-xs font-semibold text-gray-500 mb-3">{t('ui.contractTotals', 'Итого по контракту')}</div><div className="flex items-center justify-between gap-4"><div><div className="text-xs text-gray-400">{t('ui.paid')}</div><div className="text-sm font-bold text-emerald-600 mt-0.5">${paidAmount.toLocaleString()}</div></div><div className="w-px h-8 bg-gray-100"></div><div className="text-right"><div className="text-xs text-gray-400">{t('ui.lockedAmount')}</div><div className="text-sm font-bold text-[#000052] mt-0.5">${lockedAmount.toLocaleString()}</div></div></div></div></div>}
-      <div className="p-4 flex gap-2 border-t border-gray-100"><button onClick={() => navigate(`/agent/contracts/${contract.id}`)} className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-[#000052] rounded-xl text-sm font-semibold hover:border-[#000052] hover:bg-[#000052]/5 transition-all duration-200">{t('ui.details')}</button>{(contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS') && <button onClick={() => handleSendWork(contract.id)} className="flex items-center gap-2 py-2.5 px-4 bg-[#000052] text-white rounded-xl text-sm font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"><Send className="w-4 h-4" />{t('ui.sendWork')}</button>}</div></div>;
+      <div className="p-4 flex flex-wrap gap-2 border-t border-gray-100"><button onClick={() => navigate(`/agent/contracts/${contract.id}`)} className="flex-1 min-w-[140px] py-2.5 px-4 bg-white border border-gray-200 text-[#000052] rounded-xl text-sm font-semibold hover:border-[#000052] hover:bg-[#000052]/5 transition-all duration-200">{t('ui.details')}</button>{canAccept && <button onClick={() => handleAcceptContract(contract.id)} disabled={acceptingContractId === contract.id} className="flex-1 min-w-[180px] py-2.5 px-4 bg-[#000052] text-white rounded-xl text-sm font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">{acceptingContractId === contract.id ? t('common.loading') : t('ui.acceptContract', 'Принять контракт')}</button>}{(contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS') && <button onClick={() => handleSendWork(contract.id)} className="flex items-center gap-2 py-2.5 px-4 bg-[#000052] text-white rounded-xl text-sm font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"><Send className="w-4 h-4" />{t('ui.sendWork')}</button>}</div></div>;
     })}</div>}
   </div>;
 }
