@@ -24,11 +24,54 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply payout model synchronization
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/lib/smartContractLogic.ts')
+          text = path.read_text(encoding='utf-8')
+
+          if "from './contractFinance'" not in text:
+              text = text.replace("import { supabase } from './supabase';", "import { supabase } from './supabase';\nimport { calculateContractFinancials, getActualContractRevenueBreakdown } from './contractFinance';", 1)
+
+          helper = r'''\n\nasync function syncPayoutStreamAmountsWithActualRevenue(contractId: string) {\n  const { data: contract, error: contractError } = await supabase\n    .from('contracts')\n    .select('actual_contract_revenue, actual_revenue, client_contract_amount, revenue, actual_property_revenue, actual_casco_revenue, actual_dms_revenue, actual_renewal_revenue, actual_cross_sell_revenue, bitrix_deals')\n    .eq('id', contractId)\n    .maybeSingle();\n  if (contractError) throw contractError;\n  if (!contract) return;\n\n  const breakdown = getActualContractRevenueBreakdown(contract);\n  const actualRevenue = breakdown.property + breakdown.casco + breakdown.dms + breakdown.renewal + breakdown.crossSell;\n  if (actualRevenue <= 0) return;\n\n  const finance = calculateContractFinancials(breakdown);\n  const amounts: Record<string, number> = {\n    new_sales_property: finance.bonusProperty,\n    new_sales_casco: finance.bonusCasco,\n    new_sales_dms: finance.bonusDms,\n    renewal: finance.bonusRenewal,\n    cross_sell: finance.bonusCrossSell,\n    plan_bonus: finance.bonusPlan,\n    retention: finance.bonusRetention,\n    annual: finance.bonusAnnual,\n  };\n\n  const { data: streams, error: streamsError } = await supabase\n    .from('contract_payout_streams')\n    .select('id, stream_key, status')\n    .eq('contract_id', contractId);\n  if (streamsError) throw streamsError;\n\n  const mutableStatuses = ['LOCKED', 'PENDING_VERIFICATION'];\n  for (const stream of streams || []) {\n    if (!mutableStatuses.includes(stream.status)) continue;\n    const amount = amounts[stream.stream_key];\n    if (amount === undefined) continue;\n    const { error } = await supabase\n      .from('contract_payout_streams')\n      .update({ amount })\n      .eq('id', stream.id);\n    if (error) throw error;\n  }\n\n  const { data: refreshedStreams, error: refreshedError } = await supabase\n    .from('contract_payout_streams')\n    .select('stream_key, amount')\n    .eq('contract_id', contractId);\n  if (refreshedError) throw refreshedError;\n\n  const totalEscrow = (refreshedStreams || [])\n    .filter(stream => stream.stream_key !== 'annual')\n    .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);\n\n  const { data: escrowEvent, error: escrowLookupError } = await supabase\n    .from('escrow_events')\n    .select('id, metadata')\n    .eq('contract_id', contractId)\n    .eq('event_type', 'ESCROW_CREATED')\n    .order('created_at', { ascending: true })\n    .limit(1)\n    .maybeSingle();\n  if (escrowLookupError) throw escrowLookupError;\n\n  if (escrowEvent) {\n    const metadata = escrowEvent.metadata && typeof escrowEvent.metadata === 'object' ? escrowEvent.metadata : {};\n    const { error: escrowUpdateError } = await supabase\n      .from('escrow_events')\n      .update({\n        amount: totalEscrow,\n        metadata: {\n          ...metadata,\n          total_escrow: totalEscrow,\n          actual_contract_revenue: actualRevenue,\n          actual_revenue_breakdown: breakdown,\n          annual_bonus_excluded: true,\n          synchronized_with_contract_finance: true,\n        },\n      })\n      .eq('id', escrowEvent.id);\n    if (escrowUpdateError) throw escrowUpdateError;\n  }\n}\n'''
+
+          if 'async function syncPayoutStreamAmountsWithActualRevenue' not in text:
+              marker = '\nexport async function simulateOracleEvent('
+              if marker not in text:
+                  raise SystemExit('SYNC_MARKER_NOT_FOUND')
+              text = text.replace(marker, helper + marker, 1)
+
+          for fn in ['handleClientPaymentConfirmed', 'handleRenewalConfirmed', 'handleCrossSellConfirmed', 'handlePlanAchieved']:
+              marker = f'async function {fn}(contractId: string, userId: string) {{'
+              if marker in text:
+                  start = text.index(marker)
+                  prefix = text[start:start + 500]
+                  if 'syncPayoutStreamAmountsWithActualRevenue(contractId);' not in prefix:
+                      text = text.replace(marker, marker + '\n  await syncPayoutStreamAmountsWithActualRevenue(contractId);', 1)
+
+          path.write_text(text, encoding='utf-8')
+
       - name: Validate TypeScript and translations
         run: npm run check
 
       - name: Build
         run: npm run build
+
+      - name: Commit synchronization changes and remove one-time workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/sync-payout-model.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/smartContractLogic.ts .github/workflows/deploy.yml .github/workflows/sync-payout-model.yml
+          if git diff --cached --quiet; then
+            echo "NO_CHANGES"
+            exit 0
+          fi
+          git commit -m "fix: sync payout streams with actual contract revenue"
+          git push
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
