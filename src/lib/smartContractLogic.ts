@@ -61,22 +61,40 @@ export const PAYOUT_STREAMS_CONFIG = {
 
 export const PLATFORM_FEE_PERCENT = 12;
 
+export interface ContractPayoutAmounts {
+  property: number;
+  casco: number;
+  dms: number;
+  renewal: number;
+  crossSell: number;
+  planBonus: number;
+  retention: number;
+}
+
 export async function createPayoutStreamsForContract(
   contractId: string,
-  plannedRevenue: number,
-  _targetClientsNew: number,
-  _targetClientsRenewal: number,
-  _targetClientsCrossSell: number
+  contractRevenue: number,
+  payoutAmounts: ContractPayoutAmounts
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const revenue = Number(plannedRevenue);
+    const revenue = Number(contractRevenue);
+    const amounts = {
+      property: Number(payoutAmounts.property),
+      casco: Number(payoutAmounts.casco),
+      dms: Number(payoutAmounts.dms),
+      renewal: Number(payoutAmounts.renewal),
+      crossSell: Number(payoutAmounts.crossSell),
+      planBonus: Number(payoutAmounts.planBonus),
+      retention: Number(payoutAmounts.retention),
+    };
+
     if (!Number.isFinite(revenue) || revenue < 0) {
-      return { success: false, error: 'Некорректная плановая выручка' };
+      return { success: false, error: 'Некорректная сумма договоров' };
+    }
+    if (Object.values(amounts).some(amount => !Number.isFinite(amount) || amount < 0)) {
+      return { success: false, error: 'Некорректные суммы бонусов' };
     }
 
-    // Защита от повторного создания финансовых обязательств при повторном вызове.
-    // Если потоки уже существуют, не вставляем их второй раз. Если потоков нет,
-    // создаём единственный набор из 7 escrow-потоков. Годовой бонус сюда не входит.
     const { data: existingStreams, error: existingStreamsError } = await supabase
       .from('contract_payout_streams')
       .select('id, stream_key, amount, status')
@@ -115,17 +133,18 @@ export async function createPayoutStreamsForContract(
       return { success: true };
     }
 
-    const percentageAmount = (percent: number) => Math.round(revenue * percent / 100);
-
-    // Годовой бонус НЕ является escrow-потоком. Он начисляется отдельно
-    // и только визуально отображается в кабинетах агента и CEO.
+    // Суммы потоков берутся из той же формулы, что используется
+    // в форме создания контракта: каждый бонус рассчитывается
+    // от суммы договоров своего направления. Плановый бонус
+    // рассчитывается от общей суммы договоров. Годовой бонус
+    // намеренно не попадает в escrow.
     const streams = [
       {
         contract_id: contractId,
         stream_key: 'new_sales_property',
         title: PAYOUT_STREAMS_CONFIG.new_sales_property.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_property.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.new_sales_property.percent),
+        amount: amounts.property,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_property.unlock_condition,
       },
@@ -134,7 +153,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'new_sales_casco',
         title: PAYOUT_STREAMS_CONFIG.new_sales_casco.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_casco.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.new_sales_casco.percent),
+        amount: amounts.casco,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_casco.unlock_condition,
       },
@@ -143,7 +162,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'new_sales_dms',
         title: PAYOUT_STREAMS_CONFIG.new_sales_dms.title,
         percent: PAYOUT_STREAMS_CONFIG.new_sales_dms.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.new_sales_dms.percent),
+        amount: amounts.dms,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.new_sales_dms.unlock_condition,
       },
@@ -152,7 +171,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'renewal',
         title: PAYOUT_STREAMS_CONFIG.renewal.title,
         percent: PAYOUT_STREAMS_CONFIG.renewal.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.renewal.percent),
+        amount: amounts.renewal,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.renewal.unlock_condition,
       },
@@ -161,7 +180,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'cross_sell',
         title: PAYOUT_STREAMS_CONFIG.cross_sell.title,
         percent: PAYOUT_STREAMS_CONFIG.cross_sell.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.cross_sell.percent),
+        amount: amounts.crossSell,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.cross_sell.unlock_condition,
       },
@@ -170,7 +189,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'plan_bonus',
         title: PAYOUT_STREAMS_CONFIG.plan_bonus.title,
         percent: PAYOUT_STREAMS_CONFIG.plan_bonus.percent,
-        amount: percentageAmount(PAYOUT_STREAMS_CONFIG.plan_bonus.percent),
+        amount: amounts.planBonus,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.plan_bonus.unlock_condition,
       },
@@ -179,7 +198,7 @@ export async function createPayoutStreamsForContract(
         stream_key: 'retention',
         title: PAYOUT_STREAMS_CONFIG.retention.title,
         percent: 0,
-        amount: PAYOUT_STREAMS_CONFIG.retention.fixed_amount || 200,
+        amount: amounts.retention,
         status: 'LOCKED',
         unlock_condition: PAYOUT_STREAMS_CONFIG.retention.unlock_condition,
       },
@@ -426,9 +445,9 @@ export async function getContractFullData(contractId: string) {
       .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
     const totalLocked = escrowStreams.filter(stream => stream.status === 'LOCKED')
       .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
-    const plannedRevenue = Number(contract.planned_revenue || contract.revenue || 0);
+    const contractRevenue = Number(contract.revenue || contract.planned_revenue || 0);
     const platformFee = Math.round(totalEscrow * PLATFORM_FEE_PERCENT / 100);
-    const companyProfit = plannedRevenue - totalEscrow - platformFee;
+    const companyProfit = contractRevenue - totalEscrow - platformFee;
 
     return {
       contract,
@@ -437,7 +456,7 @@ export async function getContractFullData(contractId: string) {
       oracleEvents: oracleEvents || [],
       disputes: disputes || [],
       agent,
-      financials: { totalEscrow, totalUnlocked, totalLocked, platformFee, companyProfit, plannedRevenue },
+      financials: { totalEscrow, totalUnlocked, totalLocked, platformFee, companyProfit, contractRevenue },
     };
   } catch (err) {
     console.error('Ошибка получения данных контракта:', err);
