@@ -1,15 +1,17 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Users, DollarSign, Target, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { AddAgentModal } from '../../components/ui/AddAgentModal';
-import { DEMO_AGENTS } from '../../lib/demoData';
+import { DEMO_AGENTS, calculateContractKPI } from '../../lib/demoData';
 import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Демо-сценарий использует одинаковое выполнение плана всеми агентами.
-const demoKPI = (agent: any) => agent?.contracts?.some((contract: any) => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS') ? 100 : 0;
+const demoKPI = (agent: any) => {
+  const activeContract = agent?.contracts?.find((contract: any) => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS');
+  return activeContract ? calculateContractKPI(activeContract) : 0;
+};
 
 const realKPI = (contracts: any[]) => {
   const activeContracts = contracts.filter(contract => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS');
@@ -27,7 +29,7 @@ const realKPI = (contracts: any[]) => {
       return Math.round(pairs.reduce((sum, [actual, target]) => sum + (Number(actual || 0) / Number(target || 1)) * 100, 0) / pairs.length);
     }
 
-    const planned = Number(contract.planned_revenue || contract.sales_plan || contract.target_revenue || 0);
+    const planned = Number(contract.kpi_revenue || contract.planned_revenue || contract.sales_plan || contract.target_revenue || 0);
     const actual = Number(contract.actual_revenue || contract.sales_amount || 0);
     return planned > 0 ? Math.round((actual / planned) * 100) : 0;
   });
@@ -71,6 +73,7 @@ export function CEOAgentsPage() {
           active_contracts: agent.contracts.filter(contract => contract.status === 'ACTIVE' || contract.status === 'IN_PROGRESS').length,
           annual_bonus: getAnnualBonusForAgent(agent, 2026),
           start_date: agent.start_date,
+          contracts: agent.contracts,
         }));
 
         let realAgents: any[] = [];
