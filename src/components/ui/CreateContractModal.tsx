@@ -255,15 +255,15 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
             </div>
             <div className="text-xs font-semibold text-[#000052]/70 mb-2">Средний чек</div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
+              {([
                 ['Имущество/риски (20%)', avgCheckProperty, setAvgCheckProperty, calculations.propertyRevenue, calculations.bonusProperty],
                 ['Автопарки КАСКО (15%)', avgCheckCasco, setAvgCheckCasco, calculations.cascoRevenue, calculations.bonusCasco],
                 ['Медицина ДМС (10%)', avgCheckDms, setAvgCheckDms, calculations.dmsRevenue, calculations.bonusDms],
-              ].map(([label, value, setter, revenue, bonus]) => (
-                <div key={String(label)} className="bg-white p-3 rounded-lg border border-[#000052]/10">
+              ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, revenue, bonus]) => (
+                <div key={label} className="bg-white p-3 rounded-lg border border-[#000052]/10">
                   <div className="text-xs text-[#000052]/50 mb-2">{label}</div>
-                  <input type="number" value={value as number} onChange={e => (setter as (v: number) => void)(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required />
-                  <div className="text-xs text-[#000052]/60 mt-1">Сумма: ${(revenue as number).toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${(bonus as number).toLocaleString()}</span></div>
+                  <input type="number" value={value} onChange={e => setter(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required />
+                  <div className="text-xs text-[#000052]/60 mt-1">Сумма: ${revenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${bonus.toLocaleString()}</span></div>
                 </div>
               ))}
             </div>
