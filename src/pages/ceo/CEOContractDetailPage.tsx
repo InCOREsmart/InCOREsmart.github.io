@@ -9,7 +9,7 @@ import { getContractFullData, releasePayment } from '../../lib/smartContractLogi
 import { EditDraftContractModal } from '../../components/ui/EditDraftContractModal';
 import { supabase } from '../../lib/supabase';
 import { getCompletedDemoContractById } from '../../lib/demoCompletedContracts';
-import { getActualContractRevenue, calculateContractFinancials } from '../../lib/contractFinance';
+import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials } from '../../lib/contractFinance';
 
 export function CEOContractDetailPage() {
   const { t, i18n } = useTranslation(); const { id } = useParams<{ id: string }>(); const { user } = useAuth(); const navigate = useNavigate();
@@ -19,10 +19,10 @@ export function CEOContractDetailPage() {
     const demo = getDemoContractById(id) || getCompletedDemoContractById(id);
     if (demo) {
       const { DEMO_AGENTS } = await import('../../lib/demoData'); const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id)) || DEMO_AGENTS.find(item => id.includes(item.id));
-      const actualRevenue = getActualContractRevenue(demo); const perCategory = actualRevenue / 5; const finance = calculateContractFinancials({ property: perCategory, casco: perCategory, dms: perCategory, renewal: perCategory, crossSell: perCategory });
+      const actualRevenue = getActualContractRevenue(demo); const breakdown = getActualContractRevenueBreakdown(demo); const finance = calculateContractFinancials(breakdown);
       const amounts: Record<string, number> = { new_sales_property: finance.bonusProperty, new_sales_casco: finance.bonusCasco, new_sales_dms: finance.bonusDms, renewal: finance.bonusRenewal, cross_sell: finance.bonusCrossSell, plan_bonus: finance.bonusPlan, retention: finance.bonusRetention, annual: finance.bonusAnnual };
       const streams = (demo.payout_streams || []).map(stream => ({ ...stream, amount: amounts[stream.stream_key] ?? stream.amount })); const escrowStreams = getEscrowStreams(streams); const escrowAmount = escrowStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0); const totalPaid = getPaidAmount(escrowStreams); const totalLocked = getLockedAmount(escrowStreams); const escrowEvents = (demo.escrow_events || []).map(event => ({ ...event, amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount, metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount, actual_contract_revenue: actualRevenue } : event.metadata }));
-      setData({ contract: demo, streams, escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: Math.round(escrowAmount * 0.12) }, isDemo: true }); return;
+      setData({ contract: demo, streams, escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee }, isDemo: true }); return;
     }
     if (!user) return; const real = await getContractFullData(id); if (real) setData({ ...real, isDemo: false });
   } catch (error) { console.error(error); } finally { setLoading(false); } }; load(); }, [id, user]);
