@@ -47,6 +47,7 @@ export function CEODashboard() {
     const load = async () => {
       try {
         const demoContracts = DEMO_AGENTS.flatMap(agent => agent.contracts.map(contract => ({ ...contract, agent_id: agent.id, agent_name: agent.full_name, is_demo: true })));
+        const demoNames = new Set(DEMO_AGENTS.map(agent => agent.full_name.trim().toLowerCase()));
 
         const { data: company, error: companyError } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
         if (companyError) throw companyError;
@@ -60,9 +61,21 @@ export function CEODashboard() {
           if (agentsResult.error) throw agentsResult.error;
           agents = agentsResult.data || [];
 
-          const contractsResult = await supabase.from('contracts').select('*').eq('company_id', company.id);
+          const contractsResult = await supabase.from('contracts').select('*').eq('company_id', company.id).order('created_at', { ascending: false });
           if (contractsResult.error) throw contractsResult.error;
-          realContracts = contractsResult.data || [];
+          const rawContracts = contractsResult.data || [];
+
+          // Демо-агенты уже имеют канонический контракт в demoData.ts.
+          // Реальные записи с теми же ФИО не должны второй раз попадать в расчёты.
+          const realAgentNames = new Map(agents.map(agent => [agent.id, (agent.full_name || agent.name || agent.email || '').trim().toLowerCase()]));
+          const latestByAgent = new Map<string, any>();
+          rawContracts.forEach(contract => {
+            const name = (realAgentNames.get(contract.agent_id) || '').trim().toLowerCase();
+            if (name && demoNames.has(name)) return;
+            const key = contract.agent_id || contract.id;
+            if (!latestByAgent.has(key)) latestByAgent.set(key, contract);
+          });
+          realContracts = Array.from(latestByAgent.values());
 
           const contractIds = realContracts.map(contract => contract.id).filter(Boolean);
           if (contractIds.length) {
@@ -94,6 +107,8 @@ export function CEODashboard() {
 
         agents.forEach(agent => {
           const name = agent.full_name || agent.name || agent.email || t('agent.agentNotFound');
+          const normalized = name.trim().toLowerCase();
+          if (demoNames.has(normalized)) return;
           efficiencyByAgent[agent.id] = { name, total: 0, count: 0 };
           expectedByAgent[agent.id] = { name, amount: 0 };
           annualByAgent[agent.id] = [];
@@ -105,12 +120,11 @@ export function CEODashboard() {
           annualByAgent[agent.id] = agent.contracts;
         });
 
-        // Финансовое ядро считает только активные контракты. Страница
-        // «Контракты» отдельно показывает общий GMV всех 7 контрактов.
-        activeContracts.forEach(contract => {
+        // Выручка и escrow считаются по единому набору контрактов без дублей.
+        // Активные обязательства и KPI считаются только по ACTIVE/IN_PROGRESS.
+        allContracts.forEach(contract => {
           const streams: any[] = contract.is_demo ? (contract.payout_streams || []) : payoutStreams.filter(stream => stream.contract_id === contract.id);
           const financialStreams = streams.filter(stream => stream.stream_key !== 'annual');
-
           const escrow = getEscrowAmount(contract, streams) || n(contract.escrow_amount);
           const paid = getPaidAmount(streams);
           const revenue = n(contract.revenue || contract.planned_revenue);
@@ -126,37 +140,34 @@ export function CEODashboard() {
 
           const key = contract.agent_id || contract.agent_name || contract.id;
           if (!efficiencyByAgent[key]) efficiencyByAgent[key] = { name: contract.agent_name || t('agent.agentNotFound'), total: 0, count: 0 };
-          const kpi = contract.is_demo ? calculateContractKPI(contract) : realKPI(contract);
-          efficiencyByAgent[key].total += kpi;
-          efficiencyByAgent[key].count += 1;
-
           if (!expectedByAgent[key]) expectedByAgent[key] = { name: contract.agent_name || t('agent.agentNotFound'), amount: 0 };
           if (!annualByAgent[key]) annualByAgent[key] = [];
-          if (contract.is_demo) annualByAgent[key].push(contract);
+
+          if (active(contract)) {
+            const kpi = contract.is_demo ? calculateContractKPI(contract) : realKPI(contract);
+            efficiencyByAgent[key].total += kpi;
+            efficiencyByAgent[key].count += 1;
+          }
 
           financialStreams.forEach(stream => {
             const amount = n(stream.amount);
             const eventDate = stream.paid_at || stream.unlocked_at || stream.payment_date || stream.updated_at || stream.created_at;
 
-            if (stream.status === 'LOCKED') locked += amount;
-            if (stream.status === 'PAID') {
-              totalPaid += 0;
-              if (isCurrentMonth(eventDate)) periodPaid += amount;
-            }
-            if (stream.status === 'LOCKED' || stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') liability += amount;
-            if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') {
-              pending += amount;
-              if (eventDate && isCurrentMonth(eventDate)) {
-                expectedByAgent[key].amount += amount;
-              } else {
+            if (stream.status === 'PAID' && isCurrentMonth(eventDate)) periodPaid += amount;
+
+            // В блоке обязательств учитываются только реально активные обязательства.
+            if (active(contract)) {
+              if (stream.status === 'LOCKED') locked += amount;
+              if (stream.status === 'LOCKED' || stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') liability += amount;
+              if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') {
+                pending += amount;
                 expectedByAgent[key].amount += amount;
               }
             }
           });
         });
 
-        // Реальные контракты агента участвуют в годовом бонусе независимо от
-        // того, активен контракт сейчас или уже завершён.
+        // Годовой бонус использует все контракты агента, но сам бонус никогда не входит в escrow.
         realContractsWithNames.forEach(contract => {
           const key = contract.agent_id || contract.agent_name || contract.id;
           if (!annualByAgent[key]) annualByAgent[key] = [];
