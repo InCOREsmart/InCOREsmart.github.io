@@ -54,13 +54,10 @@ export function calculateAnnualBonusProgress(contracts: Array<DemoContract | any
   const annualTarget = explicitAnnualTarget > 0 ? explicitAnnualTarget : monthlyPlan * 12;
   const actualAnnualSales = yearContracts.reduce((sum, contract) => sum + getActualRevenue(contract), 0);
 
-  // Годовой бонус накапливается по мере прохождения года.
-  // В августе нельзя получить 100% годового бонуса только за один месяц.
-  const elapsedMonths = year === AS_OF_DATE.getUTCFullYear() ? AS_OF_DATE.getUTCMonth() + 1 : 12;
-  const ytdPlan = explicitAnnualTarget > 0
-    ? annualTarget * (elapsedMonths / 12)
-    : monthlyPlan * elapsedMonths;
-  const planAchievement = ytdPlan > 0 ? clamp(actualAnnualSales / ytdPlan) : 0;
+  // Важное правило: годовой бонус не может стать 100% в августе только потому,
+  // что один августовский контракт выполнен на 100%. Процент считается от полного
+  // годового плана, а бонус начисляется постепенно по фактическим продажам YTD.
+  const planAchievement = annualTarget > 0 ? clamp(actualAnnualSales / annualTarget) : 0;
 
   const months = new Set(yearContracts.map(contract => {
     const dateValue = contract.start_date || contract.start_at || contract.created_at;
