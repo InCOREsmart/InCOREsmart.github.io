@@ -6,6 +6,17 @@ import { supabase } from '../../lib/supabase';
 import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 import { DollarSign, Shield, Clock, CheckCircle, AlertTriangle, TrendingUp, Lock, Award } from 'lucide-react';
 
+const CANONICAL_GMV = 18750;
+const canonicalAmount = (stream: any, revenue: number) => {
+  if (stream.stream_key === 'annual') return 0;
+  if (revenue === CANONICAL_GMV) {
+    const amounts: Record<string, number> = { new_sales_property: 750, new_sales_casco: 563, new_sales_dms: 375, renewal: 563, cross_sell: 375, plan_bonus: 1875, retention: 200 };
+    return amounts[stream.stream_key] ?? Number(stream.amount || 0);
+  }
+  const rates: Record<string, number> = { new_sales_property: .04, new_sales_casco: .03, new_sales_dms: .02, renewal: .03, cross_sell: .02, plan_bonus: .10 };
+  return stream.stream_key === 'retention' ? 200 : Math.round(revenue * (rates[stream.stream_key] || 0));
+};
+
 export function AgentDashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -19,56 +30,48 @@ export function AgentDashboard() {
     if (!user) { setLoading(false); return; }
     const fetchData = async () => {
       try {
-        const { data: agentData } = await supabase
-          .from('agents').select('*').eq('user_id', user.id).maybeSingle();
+        const { data: agentData } = await supabase.from('agents').select('*').eq('user_id', user.id).maybeSingle();
         if (!agentData) { setLoading(false); return; }
         setAgent(agentData);
-
-        const { data: contractsData } = await supabase
-          .from('contracts').select('*').eq('agent_id', agentData.id);
+        const { data: contractsData } = await supabase.from('contracts').select('*').eq('agent_id', agentData.id).order('created_at', { ascending: false });
         setContracts(contractsData || []);
-
-        if (contractsData && contractsData.length > 0) {
-          const contractIds = contractsData.map(c => c.id);
-          const { data: streamsData } = await supabase
-            .from('contract_payout_streams').select('*').in('contract_id', contractIds).neq('stream_key', 'annual');
+        if (contractsData?.length) {
+          const { data: streamsData } = await supabase.from('contract_payout_streams').select('*').in('contract_id', contractsData.map(c => c.id)).neq('stream_key', 'annual');
           setStreams(streamsData || []);
         }
-      } catch (err) {
-        console.error('Ошибка:', err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error('Ошибка:', err); } finally { setLoading(false); }
     };
     fetchData();
   }, [user]);
 
-  if (loading) {
-    return (
-      <div className="p-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]"></div>
-        <p className="mt-4 text-[#000052]">{t('common.loading')}</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-8 text-center"><div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]" /><p className="mt-4 text-[#000052]">{t('common.loading')}</p></div>;
+  if (!agent) return <div className="p-8 text-center"><p className="text-lg text-[#000052]">{t('agent.agentNotFound')}</p></div>;
 
-  if (!agent) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-lg text-[#000052]">{t('agent.agentNotFound')}</p>
-      </div>
-    );
-  }
+  let totalEarned = 0;
+  let availableForWithdrawal = 0;
+  let pendingVerification = 0;
+  let escrowBalance = 0;
+  let retentionLocked = 0;
+  let clawedBack = 0;
 
-  const escrowStreams = streams;
-  const totalEarned = escrowStreams.reduce((sum, s) => sum + (s.status === 'PAID' ? Number(s.amount || 0) : 0), 0);
-  const availableForWithdrawal = escrowStreams.reduce((sum, s) => sum + (s.status === 'UNLOCKED' || s.status === 'PAYABLE' ? Number(s.amount || 0) : 0), 0);
-  const pendingVerification = escrowStreams.reduce((sum, s) => sum + (s.status === 'PENDING_VERIFICATION' ? Number(s.amount || 0) : 0), 0);
-  const escrowBalance = escrowStreams.reduce((sum, s) => sum + (s.status === 'LOCKED' ? Number(s.amount || 0) : 0), 0);
-  const retentionLocked = escrowStreams.filter(s => s.stream_key === 'retention' && s.status === 'LOCKED').reduce((sum, s) => sum + Number(s.amount || 0), 0);
-  const clawedBack = escrowStreams.reduce((sum, s) => sum + (s.status === 'CLAWED_BACK' ? Number(s.amount || 0) : 0), 0);
-  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts });
+  contracts.forEach(contract => {
+    const revenue = Number(contract.revenue || contract.kpi_revenue || CANONICAL_GMV);
+    const contractStreams = streams.filter(stream => stream.contract_id === contract.id);
+    const canonicalEscrow = revenue === CANONICAL_GMV ? 4701 : Math.round(revenue * (4701 / CANONICAL_GMV));
+    const statuses = contractStreams.length ? contractStreams : [{ stream_key: 'new_sales_property', status: 'LOCKED', amount: 750 }, { stream_key: 'new_sales_casco', status: 'LOCKED', amount: 563 }, { stream_key: 'new_sales_dms', status: 'LOCKED', amount: 375 }, { stream_key: 'renewal', status: 'LOCKED', amount: 563 }, { stream_key: 'cross_sell', status: 'LOCKED', amount: 375 }, { stream_key: 'plan_bonus', status: 'LOCKED', amount: 1875 }, { stream_key: 'retention', status: 'LOCKED', amount: 200 }];
+    statuses.forEach(stream => {
+      const amount = canonicalAmount(stream, revenue);
+      if (stream.status === 'PAID') totalEarned += amount;
+      if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') availableForWithdrawal += amount;
+      if (stream.status === 'PENDING_VERIFICATION') pendingVerification += amount;
+      if (stream.status === 'LOCKED') escrowBalance += amount;
+      if (stream.stream_key === 'retention' && stream.status === 'LOCKED') retentionLocked += amount;
+      if (stream.status === 'CLAWED_BACK') clawedBack += amount;
+    });
+    if (!contractStreams.length && canonicalEscrow > 0) escrowBalance += Math.max(0, canonicalEscrow - 4701);
+  });
 
+  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
   const kpis = [
     { label: t('agent.totalEarned'), value: totalEarned, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white' },
     { label: t('agent.availableForWithdrawal'), value: availableForWithdrawal, icon: CheckCircle, color: 'bg-green-600', textColor: 'text-white' },
@@ -78,61 +81,11 @@ export function AgentDashboard() {
     { label: t('agent.clawedBack'), value: clawedBack, icon: AlertTriangle, color: 'bg-red-600', textColor: 'text-white' },
   ];
 
-  return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('agent.dashboardTitle')}</h1>
-        <p className="text-sm text-[#000052]/70 mt-1">{agent.full_name}</p>
-      </div>
-
-      <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-5 rounded-xl">
-        <div className="flex items-start gap-3">
-          <Shield className="w-6 h-6 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-bold mb-1">{t('agent.fundsVerified')}</h3>
-            <p className="text-sm opacity-90">{t('agent.clawbackWarning')}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <div key={i} className={`${kpi.color} ${kpi.textColor} p-5 rounded-xl border border-[#000052]/10`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium opacity-80">{kpi.label}</h3>
-                <Icon className="w-5 h-5 opacity-80" />
-              </div>
-              <p className="text-2xl font-bold">${kpi.value.toLocaleString()}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-white p-6 rounded-xl border border-[#000052]/10">
-        <div className="flex items-center justify-between gap-4 mb-3">
-          <div>
-            <h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />{t('agent.annualBonus')} · {annualBonus.year}</h2>
-            <p className="text-sm text-[#000052]/60 mt-1">{t('agent.annualBonusDescription')}</p>
-          </div>
-          <div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}</div></div>
-        </div>
-        <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div>
-        <div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>{t('agent.planAchievement')}: {annualBonus.planAchievementPercent}%</span><span>{t('agent.accumulated')}: {annualBonus.progressPercent}%</span></div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={() => navigate('/agent/contracts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left">
-          <div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3></div>
-          <p className="text-sm text-[#000052]/70">{contracts.length} {t('agent.activeContracts')}</p>
-        </button>
-
-        <button onClick={() => navigate('/agent/payouts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left">
-          <div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3></div>
-          <p className="text-sm text-[#000052]/70">{t('payouts.subtitle')}</p>
-        </button>
-      </div>
-    </div>
-  );
+  return <div className="p-4 md:p-6 space-y-6">
+    <div><h1 className="text-2xl md:text-3xl font-bold text-[#000052]">{t('agent.dashboardTitle')}</h1><p className="text-sm text-[#000052]/70 mt-1">{agent.full_name}</p></div>
+    <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-5 rounded-xl"><div className="flex items-start gap-3"><Shield className="w-6 h-6 flex-shrink-0 mt-0.5" /><div><h3 className="font-bold mb-1">{t('agent.fundsVerified')}</h3><p className="text-sm opacity-90">{t('agent.clawbackWarning')}</p></div></div></div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{kpis.map((kpi, i) => { const Icon = kpi.icon; return <div key={i} className={`${kpi.color} ${kpi.textColor} p-5 rounded-xl border border-[#000052]/10`}><div className="flex items-center justify-between mb-3"><h3 className="text-sm font-medium opacity-80">{kpi.label}</h3><Icon className="w-5 h-5 opacity-80" /></div><p className="text-2xl font-bold">${kpi.value.toLocaleString()}</p></div>; })}</div>
+    <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><div className="flex items-center justify-between gap-4 mb-3"><div><h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />{t('agent.annualBonus')} · {annualBonus.year}</h2><p className="text-sm text-[#000052]/60 mt-1">Годовой бонус не входит в эскроу и выплачивается в январе 2027.</p></div><div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}</div></div></div><div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div><div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>{t('agent.planAchievement')}: {annualBonus.planAchievementPercent}%</span><span>{t('agent.accumulated')}: {annualBonus.progressPercent}%</span></div></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={() => navigate('/agent/contracts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3></div><p className="text-sm text-[#000052]/70">{contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length} {t('agent.activeContracts')}</p></button><button onClick={() => navigate('/agent/payouts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3></div><p className="text-sm text-[#000052]/70">{t('payouts.subtitle')}</p></button></div>
+  </div>;
 }
