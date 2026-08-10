@@ -86,21 +86,23 @@ const AS_OF_DATE = new Date('2026-08-10T23:59:59Z');
 const PLATFORM_FEE_PERCENT = 12;
 const SALES_PLAN = { clients: 10, averageCheck: 375, revenue: 18750, calls: 100, meetings: 50, proposals: 40 };
 
-// Финансовая модель одного контракта. Проценты считаются от полной плановой выручки.
-// Годовой бонус всегда визуальный и никогда не входит в escrow.
+// Каноническая финансовая модель одного демо-контракта.
+// Суммы потоков являются именно бонусами агента, а не полной суммой договора.
+// Годовой бонус никогда не входит в escrow.
 const STREAM_CONFIG = [
-  { key: 'new_sales_property' as const, title: 'Новые продажи: Имущество/риски', percent: 20, amount: 3750, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'new_sales_casco' as const, title: 'Новые продажи: Автопарки (КАСКО)', percent: 15, amount: 2813, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'new_sales_dms' as const, title: 'Новые продажи: Медицина (ДМС)', percent: 10, amount: 1875, condition: 'Оплата клиента подтверждена Oracle' },
-  { key: 'renewal' as const, title: 'Продление договоров', percent: 15, amount: 2813, condition: 'Подписание доп. соглашения в CRM' },
-  { key: 'cross_sell' as const, title: 'Кросс-продажи', percent: 10, amount: 1875, condition: 'Продажа дополнительного продукта подтверждена' },
+  { key: 'new_sales_property' as const, title: 'Новые продажи: Имущество/риски', percent: 20, amount: 750, condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'new_sales_casco' as const, title: 'Новые продажи: Автопарки (КАСКО)', percent: 15, amount: 563, condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'new_sales_dms' as const, title: 'Новые продажи: Медицина (ДМС)', percent: 10, amount: 375, condition: 'Оплата клиента подтверждена Oracle' },
+  { key: 'renewal' as const, title: 'Продление договоров', percent: 15, amount: 563, condition: 'Подписание доп. соглашения в CRM' },
+  { key: 'cross_sell' as const, title: 'Кросс-продажи', percent: 10, amount: 375, condition: 'Продажа дополнительного продукта подтверждена' },
   { key: 'plan_bonus' as const, title: 'Бонус за выполнение плана', percent: 10, amount: 1875, condition: '100% выполнение KPI квартала' },
   { key: 'retention' as const, title: 'Удержание 90 дней', percent: 0, amount: 200, condition: 'Клиент активен более 90 дней' },
   { key: 'annual' as const, title: 'Годовой бонус', percent: 0, amount: 7000, condition: 'Годовой KPI подтверждён в CRM' },
 ];
 
-const ESCROW_PER_CONTRACT = STREAM_CONFIG.filter(stream => stream.key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
-const COMPANY_PROFIT_PER_CONTRACT = SALES_PLAN.revenue - ESCROW_PER_CONTRACT - Math.round(ESCROW_PER_CONTRACT * PLATFORM_FEE_PERCENT / 100);
+const ESCROW_PER_CONTRACT = 4701;
+const PLATFORM_FEE_PER_CONTRACT = 564;
+const COMPANY_PROFIT_PER_CONTRACT = 14049;
 
 function roundMoney(value: number): number {
   return Math.round(value);
@@ -150,6 +152,8 @@ function buildPayoutStreams(contractId: string, startDate: string, performance: 
         status = 'UNLOCKED';
         unlockedAt = paidAt;
       }
+    } else if (config.key === 'renewal') {
+      status = 'LOCKED';
     } else if (config.key === 'cross_sell') {
       if (actualClients >= Math.ceil(SALES_PLAN.clients * 0.60)) {
         status = 'UNLOCKED';
@@ -160,6 +164,8 @@ function buildPayoutStreams(contractId: string, startDate: string, performance: 
         status = 'UNLOCKED';
         unlockedAt = paidAt;
       }
+    } else if (config.key === 'retention') {
+      status = 'LOCKED';
     } else if (config.key === 'annual') {
       status = 'LOCKED';
     }
@@ -216,15 +222,15 @@ function generateContract(agentId: string, startDate: string, performance: numbe
   const contract: DemoContract = {
     id,
     title: 'Привлечь 10 корпоративных клиентов',
-    description: `Выполнить план продаж: ${SALES_PLAN.clients} клиентов, ${SALES_PLAN.calls} звонков, ${SALES_PLAN.meetings} встреч, ${SALES_PLAN.proposals} КП.`,
+    description: `Выполнить план продаж: ${SALES_PLAN.clients} клиентов, средний чек $${SALES_PLAN.averageCheck}, ${SALES_PLAN.calls} звонков, ${SALES_PLAN.meetings} встреч, ${SALES_PLAN.proposals} КП.`,
     revenue: SALES_PLAN.revenue,
     planned_revenue: SALES_PLAN.revenue,
     escrow_amount: ESCROW_PER_CONTRACT,
     escrow_status: 'FUNDED',
     agent_payouts_total: ESCROW_PER_CONTRACT,
     company_profit: COMPANY_PROFIT_PER_CONTRACT,
-    platform_fee: Math.round(ESCROW_PER_CONTRACT * PLATFORM_FEE_PERCENT / 100),
-    roi_percentage: Math.round((COMPANY_PROFIT_PER_CONTRACT / SALES_PLAN.revenue) * 100),
+    platform_fee: PLATFORM_FEE_PER_CONTRACT,
+    roi_percentage: 75,
     total_paid: totalPaid,
     total_locked: totalLocked,
     status: 'ACTIVE',
