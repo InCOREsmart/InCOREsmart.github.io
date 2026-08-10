@@ -187,3 +187,106 @@ function buildPayoutStreams(contractId: string, startDate: string, performance: 
     };
   });
 }
+
+function buildEvents(contract: DemoContract): { escrow: DemoEscrowEvent[]; oracle: DemoOracleEvent[] } {
+  const escrow: DemoEscrowEvent[] = [
+    { id: `${contract.id}-created`, contract_id: contract.id, event_type: 'ESCROW_CREATED', amount: contract.escrow_amount, actor_role: 'SYSTEM', metadata: { annual_bonus_excluded: true }, created_at: `${contract.start_date}T09:00:00.000Z` },
+    { id: `${contract.id}-funded`, contract_id: contract.id, event_type: 'ESCROW_FUNDED', amount: contract.escrow_amount, actor_role: 'SYSTEM', metadata: { annual_bonus_excluded: true }, created_at: `${contract.start_date}T09:15:00.000Z` },
+  ];
+
+  contract.payout_streams.filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual').forEach((stream, index) => {
+    escrow.push({ id: `${contract.id}-payout-${index + 1}`, contract_id: contract.id, event_type: 'PAYOUT_TO_AGENT', amount: stream.amount, actor_role: 'ORACLE', metadata: { stream_key: stream.stream_key }, created_at: `${stream.paid_at || contract.start_date}T12:00:00.000Z` });
+  });
+
+  const oracle: DemoOracleEvent[] = [];
+  if (contract.actual_clients > 0) {
+    oracle.push({ id: `${contract.id}-payment`, contract_id: contract.id, event_type: 'CLIENT_PAYMENT_CONFIRMED', source: 'DEMO_ORACLE', payload: { actual_clients: contract.actual_clients, target_clients: contract.target_clients }, created_at: `${contract.start_date}T12:00:00.000Z` });
+  }
+  if (contract.actual_clients >= Math.ceil(SALES_PLAN.clients * 0.60)) {
+    oracle.push({ id: `${contract.id}-crosssell`, contract_id: contract.id, event_type: 'CROSS_SELL_CONFIRMED', source: 'DEMO_ORACLE', payload: { actual_clients: contract.actual_clients }, created_at: `${contract.start_date}T13:00:00.000Z` });
+  }
+  if (contract.actual_clients >= SALES_PLAN.clients) {
+    oracle.push({ id: `${contract.id}-plan`, contract_id: contract.id, event_type: 'PLAN_ACHIEVED', source: 'DEMO_ORACLE', payload: { target_clients: contract.target_clients }, created_at: `${contract.start_date}T14:00:00.000Z` });
+  }
+  return { escrow, oracle };
+}
+
+function generateContract(agentId: string, startDate: string, performance: number): DemoContract {
+  const actualCalls = Math.max(0, Math.round(SALES_PLAN.calls * performance));
+  const actualMeetings = Math.max(0, Math.round(SALES_PLAN.meetings * performance));
+  const actualProposals = Math.max(0, Math.round(SALES_PLAN.proposals * performance));
+  const actualClients = Math.max(0, Math.round(SALES_PLAN.clients * performance));
+  const id = `contract-${agentId}-2026-08`;
+  const payoutStreams = buildPayoutStreams(id, startDate, performance);
+  const totalPaid = payoutStreams.filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
+  const totalLocked = payoutStreams.filter(stream => stream.status === 'LOCKED' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
+
+  const contract: DemoContract = {
+    id,
+    title: 'Привлечь 10 корпоративных клиентов',
+    description: `Выполнить план продаж: ${SALES_PLAN.clients} клиентов, средний чек $${SALES_PLAN.averageCheck}, ${SALES_PLAN.calls} звонков, ${SALES_PLAN.meetings} встреч, ${SALES_PLAN.proposals} КП.`,
+    revenue: SALES_PLAN.revenue,
+    planned_revenue: SALES_PLAN.revenue,
+    escrow_amount: ESCROW_PER_CONTRACT,
+    escrow_status: 'FUNDED',
+    agent_payouts_total: ESCROW_PER_CONTRACT,
+    company_profit: COMPANY_PROFIT_PER_CONTRACT,
+    platform_fee: PLATFORM_FEE_PER_CONTRACT,
+    roi_percentage: 75,
+    total_paid: totalPaid,
+    total_locked: totalLocked,
+    status: 'ACTIVE',
+    start_date: startDate,
+    deadline: '2026-08-31',
+    month: '2026-08',
+    kpi_calls: SALES_PLAN.calls,
+    kpi_meetings: SALES_PLAN.meetings,
+    kpi_proposals: SALES_PLAN.proposals,
+    target_clients: SALES_PLAN.clients,
+    actual_calls: actualCalls,
+    actual_meetings: actualMeetings,
+    actual_proposals: actualProposals,
+    actual_clients: actualClients,
+    bitrix_deals: [],
+    payout_streams: payoutStreams,
+    escrow_events: [],
+    oracle_events: [],
+  };
+
+  contract.bitrix_deals = generateBitrixDeals(contract);
+  const events = buildEvents(contract);
+  contract.escrow_events = events.escrow;
+  contract.oracle_events = events.oracle;
+  return contract;
+}
+
+export const DEMO_AGENTS: DemoAgent[] = [
+  { id: 'demo-1', name: 'Смирнов Александр', full_name: 'Смирнов Александр Иванович', email: 'a.smirnov@incore.demo', phone: '+7 900 123-45-67', specialization: 'B2B Страхование', start_date: '2026-01-15', contracts: [generateContract('demo-1', '2026-08-01', 0.67)] },
+  { id: 'demo-2', name: 'Козлова Мария', full_name: 'Козлова Мария Петровна', email: 'm.kozlova@incore.demo', phone: '+7 900 234-56-78', specialization: 'Корпоративные клиенты', start_date: '2026-01-20', contracts: [generateContract('demo-2', '2026-08-01', 1.07)] },
+  { id: 'demo-3', name: 'Волков Дмитрий', full_name: 'Волков Дмитрий Сергеевич', email: 'd.volkov@incore.demo', phone: '+7 900 345-67-89', specialization: 'МСБ сегмент', start_date: '2026-02-10', contracts: [generateContract('demo-3', '2026-08-01', 1.00)] },
+  { id: 'demo-4', name: 'Петрова Елена', full_name: 'Петрова Елена Александровна', email: 'e.petrova@incore.demo', phone: '+7 900 456-78-90', specialization: 'Страхование жизни', start_date: '2026-03-05', contracts: [generateContract('demo-4', '2026-08-01', 0.95)] },
+  { id: 'demo-5', name: 'Тихонов Иван', full_name: 'Тихонов Иван Михайлович', email: 'i.tikhonov@incore.demo', phone: '+7 900 567-89-01', specialization: 'Региональные продажи', start_date: '2026-03-12', contracts: [generateContract('demo-5', '2026-08-01', 0.80)] },
+  { id: 'demo-7', name: 'Новиков Сергей', full_name: 'Новиков Сергей Андреевич', email: 's.novikov@incore.demo', phone: '+7 900 789-01-23', specialization: 'Партнерская сеть', start_date: '2026-03-25', contracts: [generateContract('demo-7', '2026-08-01', 0.81)] },
+];
+
+export function getDemoAgentById(id: string): DemoAgent | null {
+  return DEMO_AGENTS.find(agent => agent.id === id) ?? null;
+}
+
+export function getDemoContractById(id: string): DemoContract | null {
+  for (const agent of DEMO_AGENTS) {
+    const contract = agent.contracts.find(contract => contract.id === id);
+    if (contract) return contract;
+  }
+  return null;
+}
+
+export function calculateContractKPI(contract: Pick<DemoContract, 'actual_calls' | 'kpi_calls' | 'actual_meetings' | 'kpi_meetings' | 'actual_proposals' | 'kpi_proposals' | 'actual_clients' | 'target_clients'>): number {
+  const values = [
+    contract.kpi_calls > 0 ? contract.actual_calls / contract.kpi_calls : 0,
+    contract.kpi_meetings > 0 ? contract.actual_meetings / contract.kpi_meetings : 0,
+    contract.kpi_proposals > 0 ? contract.actual_proposals / contract.kpi_proposals : 0,
+    contract.target_clients > 0 ? contract.actual_clients / contract.target_clients : 0,
+  ];
+  return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 100);
+}
