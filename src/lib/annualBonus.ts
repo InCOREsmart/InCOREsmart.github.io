@@ -16,35 +16,13 @@ function clamp(value: number, min = 0, max = 1): number {
 }
 
 function getPlannedRevenue(contract: any): number {
-  return Number(
-    contract.sales_plan ??
-    contract.annual_sales_plan_monthly ??
-    contract.target_revenue ??
-    contract.kpi_revenue ??
-    contract.planned_revenue ??
-    0,
-  );
-}
-
-function isDemoContract(contract: any): boolean {
-  return typeof contract?.id === 'string' && contract.id.startsWith('contract-demo-');
+  return Number(contract.sales_plan ?? contract.annual_sales_plan_monthly ?? contract.target_revenue ?? contract.kpi_revenue ?? contract.planned_revenue ?? 0);
 }
 
 function getActualRevenue(contract: any): number {
   const planned = getPlannedRevenue(contract);
-
-  const explicitActual = Number(
-    contract.actual_revenue ??
-    contract.sales_amount ??
-    0,
-  );
-
+  const explicitActual = Number(contract.actual_revenue ?? contract.sales_amount ?? 0);
   if (explicitActual > 0) return explicitActual;
-
-  // Демо-сценарий моделирует одинаковое выполнение плана всеми агентами.
-  // Не используем contract.revenue как фактическую годовую продажу, иначе
-  // каждый существующий месячный контракт автоматически даст 100% годового бонуса.
-  if (isDemoContract(contract)) return planned;
 
   if (contract.target_clients && contract.actual_clients != null && planned > 0) {
     return planned * clamp(Number(contract.actual_clients) / Number(contract.target_clients));
@@ -53,10 +31,7 @@ function getActualRevenue(contract: any): number {
   return 0;
 }
 
-export function calculateAnnualBonusProgress(
-  contracts: Array<DemoContract | any>,
-  year = new Date().getFullYear(),
-): AnnualBonusProgress {
+export function calculateAnnualBonusProgress(contracts: Array<DemoContract | any>, year = new Date().getFullYear()): AnnualBonusProgress {
   const yearContracts = contracts.filter(contract => {
     const dateValue = contract.start_date || contract.start_at || contract.created_at;
     if (!dateValue) return false;
@@ -65,14 +40,7 @@ export function calculateAnnualBonusProgress(
   });
 
   if (!yearContracts.length) {
-    return {
-      year,
-      maxBonus: ANNUAL_BONUS_MAX,
-      accruedBonus: 0,
-      progressPercent: 0,
-      planAchievementPercent: 0,
-      monthsCounted: 0,
-    };
+    return { year, maxBonus: ANNUAL_BONUS_MAX, accruedBonus: 0, progressPercent: 0, planAchievementPercent: 0, monthsCounted: 0 };
   }
 
   const explicitAnnualTarget = yearContracts.reduce((sum, contract) => {
@@ -80,38 +48,19 @@ export function calculateAnnualBonusProgress(
     return sum + (annualTarget > 0 ? annualTarget : 0);
   }, 0);
 
-  const monthlyPlans = yearContracts
-    .map(getPlannedRevenue)
-    .filter(value => value > 0);
+  const monthlyPlans = yearContracts.map(getPlannedRevenue).filter(value => value > 0);
+  const monthlyPlan = monthlyPlans.length ? monthlyPlans.reduce((sum, value) => sum + value, 0) / monthlyPlans.length : 0;
+  const annualTarget = explicitAnnualTarget > 0 ? explicitAnnualTarget : monthlyPlan * 12;
+  const actualAnnualSales = yearContracts.reduce((sum, contract) => sum + getActualRevenue(contract), 0);
+  const planAchievement = annualTarget > 0 ? clamp(actualAnnualSales / annualTarget) : 0;
 
-  // Для ежемесячных контрактов годовой план всегда равен 12 месячным планам.
-  // Поэтому наличие только январь-август в данных не превращает бонус в 100%.
-  const monthlyPlan = monthlyPlans.length
-    ? monthlyPlans.reduce((sum, value) => sum + value, 0) / monthlyPlans.length
-    : 0;
-  const annualTarget = explicitAnnualTarget > 0
-    ? explicitAnnualTarget
-    : monthlyPlan * 12;
-
-  const actualAnnualSales = yearContracts.reduce(
-    (sum, contract) => sum + getActualRevenue(contract),
-    0,
-  );
-
-  const planAchievement = annualTarget > 0
-    ? clamp(actualAnnualSales / annualTarget)
-    : 0;
-
-  const months = new Set(
-    yearContracts.map(contract => {
-      const dateValue = contract.start_date || contract.start_at || contract.created_at;
-      const date = new Date(dateValue);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }),
-  );
+  const months = new Set(yearContracts.map(contract => {
+    const dateValue = contract.start_date || contract.start_at || contract.created_at;
+    const date = new Date(dateValue);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }));
 
   const progressPercent = Math.round(planAchievement * 100);
-
   return {
     year,
     maxBonus: ANNUAL_BONUS_MAX,
@@ -132,15 +81,11 @@ export function getEscrowAmount(contract: any, streams?: any[]): number {
 }
 
 export function getPaidAmount(streams: any[] = []): number {
-  return getEscrowStreams(streams)
-    .filter(stream => stream.status === 'PAID')
-    .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  return getEscrowStreams(streams).filter(stream => stream.status === 'PAID').reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
 }
 
 export function getLockedAmount(streams: any[] = []): number {
-  return getEscrowStreams(streams)
-    .filter(stream => stream.status === 'LOCKED')
-    .reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+  return getEscrowStreams(streams).filter(stream => stream.status === 'LOCKED').reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
 }
 
 export function getAnnualBonusForAgent(agent: DemoAgent | any, year = new Date().getFullYear()): AnnualBonusProgress {
