@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 import { DollarSign, Shield, Clock, CheckCircle, AlertTriangle, TrendingUp, Lock, Award } from 'lucide-react';
 
-const CANONICAL_GMV = 18750;
-const canonicalAmount = (stream: any, revenue: number) => {
-  if (stream.stream_key === 'annual') return 0;
-  if (revenue === CANONICAL_GMV) {
-    const amounts: Record<string, number> = { new_sales_property: 750, new_sales_casco: 563, new_sales_dms: 375, renewal: 563, cross_sell: 375, plan_bonus: 1875, retention: 200 };
-    return amounts[stream.stream_key] ?? Number(stream.amount || 0);
-  }
-  const rates: Record<string, number> = { new_sales_property: .04, new_sales_casco: .03, new_sales_dms: .02, renewal: .03, cross_sell: .02, plan_bonus: .10 };
-  return stream.stream_key === 'retention' ? 200 : Math.round(revenue * (rates[stream.stream_key] || 0));
-};
+const getStreamAmount = (stream: any) => stream.stream_key === 'annual' ? 0 : Number(stream.amount || 0);
 
 export function AgentDashboard() {
   const { t } = useTranslation();
@@ -55,12 +46,9 @@ export function AgentDashboard() {
   let clawedBack = 0;
 
   contracts.forEach(contract => {
-    const revenue = Number(contract.revenue || contract.kpi_revenue || CANONICAL_GMV);
     const contractStreams = streams.filter(stream => stream.contract_id === contract.id);
-    const canonicalEscrow = revenue === CANONICAL_GMV ? 4701 : Math.round(revenue * (4701 / CANONICAL_GMV));
-    const statuses = contractStreams.length ? contractStreams : [{ stream_key: 'new_sales_property', status: 'LOCKED', amount: 750 }, { stream_key: 'new_sales_casco', status: 'LOCKED', amount: 563 }, { stream_key: 'new_sales_dms', status: 'LOCKED', amount: 375 }, { stream_key: 'renewal', status: 'LOCKED', amount: 563 }, { stream_key: 'cross_sell', status: 'LOCKED', amount: 375 }, { stream_key: 'plan_bonus', status: 'LOCKED', amount: 1875 }, { stream_key: 'retention', status: 'LOCKED', amount: 200 }];
-    statuses.forEach(stream => {
-      const amount = canonicalAmount(stream, revenue);
+    contractStreams.forEach(stream => {
+      const amount = getStreamAmount(stream);
       if (stream.status === 'PAID') totalEarned += amount;
       if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') availableForWithdrawal += amount;
       if (stream.status === 'PENDING_VERIFICATION') pendingVerification += amount;
@@ -68,7 +56,6 @@ export function AgentDashboard() {
       if (stream.stream_key === 'retention' && stream.status === 'LOCKED') retentionLocked += amount;
       if (stream.status === 'CLAWED_BACK') clawedBack += amount;
     });
-    if (!contractStreams.length && canonicalEscrow > 0) escrowBalance += Math.max(0, canonicalEscrow - 4701);
   });
 
   const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
@@ -86,6 +73,6 @@ export function AgentDashboard() {
     <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-5 rounded-xl"><div className="flex items-start gap-3"><Shield className="w-6 h-6 flex-shrink-0 mt-0.5" /><div><h3 className="font-bold mb-1">{t('agent.fundsVerified')}</h3><p className="text-sm opacity-90">{t('agent.clawbackWarning')}</p></div></div></div>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{kpis.map((kpi, i) => { const Icon = kpi.icon; return <div key={i} className={`${kpi.color} ${kpi.textColor} p-5 rounded-xl border border-[#000052]/10`}><div className="flex items-center justify-between mb-3"><h3 className="text-sm font-medium opacity-80">{kpi.label}</h3><Icon className="w-5 h-5 opacity-80" /></div><p className="text-2xl font-bold">${kpi.value.toLocaleString()}</p></div>; })}</div>
     <div className="bg-white p-6 rounded-xl border border-[#000052]/10"><div className="flex items-center justify-between gap-4 mb-3"><div><h2 className="text-lg font-bold text-[#000052] flex items-center gap-2"><Award className="w-5 h-5 text-[#B8860B]" />{t('agent.annualBonus')} · {annualBonus.year}</h2><p className="text-sm text-[#000052]/60 mt-1">Годовой бонус не входит в эскроу и выплачивается в январе 2027.</p></div><div className="text-right"><div className="text-xl font-bold text-[#000052]">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}</div></div></div><div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div><div className="flex justify-between mt-2 text-xs text-[#000052]/60"><span>{t('agent.planAchievement')}: {annualBonus.planAchievementPercent}%</span><span>{t('agent.accumulated')}: {annualBonus.progressPercent}%</span></div></div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={() => navigate('/agent/contracts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3></div><p className="text-sm text-[#000052]/70">{contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length} {t('agent.activeContracts')}</p></button><button onClick={() => navigate('/agent/payouts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3></div><p className="text-sm text-[#000052]/70">{t('payouts.subtitle')}</p></button></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={() => navigate('/agent/contracts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('agent.myActiveContracts')}</h3></div><p className="text-sm text-[#000052]/70 mt-1">{contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length} {t('agent.activeContracts')}</p></button><button onClick={() => navigate('/agent/payouts')} className="bg-white p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left"><div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B]" /><h3 className="font-bold text-[#000052]">{t('payouts.title')}</h3></div><p className="text-sm text-[#000052]/70">{t('payouts.subtitle')}</p></button></div>
   </div>;
 }
