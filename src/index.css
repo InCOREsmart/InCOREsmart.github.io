@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* ============================================================
-   InCORE Design System — v4 финальная (компромисс по ревью)
+   InCORE Design System — v5 (альфа-база + polish-пасс)
    Navy #000052 = система и действия
    Золото #B8860B = деньги (дозированно, глубокие оттенки)
-   WCAG-контраст для мелкого текста
+   WCAG-контраст, скелетоны, микро-анимации
    ============================================================ */
 
 :root {
@@ -52,6 +52,11 @@ button, a, input, select, textarea {
 
 button svg { flex-shrink: 0; }
 
+/* Цифры в таблицах — по разрядам, везде */
+td, th, .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--navy);
@@ -63,7 +68,48 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 82, 0.3); }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* ---------- РАДИУСЫ, ТЕНИ, ОТПАДЫ (единый стиль) ---------- */
+/* ---------- POLISH: АВТО-АНИМАЦИЯ СТРАНИЦ ---------- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+main .overflow-y-auto > div {
+  animation: fadeInUp 0.3s ease both;
+}
+.page-enter { animation: fadeInUp 0.3s ease; }
+
+/* ---------- POLISH: СКЕЛЕТОНЫ ВМЕСТО СПИННЕРОВ ---------- */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+div.animate-spin.rounded-full {
+  animation: shimmer 1.4s linear infinite !important;
+  border: none !important;
+  border-radius: 10px !important;
+  width: 140px !important;
+  height: 12px !important;
+  background: linear-gradient(90deg, #EEF2F6 25%, #DDE3EA 50%, #EEF2F6 75%);
+  background-size: 200% 100%;
+}
+.skeleton {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #EEF2F6 25%, #DDE3EA 50%, #EEF2F6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* ---------- POLISH: ДОСТУПНОСТЬ (reduced motion) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- РАДИУСЫ, ТЕНИ, ОТПАДЫ ---------- */
 .rounded-lg  { border-radius: 16px; }
 .rounded-xl  { border-radius: 20px; }
 .rounded-2xl { border-radius: var(--radius-card); }
@@ -74,20 +120,30 @@ input:focus, select:focus, textarea:focus {
 
 button { border-radius: var(--radius-button); }
 
-/* Карточки: линия почти невидимая + тень очень мягкая (не «грязнит») */
+/* Карточки: линия почти невидимая + тень очень мягкая */
 [class*="border-[#000052]"] { border-color: var(--hairline) !important; }
 .border-gray-100 { border-color: var(--hairline) !important; }
 .border-gray-200 { border-color: var(--line) !important; }
 
-/* Единый внутренний отступ карточек — 24px */
 .p-5, .p-6 { padding: 24px !important; }
+
+/* ---------- POLISH: ЗОЛОТЫЕ КНОПКИ → NAVY (действие = navy) ---------- */
+button[class*="bg-[#B8860B]"] {
+  background-color: var(--navy) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-button);
+}
+button[class*="bg-[#B8860B]"]:hover {
+  background-color: var(--navy-light) !important;
+  transform: translateY(-1px);
+}
+button[class*="bg-[#B8860B]"]:active { transform: translateY(0); }
 
 /* ---------- ТИПОГРАФИКА И КОНТРАСТ (WCAG) ---------- */
 .text-gray-500 { color: #475569 !important; }
 .text-gray-400 { color: var(--muted) !important; }
 .text-xs { font-size: 12.5px !important; }
 
-/* Шапки таблиц: читаемые, 11px, #64748B */
 thead th {
   color: var(--muted) !important;
   font-size: 11px !important;
@@ -95,11 +151,11 @@ thead th {
   letter-spacing: 0.07em;
 }
 
-/* Тонкие разделители строк во всех таблицах */
-tbody tr { border-bottom: 1px solid var(--hairline); }
+tbody tr { border-bottom: 1px solid var(--hairline); transition: background 0.15s ease; }
 tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 
-/* ---------- ПРОГРЕСС-БАРЫ: тоньше, глубже, но различимы ---------- */
+/* ---------- ПРОГРЕСС-БАРЫ: тоньше, глубже, различимы ---------- */
 .h-2, .h-2\.5 { height: 6px !important; }
 [class*="from-[#000052]"] { background-image: linear-gradient(90deg, var(--steel-from), var(--steel-to)) !important; }
 [class*="from-[#B8860B]"] { background-image: linear-gradient(90deg, var(--bronze-from), var(--bronze-to)) !important; }
@@ -235,7 +291,7 @@ tbody tr:last-child { border-bottom: none; }
   border-top: 1px solid var(--hairline);
   font-size: 14px;
 }
-.table-clean tbody tr { transition: background 0.15s ease; cursor: pointer; }
+.table-clean tbody tr { cursor: pointer; }
 .table-clean tbody tr:hover { background: rgba(0, 0, 82, 0.03); }
 
 .progress-track {
@@ -252,9 +308,3 @@ tbody tr:last-child { border-bottom: none; }
 .progress-fill-gold {
   background: linear-gradient(90deg, var(--bronze-from), var(--bronze-to));
 }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.page-enter { animation: fadeInUp 0.3s ease; }
