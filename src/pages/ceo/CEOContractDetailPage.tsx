@@ -1,46 +1,217 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, DollarSign, Lock, Shield, TrendingUp, XCircle, Pencil } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, CreditCard, DollarSign, Lock, Shield, TrendingUp, XCircle, Pencil } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { DemoPayoutStream, getDemoContractById } from '../../lib/demoData';
 import { getEscrowStreams, getEscrowAmount, getPaidAmount, getLockedAmount } from '../../lib/annualBonus';
 import { getContractFullData, releasePayment } from '../../lib/smartContractLogic';
+import { fundContractEscrow } from '../../lib/escrowFunding';
 import { EditDraftContractModal } from '../../components/ui/EditDraftContractModal';
 import { supabase } from '../../lib/supabase';
 import { getCompletedDemoContractById } from '../../lib/demoCompletedContracts';
 import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials } from '../../lib/contractFinance';
 
 export function CEOContractDetailPage() {
-  const { t, i18n } = useTranslation(); const { id } = useParams<{ id: string }>(); const { user } = useAuth(); const navigate = useNavigate();
-  const [loading, setLoading] = useState(true); const [data, setData] = useState<any>(null); const [tab, setTab] = useState<'streams' | 'escrow' | 'oracle' | 'disputes'>('streams'); const [editOpen, setEditOpen] = useState(false); const [arbitrationStream, setArbitrationStream] = useState<any>(null); const [arbitrationReason, setArbitrationReason] = useState(''); const [arbitrationSaving, setArbitrationSaving] = useState(false);
+  const { t, i18n } = useTranslation();
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+  const [tab, setTab] = useState<'streams' | 'escrow' | 'oracle' | 'disputes'>('streams');
+  const [editOpen, setEditOpen] = useState(false);
+  const [arbitrationStream, setArbitrationStream] = useState<any>(null);
+  const [arbitrationReason, setArbitrationReason] = useState('');
+  const [arbitrationSaving, setArbitrationSaving] = useState(false);
+  const [escrowFunding, setEscrowFunding] = useState(false);
 
-  useEffect(() => { const load = async () => { if (!id) return; try {
-    const demo = getDemoContractById(id) || getCompletedDemoContractById(id);
-    if (demo) {
-      const { DEMO_AGENTS } = await import('../../lib/demoData'); const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id)) || DEMO_AGENTS.find(item => id.includes(item.id));
-      const actualRevenue = getActualContractRevenue(demo); const breakdown = getActualContractRevenueBreakdown(demo); const finance = calculateContractFinancials(breakdown);
-      const amounts: Record<string, number> = { new_sales_property: finance.bonusProperty, new_sales_casco: finance.bonusCasco, new_sales_dms: finance.bonusDms, renewal: finance.bonusRenewal, cross_sell: finance.bonusCrossSell, plan_bonus: finance.bonusPlan, retention: finance.bonusRetention, annual: finance.bonusAnnual };
-      const streams = (demo.payout_streams || []).map(stream => ({ ...stream, amount: amounts[stream.stream_key] ?? stream.amount })); const escrowStreams = getEscrowStreams(streams); const escrowAmount = escrowStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0); const totalPaid = getPaidAmount(escrowStreams); const totalLocked = getLockedAmount(escrowStreams); const escrowEvents = (demo.escrow_events || []).map(event => ({ ...event, amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount, metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount, actual_contract_revenue: actualRevenue } : event.metadata }));
-      setData({ contract: demo, streams, escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee }, isDemo: true }); return;
+  useEffect(() => {
+    const load = async () => {
+      if (!id) return;
+      try {
+        const demo = getDemoContractById(id) || getCompletedDemoContractById(id);
+        if (demo) {
+          const { DEMO_AGENTS } = await import('../../lib/demoData');
+          const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id)) || DEMO_AGENTS.find(item => id.includes(item.id));
+          const actualRevenue = getActualContractRevenue(demo);
+          const breakdown = getActualContractRevenueBreakdown(demo);
+          const finance = calculateContractFinancials(breakdown);
+          const amounts: Record<string, number> = {
+            new_sales_property: finance.bonusProperty,
+            new_sales_casco: finance.bonusCasco,
+            new_sales_dms: finance.bonusDms,
+            renewal: finance.bonusRenewal,
+            cross_sell: finance.bonusCrossSell,
+            plan_bonus: finance.bonusPlan,
+            retention: finance.bonusRetention,
+            annual: finance.bonusAnnual,
+          };
+          const streams = (demo.payout_streams || []).map(stream => ({ ...stream, amount: amounts[stream.stream_key] ?? stream.amount }));
+          const escrowStreams = getEscrowStreams(streams);
+          const escrowAmount = escrowStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
+          const totalPaid = getPaidAmount(escrowStreams);
+          const totalLocked = getLockedAmount(escrowStreams);
+          const escrowEvents = (demo.escrow_events || []).map(event => ({
+            ...event,
+            amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount,
+            metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount, actual_contract_revenue: actualRevenue } : event.metadata,
+          }));
+          setData({
+            contract: demo,
+            streams,
+            escrowEvents,
+            oracleEvents: demo.oracle_events,
+            disputes: [],
+            agent,
+            financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee },
+            isDemo: true,
+          });
+          return;
+        }
+        if (!user) return;
+        const real = await getContractFullData(id);
+        if (real) setData({ ...real, isDemo: false });
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id, user]);
+
+  const refreshReal = async () => {
+    if (!id || !user) return;
+    const real = await getContractFullData(id);
+    if (real) setData({ ...real, isDemo: false });
+  };
+
+  const handleFundEscrow = async () => {
+    if (!id || !user || data?.isDemo || escrowFunding) return;
+    setEscrowFunding(true);
+    try {
+      const result = await fundContractEscrow(id, user.id);
+      if (!result.success) {
+        alert(result.error || 'Не удалось оплатить escrow');
+        return;
+      }
+      alert(`Escrow оплачен: $${Number(result.amount || 0).toLocaleString()}`);
+      await refreshReal();
+    } catch (error) {
+      console.error(error);
+      alert('Не удалось оплатить escrow');
+    } finally {
+      setEscrowFunding(false);
     }
-    if (!user) return; const real = await getContractFullData(id); if (real) setData({ ...real, isDemo: false });
-  } catch (error) { console.error(error); } finally { setLoading(false); } }; load(); }, [id, user]);
-  const refreshReal = async () => { if (!id || !user) return; const real = await getContractFullData(id); if (real) setData({ ...real, isDemo: false }); };
-  const handleRelease = async (stream: DemoPayoutStream | any) => { if (!id || data?.isDemo || !user) return; const result = await releasePayment(id, stream.id, user.id); if (!result.success) alert(result.error || t('contractDetail.releasePayout')); await refreshReal(); };
-  const submitArbitration = async () => { if (!arbitrationStream || !arbitrationReason.trim() || !user || !id || data?.isDemo) return; setArbitrationSaving(true); try { const { error } = await supabase.from('disputes').insert({ company_id: data.contract.company_id, contract_id: id, agent_id: data.contract.agent_id, type: 'payment_issue', status: 'OPEN', amount: Number(arbitrationStream.amount || 0), title: t('actions.payoutError'), description: arbitrationReason.trim() }); if (error) throw error; setArbitrationStream(null); setArbitrationReason(''); setTab('disputes'); await refreshReal(); } catch (error) { console.error(error); alert(t('common.error')); } finally { setArbitrationSaving(false); } };
-  const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'az' ? 'az-AZ' : i18n.language === 'kk' || i18n.language === 'kz' ? 'kk-KZ' : 'en-US'; const formatDate = (value: string | null) => value ? new Date(value).toLocaleString(locale) : '—';
-  const statusLabel = (status: string) => ({ LOCKED: t('contractDetail.statusLocked'), UNLOCKED: t('contractDetail.statusUnlocked'), PAYABLE: t('contractDetail.statusPayable'), PAID: t('contractDetail.statusPaid'), CLAWED_BACK: t('contractDetail.statusClawedBack'), CANCELLED: t('contractDetail.statusCancelled') }[status] || status);
-  const contractStatusColor: Record<string, string> = { ACTIVE: 'bg-emerald-50 text-emerald-600', IN_PROGRESS: 'bg-[#000052]/5 text-[#000052]', PENDING_APPROVAL: 'bg-[#B8860B]/10 text-[#B8860B]', COMPLETED: 'bg-emerald-50 text-emerald-600', DRAFT: 'bg-gray-100 text-gray-500', DISPUTED: 'bg-red-50 text-red-600', PENDING_PAYMENT: 'bg-amber-50 text-amber-600', CANCELLED: 'bg-gray-100 text-gray-500' };
+  };
+
+  const handleRelease = async (stream: DemoPayoutStream | any) => {
+    if (!id || data?.isDemo || !user) return;
+    const result = await releasePayment(id, stream.id, user.id);
+    if (!result.success) alert(result.error || t('contractDetail.releasePayout'));
+    await refreshReal();
+  };
+
+  const submitArbitration = async () => {
+    if (!arbitrationStream || !arbitrationReason.trim() || !user || !id || data?.isDemo) return;
+    setArbitrationSaving(true);
+    try {
+      const { error } = await supabase.from('disputes').insert({
+        company_id: data.contract.company_id,
+        contract_id: id,
+        agent_id: data.contract.agent_id,
+        type: 'payment_issue',
+        status: 'OPEN',
+        amount: Number(arbitrationStream.amount || 0),
+        title: t('actions.payoutError'),
+        description: arbitrationReason.trim(),
+      });
+      if (error) throw error;
+      setArbitrationStream(null);
+      setArbitrationReason('');
+      setTab('disputes');
+      await refreshReal();
+    } catch (error) {
+      console.error(error);
+      alert(t('common.error'));
+    } finally {
+      setArbitrationSaving(false);
+    }
+  };
+
+  const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'az' ? 'az-AZ' : i18n.language === 'kk' || i18n.language === 'kz' ? 'kk-KZ' : 'en-US';
+  const formatDate = (value: string | null) => value ? new Date(value).toLocaleString(locale) : '—';
+  const statusLabel = (status: string) => ({
+    LOCKED: t('contractDetail.statusLocked'),
+    UNLOCKED: t('contractDetail.statusUnlocked'),
+    PAYABLE: t('contractDetail.statusPayable'),
+    PAID: t('contractDetail.statusPaid'),
+    CLAWED_BACK: t('contractDetail.statusClawedBack'),
+    CANCELLED: t('contractDetail.statusCancelled'),
+  }[status] || status);
+  const contractStatusColor: Record<string, string> = {
+    ACTIVE: 'bg-emerald-50 text-emerald-600',
+    IN_PROGRESS: 'bg-[#000052]/5 text-[#000052]',
+    PENDING_APPROVAL: 'bg-[#B8860B]/10 text-[#B8860B]',
+    COMPLETED: 'bg-emerald-50 text-emerald-600',
+    DRAFT: 'bg-gray-100 text-gray-500',
+    DISPUTED: 'bg-red-50 text-red-600',
+    PENDING_PAYMENT: 'bg-amber-50 text-amber-600',
+    CANCELLED: 'bg-gray-100 text-gray-500',
+  };
+
   if (loading) return <div className="p-8 text-center text-[#000052]">{t('ui.loading')}</div>;
   if (!data) return <div className="p-8 text-center"><div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 flex items-center justify-center mb-4"><XCircle className="w-8 h-8 text-red-500" /></div><p className="text-lg text-[#000052]">{t('contract.noContracts')}</p><button onClick={() => navigate('/ceo/contracts')} className="mt-4 px-6 py-2.5 bg-[#000052] text-white rounded-xl">{t('contractDetail.back')}</button></div>;
 
-  const { contract, streams, escrowEvents, oracleEvents, disputes, agent, financials } = data; const streamList = getEscrowStreams(streams || []); const escrowList = escrowEvents || []; const oracleList = oracleEvents || []; const disputeList = disputes || []; const actualRevenue = Number(financials?.actualRevenue ?? getActualContractRevenue(contract)); const totalEscrow = Number(financials?.totalEscrow ?? getEscrowAmount(contract, streamList)); const totalPaid = Number(financials?.totalUnlocked ?? getPaidAmount(streamList)); const totalLocked = Number(financials?.totalLocked ?? getLockedAmount(streamList)); const companyProfit = Number(financials?.companyProfit ?? actualRevenue - totalEscrow); const platformFee = Number(financials?.platformFee ?? Math.round(totalEscrow * 0.12));
-  const kpiValues = [contract.kpi_calls ? Number(contract.actual_calls || 0) / Number(contract.kpi_calls) : 0, contract.kpi_meetings ? Number(contract.actual_meetings || 0) / Number(contract.kpi_meetings) : 0, contract.kpi_proposals ? Number(contract.actual_proposals || 0) / Number(contract.kpi_proposals) : 0, contract.target_clients ? Number(contract.actual_clients || 0) / Number(contract.target_clients) : 0]; const kpi = Math.round(kpiValues.reduce((a: number, b: number) => a + b, 0) / kpiValues.length * 100);
-  const tabs = [['streams', `${t('contractDetail.payoutStreams')} (${streamList.length})`], ['escrow', `${t('contractDetail.escrowJournal')} (${escrowList.length})`], ['oracle', `${t('contractDetail.oracleEvents')} (${oracleList.length})`], ['disputes', `${t('contractDetail.disputes')} (${disputeList.length})`]] as const;
-  const kpiCards = [{ icon: DollarSign, label: 'Фактическая сумма договоров', value: `$${actualRevenue.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]' }, { icon: Shield, label: t('ui.escrow'), value: `$${totalEscrow.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#B8860B]' }, { icon: CheckCircle, label: t('contractDetail.paid'), value: `$${totalPaid.toLocaleString()}`, box: 'bg-emerald-50 text-emerald-600', valueColor: 'text-emerald-600' }, { icon: Lock, label: t('contractDetail.locked'), value: `$${totalLocked.toLocaleString()}`, box: 'bg-[#000052]/5 text-[#000052]', valueColor: 'text-[#000052]' }, { icon: TrendingUp, label: t('contractDetail.companyResult'), value: `$${companyProfit.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]', sub: `${t('contractDetail.commission')} $${platformFee.toLocaleString()}` }];
+  const { contract, streams, escrowEvents, oracleEvents, disputes, agent, financials } = data;
+  const streamList = getEscrowStreams(streams || []);
+  const escrowList = escrowEvents || [];
+  const oracleList = oracleEvents || [];
+  const disputeList = disputes || [];
+  const actualRevenue = Number(financials?.actualRevenue ?? getActualContractRevenue(contract));
+  const totalEscrow = Number(financials?.totalEscrow ?? getEscrowAmount(contract, streamList));
+  const totalPaid = Number(financials?.totalUnlocked ?? getPaidAmount(streamList));
+  const totalLocked = Number(financials?.totalLocked ?? getLockedAmount(streamList));
+  const companyProfit = Number(financials?.companyProfit ?? actualRevenue - totalEscrow);
+  const platformFee = Number(financials?.platformFee ?? Math.round(totalEscrow * 0.12));
+  const escrowFunded = contract.escrow_status === 'FUNDED';
+  const kpiValues = [
+    contract.kpi_calls ? Number(contract.actual_calls || 0) / Number(contract.kpi_calls) : 0,
+    contract.kpi_meetings ? Number(contract.actual_meetings || 0) / Number(contract.kpi_meetings) : 0,
+    contract.kpi_proposals ? Number(contract.actual_proposals || 0) / Number(contract.kpi_proposals) : 0,
+    contract.target_clients ? Number(contract.actual_clients || 0) / Number(contract.target_clients) : 0,
+  ];
+  const kpi = Math.round(kpiValues.reduce((a: number, b: number) => a + b, 0) / kpiValues.length * 100);
+  const tabs = [
+    ['streams', `${t('contractDetail.payoutStreams')} (${streamList.length})`],
+    ['escrow', `${t('contractDetail.escrowJournal')} (${escrowList.length})`],
+    ['oracle', `${t('contractDetail.oracleEvents')} (${oracleList.length})`],
+    ['disputes', `${t('contractDetail.disputes')} (${disputeList.length})`],
+  ] as const;
+  const kpiCards = [
+    { icon: DollarSign, label: 'Фактическая сумма договоров', value: `$${actualRevenue.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]' },
+    { icon: Shield, label: t('ui.escrow'), value: `$${totalEscrow.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#B8860B]' },
+    { icon: CheckCircle, label: t('contractDetail.paid'), value: `$${totalPaid.toLocaleString()}`, box: 'bg-emerald-50 text-emerald-600', valueColor: 'text-emerald-600' },
+    { icon: Lock, label: t('contractDetail.locked'), value: `$${totalLocked.toLocaleString()}`, box: 'bg-[#000052]/5 text-[#000052]', valueColor: 'text-[#000052]' },
+    { icon: TrendingUp, label: t('contractDetail.companyResult'), value: `$${companyProfit.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]', sub: `${t('contractDetail.commission')} $${platformFee.toLocaleString()}` },
+  ];
 
-  return <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto"><div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4"><div><button onClick={() => navigate('/ceo/contracts')} className="flex items-center text-sm text-gray-400 hover:text-[#000052] mb-2"><ArrowLeft className="w-4 h-4 mr-2" />{t('contractDetail.back')}</button><div className="flex items-center gap-3"><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">{contract.title}</h1>{contract.status === 'DRAFT' && !data.isDemo && <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#000052] text-white rounded-xl text-sm font-semibold"><Pencil className="w-4 h-4" />{t('actions.editDraft')}</button>}</div><p className="text-sm text-gray-400 mt-1">{t('contractDetail.agent')}: {agent?.full_name || t('contractDetail.notAssigned')} · {formatDate(contract.start_date || contract.created_at)} — {formatDate(contract.deadline)}</p></div><span className={`px-3 py-1 rounded-full text-sm font-semibold ${contractStatusColor[contract.status] || 'bg-gray-100 text-gray-500'}`}>{contract.status}</span></div>
+  return <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div>
+        <button onClick={() => navigate('/ceo/contracts')} className="flex items-center text-sm text-gray-400 hover:text-[#000052] mb-2"><ArrowLeft className="w-4 h-4 mr-2" />{t('contractDetail.back')}</button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">{contract.title}</h1>
+          {contract.status === 'DRAFT' && !data.isDemo && <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#000052] text-white rounded-xl text-sm font-semibold"><Pencil className="w-4 h-4" />{t('actions.editDraft')}</button>}
+          {!data.isDemo && !escrowFunded && totalEscrow > 0 && <button onClick={handleFundEscrow} disabled={escrowFunding} className="inline-flex items-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-xl text-sm font-semibold shadow-[0_4px_16px_rgba(184,134,11,0.25)] hover:bg-[#9f7309] transition-all disabled:opacity-50 disabled:cursor-not-allowed"><CreditCard className="w-4 h-4" />{escrowFunding ? 'Оплата...' : 'Оплатить escrow'}</button>}
+          {escrowFunded && <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-semibold"><CheckCircle className="w-4 h-4" />Escrow оплачен</span>}
+        </div>
+        <p className="text-sm text-gray-400 mt-1">{t('contractDetail.agent')}: {agent?.full_name || t('contractDetail.notAssigned')} · {formatDate(contract.start_date || contract.created_at)} — {formatDate(contract.deadline)}</p>
+      </div>
+      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${contractStatusColor[contract.status] || 'bg-gray-100 text-gray-500'}`}>{contract.status}</span>
+    </div>
+
     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">{kpiCards.map((card, i) => { const Icon = card.icon; return <div key={i} className="bg-white p-5 rounded-2xl shadow-sm"><div className="flex items-start justify-between mb-4"><span className="text-sm font-medium text-gray-500">{card.label}</span><div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${card.box}`}><Icon className="w-5 h-5" /></div></div><p className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</p>{card.sub && <p className="text-xs text-gray-400 mt-1">{card.sub}</p>}</div>; })}</div>
     <div className="bg-[#B8860B]/5 border border-[#B8860B]/20 p-4 rounded-2xl text-sm text-[#000052]/70 flex items-center gap-3"><Shield className="w-5 h-5 text-[#B8860B]" />Годовой бонус отображается отдельно и не входит в escrow.</div>
     <div className="bg-white p-5 rounded-2xl shadow-sm"><div className="flex justify-between mb-4"><h2 className="font-bold text-[#000052]">{t('contractDetail.kpi')}</h2><span className="font-bold text-[#B8860B] text-lg">{kpi}%</span></div><div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[[t('contractDetail.calls'), contract.actual_calls, contract.kpi_calls], [t('contractDetail.meetings'), contract.actual_meetings, contract.kpi_meetings], [t('contractDetail.proposals'), contract.actual_proposals, contract.kpi_proposals], [t('contractDetail.clients'), contract.actual_clients, contract.target_clients]].map(([label, actual, target]) => { const progress = Number(target) > 0 ? Math.min(Number(actual || 0) / Number(target) * 100, 100) : 0; return <div key={String(label)}><div className="flex justify-between text-xs mb-1.5"><span className="text-gray-500">{label}</span><b className="text-[#000052]">{actual || 0}/{target || 0}</b></div><div className="h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${progress}%` }} /></div></div>; })}</div></div>
