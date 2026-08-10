@@ -18,7 +18,7 @@ function clamp(value: number, min = 0, max = 1): number {
 function getPlannedRevenue(contract: any): number {
   return Number(
     contract.sales_plan ??
-    contract.annual_sales_plan ??
+    contract.annual_sales_plan_monthly ??
     contract.target_revenue ??
     contract.kpi_revenue ??
     contract.planned_revenue ??
@@ -26,7 +26,13 @@ function getPlannedRevenue(contract: any): number {
   );
 }
 
+function isDemoContract(contract: any): boolean {
+  return typeof contract?.id === 'string' && contract.id.startsWith('contract-demo-');
+}
+
 function getActualRevenue(contract: any): number {
+  const planned = getPlannedRevenue(contract);
+
   const explicitActual = Number(
     contract.actual_revenue ??
     contract.sales_amount ??
@@ -35,30 +41,15 @@ function getActualRevenue(contract: any): number {
 
   if (explicitActual > 0) return explicitActual;
 
-  // В демо revenue = плановая выручка. Для годового бонуса это нельзя
-  // считать фактическими продажами, иначе каждый месяц автоматически даёт 100%.
-  if (contract.target_clients && contract.actual_clients != null && Number(contract.revenue) > 0) {
-    return Number(contract.revenue) * clamp(
-      Number(contract.actual_clients) / Number(contract.target_clients),
-    );
+  // Демо-сценарий моделирует одинаковое выполнение плана всеми агентами.
+  // Не используем contract.revenue как фактическую годовую продажу, иначе
+  // каждый существующий месячный контракт автоматически даст 100% годового бонуса.
+  if (isDemoContract(contract)) return planned;
+
+  if (contract.target_clients && contract.actual_clients != null && planned > 0) {
+    return planned * clamp(Number(contract.actual_clients) / Number(contract.target_clients));
   }
 
-  return Number(contract.revenue ?? 0);
-}
-
-function contractAchievement(contract: any): number {
-  const plannedRevenue = getPlannedRevenue(contract);
-  const actualRevenue = getActualRevenue(contract);
-
-  if (plannedRevenue > 0) {
-    return clamp(actualRevenue / plannedRevenue);
-  }
-
-  if (contract.target_clients && contract.actual_clients != null) {
-    return clamp(Number(contract.actual_clients) / Number(contract.target_clients));
-  }
-
-  if (contract.client_payment_confirmed) return 1;
   return 0;
 }
 
@@ -69,34 +60,47 @@ export function calculateAnnualBonusProgress(
   const yearContracts = contracts.filter(contract => {
     const dateValue = contract.start_date || contract.start_at || contract.created_at;
     if (!dateValue) return false;
-    return new Date(dateValue).getFullYear() === year;
+    const date = new Date(dateValue);
+    return !Number.isNaN(date.getTime()) && date.getFullYear() === year;
   });
 
-  // Годовой бонус не является payout stream и не попадает в escrow.
-  // Он накапливается по фактическому выполнению годового плана продаж.
-  const plannedAnnualSales = yearContracts.reduce((sum, contract) => {
-    return sum + getPlannedRevenue(contract);
+  if (!yearContracts.length) {
+    return {
+      year,
+      maxBonus: ANNUAL_BONUS_MAX,
+      accruedBonus: 0,
+      progressPercent: 0,
+      planAchievementPercent: 0,
+      monthsCounted: 0,
+    };
+  }
+
+  const explicitAnnualTarget = yearContracts.reduce((sum, contract) => {
+    const annualTarget = Number(contract.annual_sales_plan || contract.year_sales_plan || 0);
+    return sum + (annualTarget > 0 ? annualTarget : 0);
   }, 0);
 
-  const actualAnnualSales = yearContracts.reduce((sum, contract) => {
-    return sum + getActualRevenue(contract);
-  }, 0);
+  const monthlyPlans = yearContracts
+    .map(getPlannedRevenue)
+    .filter(value => value > 0);
 
-  const revenueBasedAchievement = plannedAnnualSales > 0
-    ? clamp(actualAnnualSales / plannedAnnualSales)
-    : null;
-
-  const fallbackAchievements = yearContracts
-    .filter(contract => getPlannedRevenue(contract) <= 0)
-    .map(contractAchievement);
-
-  const fallbackAchievement = fallbackAchievements.length
-    ? fallbackAchievements.reduce((sum, value) => sum + value, 0) / fallbackAchievements.length
+  // Для ежемесячных контрактов годовой план всегда равен 12 месячным планам.
+  // Поэтому наличие только январь-август в данных не превращает бонус в 100%.
+  const monthlyPlan = monthlyPlans.length
+    ? monthlyPlans.reduce((sum, value) => sum + value, 0) / monthlyPlans.length
     : 0;
+  const annualTarget = explicitAnnualTarget > 0
+    ? explicitAnnualTarget
+    : monthlyPlan * 12;
 
-  const planAchievement = revenueBasedAchievement ?? fallbackAchievement;
-  const accruedBonus = Math.round(ANNUAL_BONUS_MAX * planAchievement);
-  const progressPercent = Math.round(planAchievement * 100);
+  const actualAnnualSales = yearContracts.reduce(
+    (sum, contract) => sum + getActualRevenue(contract),
+    0,
+  );
+
+  const planAchievement = annualTarget > 0
+    ? clamp(actualAnnualSales / annualTarget)
+    : 0;
 
   const months = new Set(
     yearContracts.map(contract => {
@@ -106,12 +110,14 @@ export function calculateAnnualBonusProgress(
     }),
   );
 
+  const progressPercent = Math.round(planAchievement * 100);
+
   return {
     year,
     maxBonus: ANNUAL_BONUS_MAX,
-    accruedBonus,
+    accruedBonus: Math.round(ANNUAL_BONUS_MAX * planAchievement),
     progressPercent,
-    planAchievementPercent: Math.round(planAchievement * 100),
+    planAchievementPercent: progressPercent,
     monthsCounted: months.size,
   };
 }
