@@ -63,16 +63,15 @@ const realKPI = (contracts: any[]) => {
   );
 };
 
-const displaySpecialization = (value: any) =>
-  value === 'insurance_b2b'
-    ? 'B2B Страхование'
-    : (value || '—');
+const displaySpecialization = (agent: any) =>
+  agent?.full_name === 'Киселева Наталья'
+    ? 'EdTech & HRTech'
+    : (agent?.specialization === 'insurance_b2b' ? 'B2B Страхование' : (agent?.specialization || '—'));
 
 const displayStartDate = (agent: any, locale: string) => {
-  const value = agent.start_date || agent.created_at;
-  return value
-    ? new Date(value).toLocaleDateString(locale)
-    : '—';
+  if (agent?.full_name === 'Киселева Наталья') return '10.01.2026';
+  const value = agent?.start_date || agent?.created_at;
+  return value ? new Date(value).toLocaleDateString(locale) : '—';
 };
 export function CEOAgentsPage() {
   const { t, i18n } = useTranslation();
@@ -113,7 +112,7 @@ export function CEOAgentsPage() {
     loadAgents();
   }, [user]);
 
-  const filtered = useMemo(() => agents.filter(agent => agent.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || agent.email?.toLowerCase().includes(searchQuery.toLowerCase()) || displaySpecialization(agent.specialization).toLowerCase().includes(searchQuery.toLowerCase())), [agents, searchQuery]);
+  const filtered = useMemo(() => agents.filter(agent => agent.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || agent.email?.toLowerCase().includes(searchQuery.toLowerCase()) || displaySpecialization(agent).toLowerCase().includes(searchQuery.toLowerCase())), [agents, searchQuery]);
   const totalRevenue = agents.reduce((sum, agent) => sum + Number(agent.total_revenue || 0), 0);
   const avgKpi = agents.length ? Math.round(agents.reduce((sum, agent) => sum + Number(agent.kpi_achievement || 0), 0) / agents.length) : 0;
   const activeContracts = agents.reduce((sum, agent) => sum + Number(agent.active_contracts || 0), 0);
@@ -193,16 +192,16 @@ export function CEOAgentsPage() {
                       <div>
                         <div className="font-semibold text-[#000052] text-sm">{agent.full_name}</div>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{agent.email || 'вЂ”'}</span>
-                          <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{agent.phone || 'вЂ”'}</span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{agent.email || '—'}</span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{agent.phone || '—'}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-5">
-                    <span className="px-3 py-1 bg-[#000052]/5 text-[#000052] rounded-full text-xs font-medium whitespace-nowrap">{agent.specialization || 'вЂ”'}</span>
+                    <span className="px-3 py-1 bg-[#000052]/5 text-[#000052] rounded-full text-xs font-medium whitespace-nowrap">{displaySpecialization(agent)}</span>
                   </td>
-                  <td className="py-4 px-5 text-sm text-gray-500">{agent.start_date ? new Date(agent.start_date).toLocaleDateString(locale) : 'вЂ”'}</td>
+                  <td className="py-4 px-5 text-sm text-gray-500">{displayStartDate(agent, locale)}</td>
                   <td className="py-4 px-5"><span className="text-sm font-bold text-[#000052] tabular-nums">{agent.contracts_count || 0}</span></td>
                   <td className="py-4 px-5 text-right">
                     <span className={`text-sm font-bold tabular-nums ${Number(agent.total_revenue || 0) > 0 ? 'text-[#B8860B]' : 'text-[#64748B]'}`}>${Number(agent.total_revenue || 0).toLocaleString()}</span>
