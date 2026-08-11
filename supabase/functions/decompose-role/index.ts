@@ -7,28 +7,35 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `Ты эксперт по декомпозиции профессиональных ролей для платформы InCORE.
 
-InCORE платит за подтверждённый результат. Твоя задача — описать роль через 5-8 проверяемых навыков.
+InCORE связывает работу человека с подтверждаемым результатом. Твоя задача — превратить реальные действия и ожидаемые результаты роли в 5-8 проверяемых навыков.
 
-ВАЖНО:
-- Не рассчитывай деньги и не создавай финансовые потоки.
-- Не придумывай проценты выплат, ставки, escrow или цены навыков.
-- Вес навыка показывает только его значимость внутри роли.
-- Сумма весов должна быть ровно 1.000.
-- Для каждого навыка нужны ожидаемый результат и конкретные критерии проверки.
-- Уровень L4 используй только там, где результат реально можно подтвердить данными контракта/CRM.
-- L3 используй для результатов, которые требуют накопления данных и оценки поведения/результативности.
-- L1/L2 используй только когда это действительно уместно.
-- Верни только JSON.`;
+ПРАВИЛА:
+- Не рассчитывай деньги, ставки, escrow или финансовые потоки.
+- Вес навыка показывает только его значимость внутри роли. Сумма весов ровно 1.000.
+- Для каждого навыка дай конкретный ожидаемый результат и критерии проверки.
+- L4 используй только там, где результат реально подтверждается данными CRM/контракта/оплаты.
+- L3 используй для накопительных результатов и долгосрочной результативности.
+- Не придумывай обязанности, которых нет в исходных данных, если их нельзя логично вывести из результата роли.
+- Если загружен документ, сначала извлеки из него обязанности, ответственность, KPI и ожидаемые результаты, затем используй их как основной источник.
+- Построй связи между навыками.
+- Верни только JSON без markdown и пояснений.`;
 
-function userPrompt(input: any) {
-  return `Разложи роль на навыки.
+function buildPrompt(input: any) {
+  return `Декомпозируй роль для InCORE.
 
 Название: ${input.name}
-Описание: ${input.description}
 Индустрия: ${input.industry}
-Регион: ${input.region}
 
-Формат:
+Что делает человек:
+${(input.actions || []).join('\n') || 'Не указано'}
+
+Ожидаемые результаты:
+${(input.expected_results || []).join('\n') || 'Не указано'}
+
+Дополнительное описание:
+${input.description || 'Не указано'}
+
+Верни строго:
 {
   "role": { "name": "string", "description": "string", "industry": "string", "category": "string" },
   "skills": [
@@ -55,28 +62,40 @@ function userPrompt(input: any) {
 }`;
 }
 
+function dataUrl(mime: string, base64: string) {
+  return `data:${mime || 'application/octet-stream'};base64,${base64}`;
+}
+
 serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
     const input = await req.json();
-    if (!input?.name || !input?.description) {
-      return new Response(JSON.stringify({ error: 'Название и описание роли обязательны.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!input?.name) {
+      return new Response(JSON.stringify({ error: 'Название роли обязательно.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) throw new Error('OPENAI_API_KEY не настроен в Supabase Functions.');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const userContent: any[] = [{ type: 'input_text', text: buildPrompt(input) }];
+    if (input.source_document_data) {
+      userContent.push({
+        type: 'input_file',
+        filename: input.source_document_name || 'job-description',
+        file_data: dataUrl(input.source_document_type, input.source_document_data),
+      });
+    }
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
         temperature: 0.2,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt(input) },
+        input: [
+          { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
+          { role: 'user', content: userContent },
         ],
       }),
     });
@@ -87,7 +106,7 @@ serve(async req => {
     }
 
     const payload = await response.json();
-    const result = payload?.choices?.[0]?.message?.content;
+    const result = payload?.output_text;
     if (!result) throw new Error('AI не вернул результат.');
 
     return new Response(JSON.stringify({ result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
