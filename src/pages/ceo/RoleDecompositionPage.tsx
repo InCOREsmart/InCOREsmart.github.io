@@ -29,6 +29,8 @@ const RELATION_LABELS: Record<string, string> = {
   enhances: 'усиливает',
 };
 
+const INSURANCE_DESCRIPTION = 'Продажа корпоративных страховых полисов, удержание клиентов, кросс-продажи и выполнение планов продаж.';
+
 export function RoleDecompositionPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -42,10 +44,17 @@ export function RoleDecompositionPage() {
   const isInsuranceDemo = input.name.trim().toLowerCase() === 'страховой агент';
 
   const decompose = async () => {
-    if (!input.name.trim() || !input.description.trim()) {
+    const normalizedInput = {
+      ...input,
+      description: input.description.trim() || (isInsuranceDemo ? INSURANCE_DESCRIPTION : ''),
+    };
+
+    if (!normalizedInput.name.trim() || !normalizedInput.description) {
       setError('Заполните название и описание роли.');
       return;
     }
+
+    setInput(normalizedInput);
     setLoading(true);
     setError('');
     try {
@@ -53,14 +62,14 @@ export function RoleDecompositionPage() {
         setResult(insuranceAgentDecomposition);
         return;
       }
-      const { data, error: fnError } = await supabase.functions.invoke('decompose-role', { body: input });
+      const { data, error: fnError } = await supabase.functions.invoke('decompose-role', { body: normalizedInput });
       if (fnError) throw fnError;
       const parsed = typeof data?.result === 'string' ? JSON.parse(data.result) : data?.result;
       if (!parsed) throw new Error('AI не вернул результат.');
       setResult(parsed as RoleDecomposition);
     } catch (err) {
       console.error(err);
-      setError('Не удалось выполнить AI-декомпозицию. Для роли «Страховой агент» доступна готовая проверенная декомпозиция.');
+      setError('Не удалось выполнить AI-декомпозицию.');
     } finally {
       setLoading(false);
     }
@@ -103,11 +112,10 @@ export function RoleDecompositionPage() {
       {!result && (
         <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5 max-w-3xl">
           <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Название роли *</label><input value={input.name} onChange={e => setInput({ ...input, name: e.target.value })} placeholder="Например: Страховой агент" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" /></div>
-          <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Описание роли *</label><textarea value={input.description} onChange={e => setInput({ ...input, description: e.target.value })} rows={4} placeholder="Какие результаты должен обеспечивать человек в этой роли?" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" /></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Индустрия</label><select value={input.industry} onChange={e => setInput({ ...input, industry: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052]">{INDUSTRIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div><div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Регион</label><input value={input.region} onChange={e => setInput({ ...input, region: e.target.value })} placeholder="az" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052]" /></div></div>
+          <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Описание роли</label><textarea value={input.description} onChange={e => setInput({ ...input, description: e.target.value })} rows={4} placeholder="Например: Продажа корпоративных страховых полисов, удержание клиентов, кросс-продажи и выполнение планов продаж." className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" /><p className="text-xs text-gray-400 mt-1.5">Для «Страхового агента» можно оставить поле пустым: система использует подготовленное описание.</p></div>
+          <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Индустрия</label><select value={input.industry} onChange={e => setInput({ ...input, industry: e.target.value })} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-[#000052]">{INDUSTRIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
           {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
           <button onClick={decompose} disabled={loading} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-50"><Sparkles className="w-5 h-5" />{loading ? 'AI анализирует роль...' : 'Декомпозировать роль'}</button>
-          <p className="text-xs text-gray-400">Для роли «Страховой агент» используется подготовленная декомпозиция, поэтому API-ключ AI для первого теста не нужен.</p>
         </div>
       )}
 
