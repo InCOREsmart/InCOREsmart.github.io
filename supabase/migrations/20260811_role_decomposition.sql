@@ -1,5 +1,5 @@
 -- InCORE: AI-декомпозиция ролей.
--- ВАЖНО: эта схема не меняет contracts, payout_streams, escrow или существующие финансовые расчёты.
+-- ВАЖНО: эта схема не меняет существующие финансовые расчёты контрактов.
 
 CREATE TABLE IF NOT EXISTS roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,6 +59,13 @@ CREATE INDEX IF NOT EXISTS idx_skills_role_id ON skills(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_skills_role_id ON role_skills(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_skills_skill_id ON role_skills(skill_id);
 CREATE INDEX IF NOT EXISTS idx_skills_relations_role_id ON skills_relations(role_id);
+
+-- Связываем роль с существующим контрактом. Поле nullable, поэтому старые контракты
+-- продолжают работать без изменений.
+ALTER TABLE contracts
+  ADD COLUMN IF NOT EXISTS role_id UUID REFERENCES roles(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_contracts_role_id ON contracts(role_id);
 
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
