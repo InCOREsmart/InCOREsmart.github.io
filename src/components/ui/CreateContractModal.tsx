@@ -9,18 +9,21 @@ interface CreateContractModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: () => void;
+  initialRoleId?: string;
 }
 
-export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContractModalProps) {
+export function CreateContractModal({ isOpen, onClose, onCreated, initialRoleId }: CreateContractModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [agents, setAgents] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [roleId, setRoleId] = useState(initialRoleId || '');
   const [deadline, setDeadline] = useState('');
 
   const [targetClientsNew, setTargetClientsNew] = useState<number>(10);
@@ -52,13 +55,24 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         if (companyData) {
           setCompanyId(companyData.id);
 
-          const { data: agentsData } = await supabase
-            .from('agents')
-            .select('id, full_name, specialization')
-            .eq('company_id', companyData.id)
-            .eq('status', 'ACTIVE');
+          const [{ data: agentsData }, { data: rolesData }] = await Promise.all([
+            supabase
+              .from('agents')
+              .select('id, full_name, specialization')
+              .eq('company_id', companyData.id)
+              .eq('status', 'ACTIVE'),
+            supabase
+              .from('roles')
+              .select('id, name, description, industry')
+              .eq('company_id', companyData.id)
+              .eq('is_active', true)
+              .order('name', { ascending: true }),
+          ]);
 
           setAgents(agentsData || []);
+          setRoles(rolesData || []);
+
+          if (initialRoleId) setRoleId(initialRoleId);
         }
       } catch (err) {
         console.error('Ошибка загрузки данных:', err);
@@ -66,7 +80,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     };
 
     loadData();
-  }, [isOpen, user]);
+  }, [isOpen, user, initialRoleId]);
 
   const calculations = useMemo(() => {
     const propertyRevenue = targetClientsNew * avgCheckProperty;
@@ -95,27 +109,11 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     const roi = totalContractRevenue > 0 ? Math.round((companyProfit / totalContractRevenue) * 100) : 0;
 
     return {
-      propertyRevenue,
-      cascoRevenue,
-      dmsRevenue,
-      totalNewSalesRevenue,
-      renewalRevenue,
-      crossSellRevenue,
-      totalContractRevenue,
-      bonusProperty,
-      bonusCasco,
-      bonusDms,
-      bonusNewSales,
-      bonusRenewal,
-      bonusCrossSell,
-      bonusPlan,
-      bonusRetention,
-      bonusAnnual,
-      totalEscrow,
-      platformFee,
-      agentPayout,
-      companyProfit,
-      roi,
+      propertyRevenue, cascoRevenue, dmsRevenue, totalNewSalesRevenue,
+      renewalRevenue, crossSellRevenue, totalContractRevenue,
+      bonusProperty, bonusCasco, bonusDms, bonusNewSales,
+      bonusRenewal, bonusCrossSell, bonusPlan, bonusRetention, bonusAnnual,
+      totalEscrow, platformFee, agentPayout, companyProfit, roi,
     };
   }, [targetClientsNew, avgCheckProperty, avgCheckCasco, avgCheckDms, targetClientsRenewal, avgCheckRenewal, targetClientsCrossSell, avgCheckCrossSell, planBonusPercent, retentionBonus, annualBonus]);
 
@@ -126,14 +124,8 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     if (!description.trim()) { alert('Заполните описание контракта'); return; }
     if (!agentId) { alert('Выберите агента'); return; }
     if (!deadline) { alert('Укажите дедлайн'); return; }
-    if (targetClientsNew <= 0 || targetClientsRenewal <= 0 || targetClientsCrossSell <= 0) {
-      alert('Количество клиентов должно быть больше 0');
-      return;
-    }
-    if (avgCheckProperty <= 0 || avgCheckCasco <= 0 || avgCheckDms <= 0 || avgCheckRenewal <= 0 || avgCheckCrossSell <= 0) {
-      alert('Средний чек должен быть больше 0');
-      return;
-    }
+    if (targetClientsNew <= 0 || targetClientsRenewal <= 0 || targetClientsCrossSell <= 0) { alert('Количество клиентов должно быть больше 0'); return; }
+    if (avgCheckProperty <= 0 || avgCheckCasco <= 0 || avgCheckDms <= 0 || avgCheckRenewal <= 0 || avgCheckCrossSell <= 0) { alert('Средний чек должен быть больше 0'); return; }
     if (!user || !companyId) { alert('Ошибка: пользователь или компания не найдены'); return; }
 
     setLoading(true);
@@ -143,6 +135,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
         .insert({
           company_id: companyId,
           agent_id: agentId,
+          role_id: roleId || null,
           title,
           description,
           status: 'DRAFT',
@@ -197,6 +190,7 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
     setTitle('');
     setDescription('');
     setAgentId('');
+    setRoleId('');
     setDeadline('');
     setTargetClientsNew(10);
     setAvgCheckProperty(375);
@@ -242,17 +236,22 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
               </select>
             </div>
             <div>
+              <label className="block text-sm font-semibold text-[#000052] mb-1.5">Роль</label>
+              <select value={roleId} onChange={e => setRoleId(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052]">
+                <option value="">Без привязки к роли</option>
+                {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+              </select>
+              <p className="text-xs text-gray-400 mt-1.5">Роль определяет навыки и критерии верификации. Финансовые расчёты контракта от неё не зависят.</p>
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Дедлайн *</label>
-              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30" required />
+              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-[#000052]/20 rounded-lg text-[#000052]" required />
             </div>
           </div>
 
           <div className="bg-[#000052]/5 p-5 rounded-xl border border-[#000052]/10">
             <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><DollarSign className="w-5 h-5 text-[#B8860B]" />Новые продажи</h3>
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label>
-              <input type="number" value={targetClientsNew} onChange={e => setTargetClientsNew(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052] max-w-xs" required />
-            </div>
+            <div className="mb-4"><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label><input type="number" value={targetClientsNew} onChange={e => setTargetClientsNew(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052] max-w-xs" required /></div>
             <div className="text-xs font-semibold text-[#000052]/70 mb-2">Средний чек</div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {([
@@ -260,80 +259,21 @@ export function CreateContractModal({ isOpen, onClose, onCreated }: CreateContra
                 ['Автопарки КАСКО (15%)', avgCheckCasco, setAvgCheckCasco, calculations.cascoRevenue, calculations.bonusCasco],
                 ['Медицина ДМС (10%)', avgCheckDms, setAvgCheckDms, calculations.dmsRevenue, calculations.bonusDms],
               ] as Array<[string, number, (value: number) => void, number, number]>).map(([label, value, setter, revenue, bonus]) => (
-                <div key={label} className="bg-white p-3 rounded-lg border border-[#000052]/10">
-                  <div className="text-xs text-[#000052]/50 mb-2">{label}</div>
-                  <input type="number" value={value} onChange={e => setter(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required />
-                  <div className="text-xs text-[#000052]/60 mt-1">Сумма: ${revenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${bonus.toLocaleString()}</span></div>
-                </div>
+                <div key={label} className="bg-white p-3 rounded-lg border border-[#000052]/10"><div className="text-xs text-[#000052]/50 mb-2">{label}</div><input type="number" value={value} onChange={e => setter(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /><div className="text-xs text-[#000052]/60 mt-1">Сумма: ${revenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${bonus.toLocaleString()}</span></div></div>
               ))}
             </div>
             <div className="mt-3 text-sm text-[#000052]/80">Итого новые продажи: <span className="font-bold text-[#B8860B]">${calculations.bonusNewSales.toLocaleString()}</span></div>
           </div>
 
-          <div className="bg-[#B8860B]/5 p-5 rounded-xl border border-[#B8860B]/20">
-            <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" />Продление (15% от суммы договоров)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label><input type="number" value={targetClientsRenewal} onChange={e => setTargetClientsRenewal(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div>
-              <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Средний чек ($) *</label><input type="number" value={avgCheckRenewal} onChange={e => setAvgCheckRenewal(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div>
-            </div>
-            <div className="mt-3 text-sm text-[#000052]/80">Сумма договоров: ${calculations.renewalRevenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${calculations.bonusRenewal.toLocaleString()}</span></div>
-          </div>
+          <div className="bg-[#B8860B]/5 p-5 rounded-xl border border-[#B8860B]/20"><h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" />Продление (15% от суммы договоров)</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label><input type="number" value={targetClientsRenewal} onChange={e => setTargetClientsRenewal(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Средний чек ($) *</label><input type="number" value={avgCheckRenewal} onChange={e => setAvgCheckRenewal(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div></div><div className="mt-3 text-sm text-[#000052]/80">Сумма договоров: ${calculations.renewalRevenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${calculations.bonusRenewal.toLocaleString()}</span></div></div>
 
-          <div className="bg-[#000052]/5 p-5 rounded-xl border border-[#000052]/10">
-            <h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-[#B8860B]" />Кросс-продажи (10% от суммы договоров)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label><input type="number" value={targetClientsCrossSell} onChange={e => setTargetClientsCrossSell(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div>
-              <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Средний чек ($) *</label><input type="number" value={avgCheckCrossSell} onChange={e => setAvgCheckCrossSell(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div>
-            </div>
-            <div className="mt-3 text-sm text-[#000052]/80">Сумма договоров: ${calculations.crossSellRevenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${calculations.bonusCrossSell.toLocaleString()}</span></div>
-          </div>
+          <div className="bg-[#000052]/5 p-5 rounded-xl border border-[#000052]/10"><h3 className="text-lg font-bold text-[#000052] mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-[#B8860B]" />Кросс-продажи (10% от суммы договоров)</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Кол-во клиентов *</label><input type="number" value={targetClientsCrossSell} onChange={e => setTargetClientsCrossSell(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Средний чек ($) *</label><input type="number" value={avgCheckCrossSell} onChange={e => setAvgCheckCrossSell(Number(e.target.value))} min={1} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /></div></div><div className="mt-3 text-sm text-[#000052]/80">Сумма договоров: ${calculations.crossSellRevenue.toLocaleString()} → бонус <span className="font-bold text-[#B8860B]">${calculations.bonusCrossSell.toLocaleString()}</span></div></div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-[#B8860B]/5 p-5 rounded-xl border border-[#B8860B]/20">
-              <h3 className="text-lg font-bold text-[#000052] mb-2 flex items-center gap-2"><Shield className="w-5 h-5 text-[#B8860B]" />Бонус за выполнение плана</h3>
-              <div className="mb-2"><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Процент от общей суммы договоров (%)</label><input type="number" value={planBonusPercent} onChange={e => setPlanBonusPercent(Number(e.target.value))} min={0} max={100} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" /></div>
-              <div className="text-2xl font-bold text-[#B8860B]">${calculations.bonusPlan.toLocaleString()}</div>
-              <p className="text-xs text-[#000052]/60 mt-1">Условие: 100% выполнение KPI квартала</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-[#B8860B]/5 p-5 rounded-xl border border-[#B8860B]/20"><h3 className="text-lg font-bold text-[#000052] mb-2 flex items-center gap-2"><Shield className="w-5 h-5 text-[#B8860B]" />Бонус за выполнение плана</h3><div className="mb-2"><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Процент от общей суммы договоров (%)</label><input type="number" value={planBonusPercent} onChange={e => setPlanBonusPercent(Number(e.target.value))} min={0} max={100} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" /></div><div className="text-2xl font-bold text-[#B8860B]">${calculations.bonusPlan.toLocaleString()}</div><p className="text-xs text-[#000052]/60 mt-1">Условие: 100% выполнение KPI квартала</p></div><div className="bg-[#000052]/5 p-5 rounded-xl border border-[#000052]/10"><h3 className="text-lg font-bold text-[#000052] mb-2 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-[#B8860B]" />Дополнительные бонусы</h3><div className="space-y-3"><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Удержание 90 дней ($)</label><input type="number" value={retentionBonus} onChange={e => setRetentionBonus(Number(e.target.value))} min={0} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" /></div><div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Годовой бонус ($) *</label><input type="number" value={annualBonus} onChange={e => setAnnualBonus(Number(e.target.value))} min={0} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /><p className="text-xs text-[#000052]/50 mt-1">Выплачивается в январе 2027</p></div></div></div></div>
 
-            <div className="bg-[#000052]/5 p-5 rounded-xl border border-[#000052]/10">
-              <h3 className="text-lg font-bold text-[#000052] mb-2 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-[#B8860B]" />Дополнительные бонусы</h3>
-              <div className="space-y-3">
-                <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Удержание 90 дней ($)</label><input type="number" value={retentionBonus} onChange={e => setRetentionBonus(Number(e.target.value))} min={0} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" /></div>
-                <div><label className="block text-xs font-semibold text-[#000052]/70 mb-1">Годовой бонус ($) *</label><input type="number" value={annualBonus} onChange={e => setAnnualBonus(Number(e.target.value))} min={0} className="w-full px-3 py-2 bg-white border border-[#000052]/20 rounded-lg text-sm text-[#000052]" required /><p className="text-xs text-[#000052]/50 mt-1">Выплачивается в январе 2027</p></div>
-              </div>
-            </div>
-          </div>
+          <div className="bg-gradient-to-br from-[#000052] to-[#000052]/90 text-white p-6 rounded-xl"><h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Calculator className="w-5 h-5 text-[#B8860B]" />Итоговый расчёт</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-2"><div className="text-sm font-semibold text-[#B8860B] mb-2">Общая сумма договоров:</div><div className="text-xl font-bold mb-4">${calculations.totalContractRevenue.toLocaleString()}</div><div className="text-sm font-semibold text-[#B8860B] mb-2">Эскроу (замороженные средства):</div>{[['Новые продажи', calculations.bonusNewSales], ['Продление', calculations.bonusRenewal], ['Кросс-продажи', calculations.bonusCrossSell], ['Бонус за план', calculations.bonusPlan], ['Удержание 90 дней', calculations.bonusRetention]].map(([label, amount]) => <div key={String(label)} className="flex justify-between text-sm"><span className="opacity-80">{label}</span><span className="font-bold">${(amount as number).toLocaleString()}</span></div>)}</div><div className="space-y-3 border-l border-white/20 pl-4"><div className="flex justify-between"><span className="opacity-80">Итого эскроу</span><span className="text-2xl font-bold text-[#B8860B]">${calculations.totalEscrow.toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="opacity-80">Комиссия InCORE ({PLATFORM_FEE_PERCENT}%)</span><span className="font-bold">${calculations.platformFee.toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="opacity-80">Выплата агенту</span><span className="font-bold">${calculations.agentPayout.toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="opacity-80">Прибыль компании</span><span className="font-bold text-[#B8860B]">${calculations.companyProfit.toLocaleString()}</span></div><div className="flex justify-between text-sm"><span className="opacity-80">ROI</span><span className="font-bold text-[#B8860B]">{calculations.roi}%</span></div></div></div></div>
 
-          <div className="bg-gradient-to-br from-[#000052] to-[#000052]/90 text-white p-6 rounded-xl">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Calculator className="w-5 h-5 text-[#B8860B]" />Итоговый расчёт</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <div className="text-sm font-semibold text-[#B8860B] mb-2">Общая сумма договоров:</div>
-                <div className="text-xl font-bold mb-4">${calculations.totalContractRevenue.toLocaleString()}</div>
-                <div className="text-sm font-semibold text-[#B8860B] mb-2">Эскроу (замороженные средства):</div>
-                {[
-                  ['Новые продажи', calculations.bonusNewSales],
-                  ['Продление', calculations.bonusRenewal],
-                  ['Кросс-продажи', calculations.bonusCrossSell],
-                  ['Бонус за план', calculations.bonusPlan],
-                  ['Удержание 90 дней', calculations.bonusRetention],
-                ].map(([label, amount]) => <div key={String(label)} className="flex justify-between text-sm"><span className="opacity-80">{label}</span><span className="font-bold">${(amount as number).toLocaleString()}</span></div>)}
-              </div>
-              <div className="space-y-3 border-l border-white/20 pl-4">
-                <div className="flex justify-between"><span className="opacity-80">Итого эскроу</span><span className="text-2xl font-bold text-[#B8860B]">${calculations.totalEscrow.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="opacity-80">Комиссия InCORE ({PLATFORM_FEE_PERCENT}%)</span><span className="font-bold">${calculations.platformFee.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="opacity-80">Выплата агенту</span><span className="font-bold">${calculations.agentPayout.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="opacity-80">Прибыль компании</span><span className="font-bold text-[#B8860B]">${calculations.companyProfit.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm"><span className="opacity-80">ROI</span><span className="font-bold text-[#B8860B]">{calculations.roi}%</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t border-[#000052]/10">
-            <button type="button" onClick={onClose} className="flex-1 py-3 px-4 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg font-semibold transition" disabled={loading}>Отмена</button>
-            <button type="submit" disabled={loading} className="flex-1 py-3 px-4 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50">{loading ? 'Создание...' : 'Создать контракт'}</button>
-          </div>
+          <div className="flex gap-3 pt-4 border-t border-[#000052]/10"><button type="button" onClick={onClose} className="flex-1 py-3 px-4 bg-[#000052]/5 hover:bg-[#000052]/10 text-[#000052] rounded-lg font-semibold transition" disabled={loading}>Отмена</button><button type="submit" disabled={loading} className="flex-1 py-3 px-4 bg-[#B8860B] hover:bg-[#9a7209] text-white rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50">{loading ? 'Создание...' : 'Создать контракт'}</button></div>
         </form>
       </div>
     </div>
