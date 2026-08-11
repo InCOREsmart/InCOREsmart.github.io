@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ArrowLeft, CheckCircle2, RefreshCw, Save, Sparkles, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, RefreshCw, Save, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,7 +30,6 @@ const RELATION_LABELS: Record<string, string> = {
 };
 
 export function RoleDecompositionPage() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [input, setInput] = useState<RoleInput>({ name: '', description: '', industry: 'insurance', region: 'az' });
