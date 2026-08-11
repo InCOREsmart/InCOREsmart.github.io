@@ -1,0 +1,3 @@
+# The browser sends an unauthenticated OPTIONS preflight request.
+# JWT validation is performed inside the function for the actual request.
+verify_jwt = false
