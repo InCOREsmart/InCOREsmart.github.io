@@ -113,7 +113,7 @@ export function RoleDecompositionPage() {
     const expectedResults = cleanList(input.expected_results);
     const normalizedInput: RoleInput = {
       ...input,
-      description: input.description.trim() || (isInsuranceDemo ? INSURANCE_DESCRIPTION : ''),
+      description: (input.description ?? '').trim() || (isInsuranceDemo ? INSURANCE_DESCRIPTION : ''),
       actions,
       expected_results: expectedResults,
     };
