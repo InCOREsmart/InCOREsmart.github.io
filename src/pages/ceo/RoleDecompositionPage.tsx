@@ -39,7 +39,7 @@ export function RoleDecompositionPage() {
   const [error, setError] = useState('');
 
   const validation = useMemo(() => result ? validateDecomposition(result) : null, [result]);
-  const isInsuranceDemo = input.industry === 'insurance' || input.name.trim().toLowerCase() === 'страховой агент';
+  const isInsuranceDemo = input.name.trim().toLowerCase() === 'страховой агент';
 
   const decompose = async () => {
     if (!input.name.trim() || !input.description.trim()) {
@@ -60,7 +60,7 @@ export function RoleDecompositionPage() {
       setResult(parsed as RoleDecomposition);
     } catch (err) {
       console.error(err);
-      setError('Не удалось выполнить AI-декомпозицию. Для страхового агента доступна готовая проверенная декомпозиция.');
+      setError('Не удалось выполнить AI-декомпозицию. Для роли «Страховой агент» доступна готовая проверенная декомпозиция.');
     } finally {
       setLoading(false);
     }
