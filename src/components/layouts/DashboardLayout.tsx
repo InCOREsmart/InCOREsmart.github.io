@@ -13,7 +13,8 @@ import {
   Menu, 
   X,
   DollarSign,
-  Scale
+  Scale,
+  BrainCircuit
 } from 'lucide-react';
 import { NotificationBell } from '../ui/NotificationBell';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
@@ -39,6 +40,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const menuItems = [
     { path: '/ceo', label: t('layout.financialCore'), icon: BarChart3, role: 'ceo' },
     { path: '/ceo/contracts', label: t('layout.contracts'), icon: FileText, role: 'ceo' },
+    { path: '/ceo/roles/decompose', label: t('layout.roleDecomposition', 'Декомпозиция ролей'), icon: BrainCircuit, role: 'ceo' },
     { path: '/ceo/agents', label: t('layout.agents'), icon: Users, role: 'ceo' },
     { path: '/ceo/disputes', label: t('layout.disputes'), icon: Scale, role: 'ceo' },
     { path: '/ceo/integrations', label: t('layout.integrations'), icon: ShieldCheck, role: 'ceo' },
