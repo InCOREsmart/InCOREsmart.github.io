@@ -34,9 +34,7 @@ export interface RoleDecomposition {
 
 export interface RoleInput {
   name: string;
-  description: string;
   industry: string;
-  region: string;
   actions: string[];
   expected_results: string[];
   source_document_name?: string;
