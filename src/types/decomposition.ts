@@ -37,6 +37,11 @@ export interface RoleInput {
   description: string;
   industry: string;
   region: string;
+  actions: string[];
+  expected_results: string[];
+  source_document_name?: string;
+  source_document_data?: string;
+  source_document_type?: string;
 }
 
 export interface ValidationResult {
