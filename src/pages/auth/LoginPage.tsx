@@ -9,17 +9,14 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Редирект после успешного входа
   useEffect(() => {
-    // Ждем завершения загрузки и наличия пользователя + роли
     if (!loading && user && role) {
-      console.log('✅ LoginPage: Редирект на /' + role);
       navigate('/' + role, { replace: true });
     }
   }, [user, role, loading, navigate]);
@@ -36,10 +33,14 @@ export function LoginPage() {
       });
 
       if (signInError) {
-        throw signInError;
+        console.error('Login failed:', signInError);
+        setError(t('auth.invalidCredentials', 'Неверный email или пароль'));
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || 'Неверный email или пароль');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(t('auth.invalidCredentials', 'Неверный email или пароль'));
+    } finally {
       setSubmitting(false);
     }
   };
@@ -105,7 +106,7 @@ export function LoginPage() {
               <span className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a7.96 7.96 0 0 1 3-6.06V0C3.13 1.81 0 6.55 0 12h4zm2 5.29A7.96 7.96 0 0 1 4 12H0c0 3.04 1.13 5.82 3 7.94l3-2.65z"></path>
                 </svg>
                 {t('common.loading')}
               </span>
@@ -117,8 +118,8 @@ export function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           {t('auth.noAccount')}{' '}
-          <button 
-            onClick={() => navigate('/register')} 
+          <button
+            onClick={() => navigate('/register')}
             className="text-[#B8860B] font-semibold hover:text-[#D4A017] transition-colors"
           >
             {t('auth.registerNow')}
