@@ -12,6 +12,7 @@ import { CEOAgentsPage } from './pages/ceo/CEOAgentsPage';
 import { AgentProfilePage } from './pages/ceo/AgentProfilePage';
 import { CEOIntegrationsPage } from './pages/ceo/CEOIntegrationsPage';
 import { CEOAccountingExport } from './pages/ceo/CEOAccountingExport';
+import { RoleDecompositionPage } from './pages/ceo/RoleDecompositionPage';
 import { AgentDashboard } from './pages/agent/AgentDashboard';
 import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
@@ -38,6 +39,7 @@ function App() {
     <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
     <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
     <Route path="/ceo/agents/:id" element={<ProtectedRoute><DashboardLayout><AgentProfilePage /></DashboardLayout></ProtectedRoute>} />
+    <Route path="/ceo/roles/decompose" element={<ProtectedRoute><DashboardLayout><RoleDecompositionPage /></DashboardLayout></ProtectedRoute>} />
     <Route path="/ceo/integrations" element={<ProtectedRoute><DashboardLayout><CEOIntegrationsPage /></DashboardLayout></ProtectedRoute>} />
     <Route path="/ceo/accounting" element={<ProtectedRoute><DashboardLayout><CEOAccountingExport /></DashboardLayout></ProtectedRoute>} />
     <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
