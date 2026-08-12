@@ -149,7 +149,7 @@ function matchesSkill(row: MarketRow, rule: { name: string; patterns: string[] }
 
 export function HHMarketCollectorPage() {
   const navigate = useNavigate();
-  const [viewType, setViewType] = useState<'all' | SourceType>('all');
+  const [viewType, setViewType] = useState<'all' | SourceType>('vacancies');
   const [allRows, setAllRows] = useState<MarketRow[]>([]);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -361,7 +361,6 @@ export function HHMarketCollectorPage() {
 
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => setViewType('all')} className={`px-4 py-2 rounded-xl text-sm font-semibold ${viewType === 'all' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-[#000052]'}`}>Рынок</button>
           <button onClick={() => setViewType('vacancies')} className={`px-4 py-2 rounded-xl text-sm font-semibold ${viewType === 'vacancies' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-[#000052]'}`}>Вакансии</button>
           <button onClick={() => setViewType('resumes')} className={`px-4 py-2 rounded-xl text-sm font-semibold ${viewType === 'resumes' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-[#000052]'}`}>Резюме</button>
         </div>
