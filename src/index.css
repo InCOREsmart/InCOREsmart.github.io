@@ -82,7 +82,7 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .icon-box-navy { background: var(--navy-soft); color: var(--navy); }
 .icon-box-gold { background: var(--gold-soft); color: var(--bronze-from); }
 .icon-box-green { background: var(--navy-soft); color: var(--navy); }
-.icon-box-red { background: #f7eeee; color: #7f1d1d; }
+.icon-box-red { background: var(--gold-soft); color: var(--bronze-from); }
 .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--navy); color: #ffffff; font-weight: 600; font-size: 15px; padding: 14px 24px; border-radius: var(--radius-button); box-shadow: var(--shadow-button); cursor: pointer; border: none; }
 .btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); }
 .btn-primary:active { transform: translateY(0); }
@@ -95,7 +95,7 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .badge-green { background: var(--navy-soft); color: var(--navy); }
 .badge-navy { background: var(--navy-soft); color: var(--navy); }
 .badge-gold { background: var(--gold-soft); color: var(--bronze-from); }
-.badge-red { background: #f7eeee; color: #7f1d1d; }
+.badge-red { background: var(--gold-soft); color: var(--bronze-from); }
 .badge-amber { background: var(--gold-soft); color: var(--bronze-from); }
 .badge-gray { background: #eef2f6; color: #475569; }
 .table-clean { width: 100%; border-collapse: collapse; }
@@ -106,3 +106,25 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .progress-track { height: 6px; border-radius: 999px; background: #EEF2F6; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--steel-from), var(--steel-to)); }
 .progress-fill-gold { background: linear-gradient(90deg, var(--bronze-from), var(--bronze-to)); }
+
+/* ============================================================
+   STATUS PALETTE OVERRIDE
+   Старые semantic Tailwind-классы больше не должны показывать
+   зелёный/красный/оранжевый. Статусы используют только InCORE:
+   Navy/Steel = активное/положительное состояние,
+   Gold/Bronze = внимание/ожидание/ошибка.
+   ============================================================ */
+.bg-green-50, .bg-green-100, .bg-emerald-50, .bg-emerald-100 { background-color: var(--navy-soft) !important; }
+.text-green-600, .text-green-700, .text-emerald-600, .text-emerald-700 { color: var(--navy) !important; }
+.bg-red-50, .bg-red-100, .bg-rose-50, .bg-rose-100 { background-color: var(--gold-soft) !important; }
+.text-red-500, .text-red-600, .text-red-700, .text-rose-500, .text-rose-600, .text-rose-700 { color: var(--bronze-from) !important; }
+.border-green-200, .border-emerald-200 { border-color: rgba(0, 0, 82, 0.15) !important; }
+.border-red-200, .border-rose-200 { border-color: rgba(184, 134, 11, 0.25) !important; }
+.bg-amber-50, .bg-yellow-50, .bg-orange-50 { background-color: var(--gold-soft) !important; }
+.text-amber-600, .text-amber-700, .text-yellow-600, .text-yellow-700, .text-orange-600, .text-orange-700 { color: var(--bronze-from) !important; }
+.border-amber-200, .border-yellow-200, .border-orange-200 { border-color: rgba(184, 134, 11, 0.25) !important; }
+.bg-green-500, .bg-emerald-500 { background-color: var(--steel-to) !important; }
+.text-green-500, .text-emerald-500 { color: var(--steel-to) !important; }
+.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600 { background-color: var(--bronze-to) !important; color: #ffffff !important; }
+.bg-success, .text-success { background-color: var(--navy) !important; color: var(--navy) !important; }
+.bg-error, .text-error { background-color: var(--bronze-from) !important; color: var(--bronze-from) !important; }
