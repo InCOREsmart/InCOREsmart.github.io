@@ -46,11 +46,17 @@ export function CreateContractModal({ isOpen, onClose, onCreated, initialRoleId 
 
     const loadData = async () => {
       try {
-        const { data: companyData } = await supabase
+        const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        if (companyError) {
+          console.error('Ошибка поиска компании CEO:', companyError);
+          setCompanyId(null);
+          return;
+        }
 
         if (companyData) {
           setCompanyId(companyData.id);
@@ -73,9 +79,15 @@ export function CreateContractModal({ isOpen, onClose, onCreated, initialRoleId 
           setRoles(rolesData || []);
 
           if (initialRoleId) setRoleId(initialRoleId);
+        } else {
+          setCompanyId(null);
+          setAgents([]);
+          setRoles([]);
+          console.error('Для текущего пользователя CEO не найдена компания:', user.id);
         }
       } catch (err) {
         console.error('Ошибка загрузки данных:', err);
+        setCompanyId(null);
       }
     };
 
@@ -126,14 +138,52 @@ export function CreateContractModal({ isOpen, onClose, onCreated, initialRoleId 
     if (!deadline) { alert('Укажите дедлайн'); return; }
     if (targetClientsNew <= 0 || targetClientsRenewal <= 0 || targetClientsCrossSell <= 0) { alert('Количество клиентов должно быть больше 0'); return; }
     if (avgCheckProperty <= 0 || avgCheckCasco <= 0 || avgCheckDms <= 0 || avgCheckRenewal <= 0 || avgCheckCrossSell <= 0) { alert('Средний чек должен быть больше 0'); return; }
-    if (!user || !companyId) { alert('Ошибка: пользователь или компания не найдены'); return; }
+    if (!user) { alert('Ошибка: пользователь не найден'); return; }
 
     setLoading(true);
     try {
+      // Важно: не используем companyId из state для INSERT.
+      // Повторно получаем компанию по текущему auth.uid(), чтобы не сохранить
+      // контракт с company_id от другой регистрации или устаревшего состояния.
+      const { data: currentCompany, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (companyError) throw new Error(`Не удалось определить компанию: ${companyError.message}`);
+      if (!currentCompany) throw new Error('Для текущего пользователя не найдена компания. Войдите под регистрацией CEO этой компании.');
+
+      const currentCompanyId = currentCompany.id;
+
+      // Дополнительная проверка: выбранный агент должен принадлежать той же компании.
+      const { data: selectedAgent, error: agentError } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('id', agentId)
+        .eq('company_id', currentCompanyId)
+        .maybeSingle();
+
+      if (agentError) throw new Error(`Не удалось проверить агента: ${agentError.message}`);
+      if (!selectedAgent) throw new Error('Выбранный агент не относится к вашей компании. Обновите страницу и выберите агента заново.');
+
+      // Аналогично проверяем выбранную роль, если она указана.
+      if (roleId) {
+        const { data: selectedRole, error: roleError } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('id', roleId)
+          .eq('company_id', currentCompanyId)
+          .maybeSingle();
+
+        if (roleError) throw new Error(`Не удалось проверить роль: ${roleError.message}`);
+        if (!selectedRole) throw new Error('Выбранная роль не относится к вашей компании. Обновите страницу и выберите роль заново.');
+      }
+
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
         .insert({
-          company_id: companyId,
+          company_id: currentCompanyId,
           agent_id: agentId,
           role_id: roleId || null,
           title,
