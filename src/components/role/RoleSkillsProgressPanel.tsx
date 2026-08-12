@@ -3,15 +3,17 @@ import { useParams } from 'react-router-dom';
 import { Activity, CheckCircle, Target } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+interface Skill {
+  name: string;
+  description?: string | null;
+  verification_level?: string | null;
+  expected_outcomes?: string[] | null;
+  verification_criteria?: string[] | null;
+}
+
 interface SkillRow {
   weight: number;
-  skills: {
-    name: string;
-    description?: string | null;
-    verification_level?: string | null;
-    expected_outcomes?: string[] | null;
-    verification_criteria?: string[] | null;
-  } | null;
+  skills: Skill | null;
 }
 
 function clamp(value: number) {
@@ -20,7 +22,7 @@ function clamp(value: number) {
 
 function progressForSkill(skillName: string, events: Set<string>, overall: number) {
   const name = skillName.toLowerCase();
-  if (name.includes('удерж') || name.includes('retention')) return events.has('RETENTION_PERIOD_PASSED') ? 100 : events.has('CLIENT_CHURNED_BEFORE_90_DAYS') ? 0 : 0;
+  if (name.includes('удерж') || name.includes('retention')) return events.has('RETENTION_PERIOD_PASSED') ? 100 : 0;
   if (name.includes('кросс') || name.includes('cross')) return events.has('CROSS_SELL_CONFIRMED') ? 100 : 0;
   if (name.includes('продаж') || name.includes('sales') || name.includes('корпоратив')) return events.has('CLIENT_PAYMENT_CONFIRMED') ? 100 : 0;
   if (name.includes('продлен') || name.includes('renewal')) return events.has('RENEWAL_CONFIRMED') ? 100 : 0;
@@ -60,7 +62,18 @@ export function RoleSkillsProgressPanel() {
 
         if (roleError || !roleData) return;
         setRoleName(roleData.name || '');
-        setSkills((roleData.role_skills || []) as SkillRow[]);
+
+        const normalizedSkills: SkillRow[] = (roleData.role_skills || []).flatMap((row: any) => {
+          const relatedSkills = Array.isArray(row.skills) ? row.skills : [row.skills];
+          return relatedSkills
+            .filter(Boolean)
+            .map((skill: Skill) => ({
+              weight: Number(row.weight || 0),
+              skills: skill,
+            }));
+        });
+
+        setSkills(normalizedSkills);
         setEvents(new Set((oracleData || []).map(event => event.event_type)));
       } finally {
         setLoading(false);
