@@ -206,6 +206,13 @@ export function HHMarketCollectorPage() {
 
   const clear = () => setRows([]);
 
+  const salaryCount = rows.filter(row => row.salary !== null).length;
+  const overallMedian = median(rows.map(row => row.salary).filter((value): value is number => value !== null));
+  const topSkill = stats[0] ?? null;
+  const topSalarySkill = [...stats].filter(stat => stat.salaryMedian !== null).sort((a, b) => (b.salaryMedian ?? 0) - (a.salaryMedian ?? 0))[0] ?? null;
+  const coreSkills = stats.filter(stat => stat.share >= 50).map(stat => stat.skill);
+  const additionalSkills = stats.filter(stat => stat.share < 50).map(stat => stat.skill);
+
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-start gap-3">
@@ -214,12 +221,8 @@ export function HHMarketCollectorPage() {
         </button>
         <div>
           <h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Рынок навыков</h1>
-          <p className="text-sm text-gray-500 mt-1">HH Market Collector для прототипа роли «Страховой агент».</p>
+          <p className="text-sm text-gray-500 mt-1">Анализ рынка для прототипа роли «Страховой агент».</p>
         </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-900">
-        <b>Новый способ импорта:</b> сохраняй страницы HH как HTML и загружай их сюда. Каждый HTML-файл = ровно одна запись. Поэтому 7 сохранённых вакансий дадут 7 записей, а не 55 или 103.
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
@@ -235,9 +238,8 @@ export function HHMarketCollectorPage() {
           className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition ${dragActive ? 'border-[#B8860B] bg-amber-50' : 'border-gray-300 hover:border-[#000052]'}`}
         >
           <FileUp className="w-9 h-9 mx-auto text-[#000052] mb-3" />
-          <div className="font-semibold text-[#000052]">Загрузить сохранённые страницы HH</div>
+          <div className="font-semibold text-[#000052]">Загрузить вакансии HH</div>
           <div className="text-sm text-gray-500 mt-1">HTML / HTM / TXT. Можно выбрать сразу много файлов.</div>
-          <div className="text-xs text-gray-400 mt-2">Каждый файл считается одной вакансией или одним резюме.</div>
           <input type="file" multiple accept=".html,.htm,.txt,text/html,text/plain" onChange={handleFileInput} className="hidden" />
         </label>
 
@@ -250,19 +252,34 @@ export function HHMarketCollectorPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Загружено записей</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.length}</div></div>
-        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">С зарплатой</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.filter(row => row.salary !== null).length}</div></div>
-        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Медианная зарплата</div><div className="text-3xl font-bold text-[#000052] mt-1">{formatMoney(median(rows.map(row => row.salary).filter((value): value is number => value !== null)))}</div></div>
+        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Вакансий в выборке</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.length}</div></div>
+        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">С указанием зарплаты</div><div className="text-3xl font-bold text-[#000052] mt-1">{salaryCount}</div></div>
+        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Медианная зарплата</div><div className="text-3xl font-bold text-[#000052] mt-1">{formatMoney(overallMedian)}</div></div>
       </div>
 
+      {!!rows.length && !!stats.length && (
+        <div className="bg-[#000052] text-white rounded-2xl shadow-sm p-6">
+          <div className="text-sm uppercase tracking-wide opacity-70">Что это значит для CEO</div>
+          <h2 className="text-xl font-bold mt-1">Рыночный профиль страхового агента</h2>
+          <div className="mt-4 space-y-3 text-sm leading-6">
+            {topSkill && <p><strong>{topSkill.skill}</strong> встречается в {topSkill.share}% вакансий выборки. Это один из базовых навыков рынка.</p>}
+            {coreSkills.length > 0 && <p><strong>Ядро профиля:</strong> {coreSkills.join(', ')}.</p>}
+            {additionalSkills.length > 0 && <p><strong>Дополнительные требования:</strong> {additionalSkills.slice(0, 5).join(', ')}. Они встречаются реже и не обязательно должны быть обязательными для роли.</p>}
+            {topSalarySkill && <p><strong>Самая высокая медианная зарплата среди навыков:</strong> {topSalarySkill.skill} — {formatMoney(topSalarySkill.salaryMedian)}.</p>}
+            <p className="opacity-80">Вывод основан на текущей выборке вакансий. Чем больше вакансий загружено, тем надёжнее рыночная картина.</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-4"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Навыки в выборке</h2></div>
+        <div className="flex items-center gap-2 mb-1"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Какие навыки нужны рынку</h2></div>
+        <p className="text-sm text-gray-500 mb-4">Доля показывает, в какой части вакансий встречается требование к навыку.</p>
         {!stats.length ? (
-          <div className="text-sm text-gray-400 py-6 text-center">Загрузи HTML-файлы, чтобы увидеть анализ.</div>
+          <div className="text-sm text-gray-400 py-6 text-center">Загрузи вакансии, чтобы увидеть анализ.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-gray-500"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Записей</th><th className="py-3 pr-4">Доля</th><th className="py-3">Медианная зарплата</th></tr></thead>
+              <thead><tr className="border-b text-left text-gray-500"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Вакансий</th><th className="py-3 pr-4">Доля вакансий</th><th className="py-3">Медианная зарплата</th></tr></thead>
               <tbody>{stats.map(stat => <tr key={stat.skill} className="border-b last:border-0"><td className="py-3 pr-4 font-semibold text-[#000052]">{stat.skill}</td><td className="py-3 pr-4">{stat.count}</td><td className="py-3 pr-4">{stat.share}%</td><td className="py-3">{stat.salaryMedian === null ? 'Недостаточно данных' : formatMoney(stat.salaryMedian)}</td></tr>)}</tbody>
             </table>
           </div>
@@ -270,7 +287,8 @@ export function HHMarketCollectorPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
-        <h2 className="text-lg font-bold text-[#000052] mb-4">Последние записи</h2>
+        <h2 className="text-lg font-bold text-[#000052] mb-2">Загруженные вакансии</h2>
+        <p className="text-sm text-gray-500 mb-4">Используются как исходные данные для расчёта рыночного профиля.</p>
         {!rows.length ? <div className="text-sm text-gray-400">Пока ничего не загружено.</div> : (
           <div className="space-y-2">{rows.slice(-10).reverse().map(row => <div key={row.id} className="border border-gray-100 rounded-xl p-3"><div className="font-semibold text-[#000052]">{row.title}</div><div className="text-xs text-gray-500 mt-1">{row.region} · {formatMoney(row.salary)} · {row.sourceName}</div></div>)}</div>
         )}
