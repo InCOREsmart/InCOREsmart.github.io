@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { insuranceAgentDecomposition } from '../../data/insuranceAgentDecomposition';
+import { insuranceAgentMarketDemo, insuranceAgentMarketSummary } from '../../data/insuranceAgentMarketDemo';
 import { validateDecomposition } from '../../lib/decomposition';
 import { RoleDecomposition, RoleInput } from '../../types/decomposition';
 
@@ -53,6 +54,11 @@ type SavedRole = {
 
 function cleanList(items: string[]) {
   return items.map(item => item.trim()).filter(Boolean);
+}
+
+function formatSalary(value: number | null) {
+  if (value === null) return '—';
+  return `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
 }
 
 export function RoleDecompositionPage() {
@@ -297,6 +303,61 @@ export function RoleDecompositionPage() {
             <div className="p-5 border-b border-gray-100"><h3 className="font-bold text-[#000052]">Навыки роли</h3><p className="text-xs text-gray-400 mt-1">Изменяйте веса. Это значимость навыка внутри роли, а не распределение денег контракта.</p></div>
             <div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead><tr className="bg-gray-50 text-xs text-gray-500 uppercase"><th className="text-left p-3">Навык</th><th className="text-left p-3 w-28">Вес</th><th className="text-left p-3">Верификация</th><th className="text-left p-3">Ожидаемый результат</th><th className="text-left p-3">Критерий проверки</th></tr></thead><tbody className="divide-y divide-gray-100">{result.skills.map((skill, index) => <tr key={skill.name} className="align-top"><td className="p-3"><div className="font-semibold text-[#000052]">{skill.name}</div><div className="text-xs text-gray-500 mt-1 max-w-[280px]">{skill.description}</div></td><td className="p-3"><div className="relative"><input type="number" min="0" max="100" step="1" value={(skill.weight * 100).toFixed(0)} onChange={e => updateWeight(index, e.target.value)} className="w-20 px-3 py-2 pr-7 border border-gray-200 rounded-lg font-bold text-[#B8860B]" /><span className="absolute right-3 top-2 text-[#B8860B]">%</span></div></td><td className="p-3 text-sm text-[#000052]">{VERIFICATION_LABELS[skill.verification_level]}</td><td className="p-3 text-sm text-gray-600">{skill.expected_outcomes.map(item => <div key={item}>• {item}</div>)}</td><td className="p-3 text-sm text-gray-600">{skill.verification_criteria.map(item => <div key={item}>• {item}</div>)}</td></tr>)}</tbody><tfoot><tr className="bg-gray-50 border-t-2 border-gray-200"><td className="p-3 font-bold text-[#000052]">Итого</td><td className={`p-3 font-bold ${Math.abs(result.skills.reduce((sum, skill) => sum + skill.weight, 0) - 1) < 0.001 ? 'text-emerald-600' : 'text-red-600'}`}>{(result.skills.reduce((sum, skill) => sum + skill.weight, 0) * 100).toFixed(0)}%</td><td colSpan={3}></td></tr></tfoot></table></div>
           </div>
+
+          {isInsuranceDemo && (
+            <section className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-gray-100">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-[#000052]">Рыночный профиль навыков</h3>
+                    <p className="text-xs text-gray-400 mt-1">Первый бесплатный прототип: навыки роли сопоставляются с тестовой моделью данных hh.ru.</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold whitespace-nowrap">ДЕМО · hh.ru</span>
+                </div>
+                <div className="mt-4 p-3 rounded-xl bg-blue-50 text-blue-800 text-xs leading-relaxed">
+                  Это прототип. Цифры ниже иллюстративные и не являются текущей статистикой hh.ru. На следующем этапе они заменяются реальными данными из разрешённого источника hh.ru. InCORE не использует эти данные для расчёта выплат по контрактам.
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px]">
+                  <thead>
+                    <tr className="bg-gray-50 text-xs text-gray-500 uppercase">
+                      <th className="text-left p-3">Навык</th>
+                      <th className="text-left p-3">Вес роли</th>
+                      <th className="text-left p-3">Вакансий</th>
+                      <th className="text-left p-3">Медианная зарплата</th>
+                      <th className="text-left p-3">Доступность</th>
+                      <th className="text-left p-3">Уверенность</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {result.skills.map(skill => {
+                      const market = insuranceAgentMarketDemo.find(item => item.skill === skill.name);
+                      return (
+                        <tr key={`market-${skill.name}`} className="align-top">
+                          <td className="p-3"><div className="font-semibold text-[#000052]">{skill.name}</div></td>
+                          <td className="p-3 font-semibold text-[#B8860B]">{Math.round(skill.weight * 100)}%</td>
+                          <td className="p-3 text-sm text-gray-600">{market?.hhVacancies ?? 0}</td>
+                          <td className="p-3 text-sm text-gray-600">{formatSalary(market?.salaryMedian ?? null)}</td>
+                          <td className="p-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-semibold ${market?.availability === 'Высокая' ? 'bg-emerald-50 text-emerald-700' : market?.availability === 'Средняя' ? 'bg-amber-50 text-amber-700' : market?.availability === 'Низкая' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{market?.availability ?? 'Нет данных'}</span></td>
+                          <td className="p-3 text-sm text-gray-500">{market?.confidence ?? 'Нет данных'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-5 border-t border-gray-100">
+                <h4 className="font-semibold text-[#000052]">Что это даёт CEO</h4>
+                <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="p-4 rounded-xl bg-gray-50"><div className="text-xs text-gray-400 uppercase">Стоимость</div><div className="mt-1 text-sm text-[#000052]">Видно, какие навыки связаны с более дорогим рыночным профилем.</div></div>
+                  <div className="p-4 rounded-xl bg-gray-50"><div className="text-xs text-gray-400 uppercase">Доступность</div><div className="mt-1 text-sm text-[#000052]">Можно заметить требования, которые потенциально сужают воронку найма.</div></div>
+                  <div className="p-4 rounded-xl bg-gray-50"><div className="text-xs text-gray-400 uppercase">Развитие</div><div className="mt-1 text-sm text-[#000052]">Редкие навыки можно рассматривать как кандидатов на внутреннее обучение.</div></div>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-4">Источник модели: {insuranceAgentMarketSummary.source}. Статус: {insuranceAgentMarketSummary.note}</p>
+              </div>
+            </section>
+          )}
 
           <div className="bg-white rounded-2xl shadow-sm p-5"><h3 className="font-bold text-[#000052] mb-3">Связи между навыками</h3><div className="space-y-2">{result.skills_relations.map((relation, index) => <div key={`${relation.skill_from}-${relation.skill_to}-${index}`} className="text-sm flex flex-wrap items-center gap-2"><span className="font-medium text-[#000052]">{relation.skill_from}</span><span className="px-2 py-1 bg-[#000052]/5 rounded-lg text-xs">{RELATION_LABELS[relation.relation_type]}</span><span className="font-medium text-[#000052]">{relation.skill_to}</span><span className="text-gray-400">{Math.round(relation.strength * 100)}%</span></div>)}</div></div>
 
