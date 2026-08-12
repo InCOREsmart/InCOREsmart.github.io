@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, Download, FileUp, Trash2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Download, FileUp, Trash2, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -180,6 +180,7 @@ export function HHMarketCollectorPage() {
   const highDemand = marketStats.filter(stat => stat.vacancyShare >= 50);
   const scarceSkills = marketStats.filter(stat => stat.gap >= 20).slice(0, 5);
   const topSalarySkill = [...marketStats].filter(stat => stat.candidateSalaryMedian !== null).sort((a, b) => (b.candidateSalaryMedian ?? 0) - (a.candidateSalaryMedian ?? 0))[0] ?? null;
+  const chartStats = [...marketStats].sort((a, b) => b.vacancyShare - a.vacancyShare).slice(0, 8);
 
   const importFiles = async (files: FileList | File[]) => {
     setError('');
@@ -229,7 +230,10 @@ export function HHMarketCollectorPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-start gap-3"><button onClick={() => navigate('/ceo/roles/decompose')} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" aria-label="Назад"><ArrowLeft className="w-5 h-5" /></button><div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Рынок навыков</h1><p className="text-sm text-gray-500 mt-1">Спрос и предложение для роли «Страховой агент».</p></div></div>
+      <div className="flex items-start gap-3">
+        <button onClick={() => navigate('/ceo/roles/decompose')} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" aria-label="Назад"><ArrowLeft className="w-5 h-5" /></button>
+        <div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Рынок навыков</h1><p className="text-sm text-gray-500 mt-1">Спрос и предложение для роли «Страховой агент».</p></div>
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
         <div className="flex flex-wrap gap-2">
@@ -252,13 +256,26 @@ export function HHMarketCollectorPage() {
           <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Медиана ожиданий</div><div className="text-3xl font-bold text-[#000052] mt-1">{formatMoney(resumeMedian)}</div></div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6"><div className="flex items-center gap-2 mb-2"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Спрос ↔ предложение</h2></div><p className="text-sm text-gray-500 mb-4">Дефицит = доля вакансий с навыком минус доля резюме с этим навыком.</p>
-          {!marketStats.length ? <div className="text-sm text-gray-400 py-6 text-center">Загрузи вакансии и резюме, чтобы увидеть рыночный разрыв.</div> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-gray-500"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Вакансии</th><th className="py-3 pr-4">Спрос</th><th className="py-3 pr-4">Резюме</th><th className="py-3 pr-4">Предложение</th><th className="py-3 pr-4">Дефицит</th><th className="py-3">Стоимость кандидата</th></tr></thead><tbody>{marketStats.map(stat => <tr key={stat.skill} className="border-b last:border-0"><td className="py-3 pr-4 font-semibold text-[#000052]">{stat.skill}</td><td className="py-3 pr-4">{stat.vacancies}</td><td className="py-3 pr-4">{stat.vacancyShare}%</td><td className="py-3 pr-4">{stat.resumes}</td><td className="py-3 pr-4">{stat.resumeShare}%</td><td className={`py-3 pr-4 font-bold ${stat.gap >= 20 ? 'text-red-600' : stat.gap <= -20 ? 'text-blue-600' : 'text-gray-600'}`}>{stat.gap > 0 ? '+' : ''}{stat.gap} п.п.</td><td className="py-3">{formatMoney(stat.candidateSalaryMedian)}</td></tr>)}</tbody></table></div>}
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-1"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Карта рынка навыков</h2></div>
+          <p className="text-sm text-gray-500 mb-6">Сравнение того, как часто навык требуется в вакансиях и как часто он указан в резюме.</p>
+          {!chartStats.length ? <div className="text-sm text-gray-400 py-6 text-center">Загрузи вакансии и резюме, чтобы увидеть инфографику.</div> : <div className="space-y-5">
+            {chartStats.map(stat => <div key={stat.skill}>
+              <div className="flex items-center justify-between gap-4 mb-2"><span className="text-sm font-semibold text-[#000052]">{stat.skill}</span><span className={`text-xs font-bold ${stat.gap >= 20 ? 'text-red-600' : stat.gap <= -20 ? 'text-blue-600' : 'text-gray-500'}`}>{stat.gap > 0 ? '+' : ''}{stat.gap} п.п.</span></div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-3"><span className="w-20 text-xs text-gray-500">Вакансии</span><div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#000052] rounded-full" style={{ width: `${stat.vacancyShare}%` }} /></div><span className="w-10 text-right text-xs font-semibold">{stat.vacancyShare}%</span></div>
+                <div className="flex items-center gap-3"><span className="w-20 text-xs text-gray-500">Резюме</span><div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${stat.resumeShare}%` }} /></div><span className="w-10 text-right text-xs font-semibold">{stat.resumeShare}%</span></div>
+              </div>
+            </div>)}
+          </div>}
+          <div className="flex flex-wrap gap-5 mt-6 pt-4 border-t text-xs text-gray-500"><span className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#000052]" /> Спрос</span><span className="inline-flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-[#B8860B]" /> Предложение</span><span>Красный разрыв = дефицит навыка</span></div>
         </div>
 
-        {!!marketStats.length && <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4"><h2 className="text-lg font-bold text-[#000052]">Что это значит для CEO</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="rounded-xl bg-red-50 p-4"><div className="text-sm text-gray-500">Дефицитные навыки</div><div className="font-bold text-[#000052] mt-1">{scarceSkills.length ? scarceSkills.map(stat => stat.skill).join(', ') : 'Не выявлены'}</div><div className="text-sm mt-1">Разрыв спроса и предложения от 20 п.п.</div></div><div className="rounded-xl bg-blue-50 p-4"><div className="text-sm text-gray-500">Ядро спроса</div><div className="font-bold text-[#000052] mt-1">{highDemand.length ? highDemand.map(stat => stat.skill).join(', ') : 'Пока не выделено'}</div><div className="text-sm mt-1">Требуются минимум в 50% вакансий.</div></div><div className="rounded-xl bg-amber-50 p-4"><div className="text-sm text-gray-500">Самая высокая стоимость</div><div className="font-bold text-[#000052] mt-1">{topSalarySkill?.skill ?? 'Недостаточно данных'}</div><div className="text-sm mt-1">{topSalarySkill ? formatMoney(topSalarySkill.candidateSalaryMedian) : 'Нужны резюме с зарплатой'}</div></div></div><div className="text-sm text-gray-700 space-y-2"><p><b>Как читать таблицу:</b> положительный дефицит означает, что рынок требует навык чаще, чем кандидаты указывают его в резюме.</p><p><b>Для найма:</b> чем выше дефицит, тем сложнее закрыть роль без расширения воронки, обучения или повышения привлекательности предложения.</p><p><b>Для профиля роли:</b> навыки с высоким спросом стоит считать ядром требований, а не добавлять в описание всё подряд, что встретилось в одной вакансии.</p></div></div>}
+        <div className="bg-white rounded-2xl shadow-sm p-6"><div className="flex items-center gap-2 mb-2"><TrendingUp className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Рыночный разрыв</h2></div><p className="text-sm text-gray-500 mb-4">Показывает, где компании ищут навыки чаще, чем кандидаты указывают их в резюме.</p>
+          {!marketStats.length ? <div className="text-sm text-gray-400 py-6 text-center">Недостаточно данных.</div> : <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-gray-500"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Спрос</th><th className="py-3 pr-4">Предложение</th><th className="py-3 pr-4">Разрыв</th><th className="py-3">Медиана ожиданий</th></tr></thead><tbody>{marketStats.map(stat => <tr key={stat.skill} className="border-b last:border-0"><td className="py-3 pr-4 font-semibold text-[#000052]">{stat.skill}</td><td className="py-3 pr-4">{stat.vacancyShare}%</td><td className="py-3 pr-4">{stat.resumeShare}%</td><td className={`py-3 pr-4 font-bold ${stat.gap >= 20 ? 'text-red-600' : stat.gap <= -20 ? 'text-blue-600' : 'text-gray-600'}`}>{stat.gap > 0 ? '+' : ''}{stat.gap} п.п.</td><td className="py-3">{formatMoney(stat.candidateSalaryMedian)}</td></tr>)}</tbody></table></div>}
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6"><h2 className="text-lg font-bold text-[#000052] mb-4">{viewType === 'resumes' ? 'Загруженные резюме' : viewType === 'vacancies' ? 'Загруженные вакансии' : 'Все загруженные записи'}</h2>{!visibleRows.length ? <div className="text-sm text-gray-400">Пока ничего не загружено.</div> : <div className="space-y-2">{visibleRows.slice(0, 10).map(row => <div key={row.id} className="border border-gray-100 rounded-xl p-3"><div className="font-semibold text-[#000052]">{row.title}</div><div className="text-xs text-gray-500 mt-1">{row.sourceType === 'vacancies' ? 'Вакансия' : 'Резюме'} · {row.region} · {formatMoney(row.salary)}</div></div>)}</div>}</div>
+        {!!marketStats.length && <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4"><h2 className="text-lg font-bold text-[#000052]">Что это значит для CEO</h2><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="rounded-xl bg-red-50 p-4"><div className="text-sm text-gray-500">Дефицитные навыки</div><div className="font-bold text-[#000052] mt-1">{scarceSkills.length ? scarceSkills.map(stat => stat.skill).join(', ') : 'Не выявлены'}</div><div className="text-sm mt-1">Разрыв спроса и предложения от 20 п.п.</div></div><div className="rounded-xl bg-blue-50 p-4"><div className="text-sm text-gray-500">Ядро спроса</div><div className="font-bold text-[#000052] mt-1">{highDemand.length ? highDemand.map(stat => stat.skill).join(', ') : 'Пока не выделено'}</div><div className="text-sm mt-1">Требуются минимум в 50% вакансий.</div></div><div className="rounded-xl bg-amber-50 p-4"><div className="text-sm text-gray-500">Самая высокая стоимость</div><div className="font-bold text-[#000052] mt-1">{topSalarySkill?.skill ?? 'Недостаточно данных'}</div><div className="text-sm mt-1">{topSalarySkill ? formatMoney(topSalarySkill.candidateSalaryMedian) : 'Нужны резюме с зарплатой'}</div></div></div><div className="text-sm text-gray-700 space-y-2"><p><b>Вывод:</b> положительный разрыв означает дефицит навыка на рынке, отрицательный — кандидатов с этим навыком относительно больше.</p><p><b>Для найма:</b> дефицитные навыки стоит учитывать при формировании профиля роли, обучении и оценке привлекательности предложения.</p></div></div>}
       </>}
     </div>
   );
