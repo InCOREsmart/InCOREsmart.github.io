@@ -48,7 +48,7 @@ type SavedRole = {
   industry: string;
   category: string | null;
   created_at: string;
-  role_skills: Array<{ weight: number; skills: { name: string } | null }>;
+  role_skills: Array<{ weight: number; skills: Array<{ name: string }> | null }>;
 };
 
 function cleanList(items: string[]) {
@@ -332,12 +332,15 @@ export function RoleDecompositionPage() {
                   </div>
                   {role.description && <p className="text-sm text-gray-500 mt-3">{role.description}</p>}
                   <div className="mt-4 space-y-2">
-                    {role.role_skills?.map((item, index) => item.skills?.name ? (
-                      <div key={`${item.skills.name}-${index}`} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-[#000052]">{item.skills.name}</span>
-                        <span className="font-bold text-[#B8860B]">{Math.round(Number(item.weight) * 100)}%</span>
-                      </div>
-                    ) : null)}
+                    {role.role_skills?.map((item, index) => {
+                      const skillName = item.skills?.[0]?.name;
+                      return skillName ? (
+                        <div key={`${skillName}-${index}`} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-[#000052]">{skillName}</span>
+                          <span className="font-bold text-[#B8860B]">{Math.round(Number(item.weight) * 100)}%</span>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
                   <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2">
                     <button onClick={() => navigate(`/ceo/contracts?roleId=${role.id}`)} className="flex-1 px-3 py-2.5 rounded-xl bg-[#000052] text-white text-sm font-semibold">Создать контракт</button>
