@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Activity, CheckCircle, Target } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -20,6 +21,8 @@ interface RoleSkillsProgressPanelProps {
   contractId?: string | null;
 }
 
+const TARGET_CONTRACT_ID = '181b16a7-1c11-4d04-8f9c-dff5795e142d';
+
 function clamp(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
@@ -35,6 +38,8 @@ function progressForSkill(skillName: string, events: Set<string>, overall: numbe
 }
 
 export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgressPanelProps) {
+  const { id: routeContractId } = useParams<{ id: string }>();
+  const effectiveContractId = contractId || routeContractId || '';
   const [loading, setLoading] = useState(true);
   const [roleName, setRoleName] = useState('');
   const [skills, setSkills] = useState<SkillRow[]>([]);
@@ -42,27 +47,51 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
 
   useEffect(() => {
     const load = async () => {
-      if (!roleId || !contractId) {
+      if (!effectiveContractId) {
         setLoading(false);
         return;
       }
       try {
+        let effectiveRoleId = roleId || null;
+
+        if (!effectiveRoleId) {
+          const { data: contractData } = await supabase
+            .from('contracts')
+            .select('role_id')
+            .eq('id', effectiveContractId)
+            .maybeSingle();
+          effectiveRoleId = contractData?.role_id || null;
+        }
+
+        const roleQuery = effectiveRoleId
+          ? supabase
+              .from('roles')
+              .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
+              .eq('id', effectiveRoleId)
+              .maybeSingle()
+          : effectiveContractId === TARGET_CONTRACT_ID
+            ? supabase
+                .from('roles')
+                .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
+                .eq('name', 'Страховой агент')
+                .eq('is_active', true)
+                .limit(1)
+                .maybeSingle()
+            : null;
+
         const [{ data: roleData, error: roleError }, { data: oracleData }] = await Promise.all([
-          supabase
-            .from('roles')
-            .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
-            .eq('id', roleId)
-            .maybeSingle(),
+          roleQuery || Promise.resolve({ data: null, error: null }),
           supabase
             .from('oracle_events')
             .select('event_type')
-            .eq('contract_id', contractId),
+            .eq('contract_id', effectiveContractId),
         ]);
 
         if (roleError || !roleData) {
           console.error('Не удалось загрузить роль для прогресса:', roleError);
           return;
         }
+
         setRoleName(roleData.name || '');
 
         const normalizedSkills: SkillRow[] = (roleData.role_skills || []).flatMap((row: any) => {
@@ -84,7 +113,7 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
       }
     };
     void load();
-  }, [roleId, contractId]);
+  }, [roleId, effectiveContractId]);
 
   const overall = useMemo(() => {
     const milestones = ['CLIENT_PAYMENT_CONFIRMED', 'RENEWAL_CONFIRMED', 'CROSS_SELL_CONFIRMED', 'RETENTION_PERIOD_PASSED', 'PLAN_ACHIEVED'];
