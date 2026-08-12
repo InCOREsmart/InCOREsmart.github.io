@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, FileText, Plus, RefreshCw, Save, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -41,6 +41,16 @@ const emptyInput: RoleInput = {
   expected_results: [''],
 };
 
+type SavedRole = {
+  id: string;
+  name: string;
+  description: string | null;
+  industry: string;
+  category: string | null;
+  created_at: string;
+  role_skills: Array<{ weight: number; skills: { name: string } | null }>;
+};
+
 function cleanList(items: string[]) {
   return items.map(item => item.trim()).filter(Boolean);
 }
@@ -51,13 +61,38 @@ export function RoleDecompositionPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState<RoleInput>(emptyInput);
   const [result, setResult] = useState<RoleDecomposition | null>(null);
+  const [savedRoles, setSavedRoles] = useState<SavedRole[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [documentName, setDocumentName] = useState('');
 
   const validation = useMemo(() => result ? validateDecomposition(result) : null, [result]);
   const isInsuranceDemo = input.name.trim().toLowerCase() === 'страховой агент';
+
+  const loadSavedRoles = async () => {
+    setLoadingRoles(true);
+    try {
+      const { data, error: rolesError } = await supabase
+        .from('roles')
+        .select('id, name, description, industry, category, created_at, role_skills(weight, skills(name))')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (rolesError) throw rolesError;
+      setSavedRoles((data ?? []) as SavedRole[]);
+    } catch (err) {
+      console.error('Ошибка загрузки сохранённых ролей:', err);
+      setSavedRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) void loadSavedRoles();
+  }, [user]);
 
   const updateList = (field: 'actions' | 'expected_results', index: number, value: string) => {
     setInput(prev => ({ ...prev, [field]: prev[field].map((item, i) => i === index ? value : item) }));
@@ -182,11 +217,14 @@ export function RoleDecompositionPage() {
       });
       if (rpcError) throw rpcError;
       if (!data) throw new Error('Роль не сохранена.');
-      alert('Роль сохранена.');
-      navigate(`/ceo/contracts?roleId=${data}`);
+
+      setResult(null);
+      setInput(emptyInput);
+      setDocumentName('');
+      await loadSavedRoles();
     } catch (err) {
-      console.error(err);
-      setError('Не удалось сохранить роль. Проверьте миграцию Supabase и права CEO.');
+      console.error('Ошибка сохранения роли:', err);
+      setError('Не удалось сохранить роль.');
     } finally {
       setSaving(false);
     }
@@ -196,7 +234,10 @@ export function RoleDecompositionPage() {
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/ceo/agents')} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" aria-label="Назад"><ArrowLeft className="w-5 h-5" /></button>
-        <div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Декомпозиция роли</h1><p className="text-sm text-gray-400 mt-1">AI конвектирует реальную работу роли в проверяемые навыки.</p></div>
+        <div>
+          <h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Декомпозиция роли</h1>
+          <p className="text-sm text-gray-400 mt-1">AI конвектирует реальную работу роли в проверяемые навыки.</p>
+        </div>
       </div>
 
       {!result && (
@@ -262,6 +303,50 @@ export function RoleDecompositionPage() {
           {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
           <div className="flex flex-col md:flex-row gap-3"><button onClick={() => { setResult(null); setError(''); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-[#000052] rounded-xl font-semibold"><RefreshCw className="w-4 h-4" />Изменить входные данные</button><button onClick={save} disabled={!validation.valid || saving} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold disabled:opacity-50"><Save className="w-4 h-4" />{saving ? 'Сохранение...' : 'Подтвердить и сохранить'}</button></div>
         </div>
+      )}
+
+      {!result && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-[#000052]">Сохранённые роли</h2>
+              <p className="text-sm text-gray-400 mt-1">Все сохранённые декомпозиции вашей компании.</p>
+            </div>
+            <button onClick={() => void loadSavedRoles()} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" title="Обновить"><RefreshCw className="w-4 h-4" /></button>
+          </div>
+
+          {loadingRoles ? (
+            <div className="bg-white rounded-2xl p-6 text-sm text-gray-400">Загрузка ролей...</div>
+          ) : savedRoles.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 text-center text-sm text-gray-400">Сохранённых ролей пока нет.</div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {savedRoles.map(role => (
+                <div key={role.id} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-bold text-[#000052] text-lg">{role.name}</h3>
+                      <p className="text-xs text-gray-400 mt-1">{role.industry}{role.category ? ` · ${role.category}` : ''}</p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">Сохранена</span>
+                  </div>
+                  {role.description && <p className="text-sm text-gray-500 mt-3">{role.description}</p>}
+                  <div className="mt-4 space-y-2">
+                    {role.role_skills?.map((item, index) => item.skills?.name ? (
+                      <div key={`${item.skills.name}-${index}`} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-[#000052]">{item.skills.name}</span>
+                        <span className="font-bold text-[#B8860B]">{Math.round(Number(item.weight) * 100)}%</span>
+                      </div>
+                    ) : null)}
+                  </div>
+                  <div className="mt-5 pt-4 border-t border-gray-100 flex gap-2">
+                    <button onClick={() => navigate(`/ceo/contracts?roleId=${role.id}`)} className="flex-1 px-3 py-2.5 rounded-xl bg-[#000052] text-white text-sm font-semibold">Создать контракт</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
     </div>
   );
