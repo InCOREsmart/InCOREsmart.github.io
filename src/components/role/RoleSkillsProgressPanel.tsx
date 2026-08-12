@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Activity, CheckCircle, Target } from 'lucide-react';
+import { Activity, Target } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Skill {
@@ -68,8 +68,6 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
 
           effectiveRoleId = contractData?.role_id || null;
 
-          // Старые контракты могли быть созданы до появления привязки role_id.
-          // Для них определяем роль через специализацию назначенного агента.
           if (!effectiveRoleId && contractData?.agent_id) {
             const { data: agentData } = await supabase
               .from('agents')
@@ -150,35 +148,50 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
   if (loading || !roleName || !skills.length) return null;
 
   return (
-    <section className="bg-white rounded-2xl shadow-sm p-5 md:p-6 space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[#B8860B] text-sm font-semibold"><Target className="w-4 h-4" />Роль и прогресс</div>
-          <h2 className="text-xl font-bold text-[#000052] mt-1">{roleName}</h2>
-          <p className="text-sm text-gray-400 mt-1">Прогресс формируется по подтверждённым событиям Oracle и весам навыков.</p>
+    <section className="w-full max-w-4xl mx-auto bg-white border border-gray-100 rounded-2xl shadow-sm px-4 py-4 md:px-5 md:py-5">
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[#B8860B] text-xs font-semibold uppercase tracking-wide">
+            <Target className="w-3.5 h-3.5" />
+            Роль и прогресс
+          </div>
+          <h2 className="text-lg font-bold text-[#000052] mt-0.5 truncate">{roleName}</h2>
         </div>
-        <div className="text-right shrink-0"><div className="text-2xl font-bold text-[#000052]">{weightedProgress}%</div><div className="text-xs text-gray-400">общий прогресс</div></div>
+        <div className="shrink-0 text-right">
+          <div className="text-xl font-bold text-[#000052] leading-none">{weightedProgress}%</div>
+          <div className="text-[10px] text-gray-400 mt-1">общий прогресс</div>
+        </div>
       </div>
 
-      <div className="h-3 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full transition-all" style={{ width: `${weightedProgress}%` }} /></div>
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
+        <div className="h-full bg-[#B8860B] rounded-full transition-all" style={{ width: `${weightedProgress}%` }} />
+      </div>
 
-      <div className="space-y-4">
+      <div className="divide-y divide-gray-100">
         {skills.map((item, index) => {
           const skill = item.skills;
           if (!skill) return null;
           const progress = progressForSkill(skill.name, events, overall);
           const weight = Number(item.weight || 0);
           const displayWeight = weight <= 1 ? weight * 100 : weight;
+
           return (
-            <div key={`${skill.name}-${index}`} className="border border-gray-100 rounded-xl p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0"><div className="font-semibold text-[#000052]">{skill.name}</div><div className="text-xs text-gray-400 mt-1">Вес {displayWeight}%{skill.verification_level ? ` · ${skill.verification_level}` : ''}</div></div>
-                <div className="flex items-center gap-2 text-sm font-bold text-[#000052]"><Activity className="w-4 h-4 text-[#B8860B]" />{progress}%</div>
+            <div key={`${skill.name}-${index}`} className="py-2.5 first:pt-0 last:pb-0">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <span className="text-sm font-semibold text-[#000052] truncate">{skill.name}</span>
+                    <span className="shrink-0 text-[11px] text-gray-400">{displayWeight}%</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#000052] rounded-full transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+                <div className="w-12 shrink-0 flex items-center justify-end gap-1 text-xs font-bold text-[#000052]">
+                  <Activity className="w-3.5 h-3.5 text-[#B8860B]" />
+                  {progress}%
+                </div>
               </div>
-              <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#000052] rounded-full" style={{ width: `${progress}%` }} /></div>
-              {skill.description && <p className="text-xs text-gray-500 mt-2">{skill.description}</p>}
-              {skill.verification_criteria?.length ? <div className="mt-3 text-xs text-gray-500"><span className="font-semibold text-[#000052]">Критерии:</span> {skill.verification_criteria.join(' · ')}</div> : null}
-              {progress >= 100 && <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><CheckCircle className="w-3.5 h-3.5" />Целевой уровень достигнут</div>}
             </div>
           );
         })}
