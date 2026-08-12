@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, FileText, Plus, RefreshCw, Save, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, RefreshCw, Save, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -63,14 +63,22 @@ export function RoleDecompositionPage() {
     setInput(prev => ({ ...prev, [field]: prev[field].map((item, i) => i === index ? value : item) }));
   };
 
-  const addListItem = (field: 'actions' | 'expected_results') => {
-    setInput(prev => ({ ...prev, [field]: [...prev[field], ''] }));
+  const addListItem = () => {
+    setInput(prev => ({
+      ...prev,
+      actions: [...prev.actions, ''],
+      expected_results: [...prev.expected_results, ''],
+    }));
   };
 
-  const removeListItem = (field: 'actions' | 'expected_results', index: number) => {
+  const removeListItem = (index: number) => {
     setInput(prev => {
-      const next = prev[field].filter((_, i) => i !== index);
-      return { ...prev, [field]: next.length ? next : [''] };
+      if (prev.actions.length <= 1) return prev;
+      return {
+        ...prev,
+        actions: prev.actions.filter((_, i) => i !== index),
+        expected_results: prev.expected_results.filter((_, i) => i !== index),
+      };
     });
   };
 
@@ -174,7 +182,7 @@ export function RoleDecompositionPage() {
       });
       if (rpcError) throw rpcError;
       if (!data) throw new Error('Роль не сохранена.');
-      alert('Роль сохранена. Финансовые расчёты контрактов не изменены.');
+      alert('Роль сохранена.');
       navigate(`/ceo/contracts?roleId=${data}`);
     } catch (err) {
       console.error(err);
@@ -188,11 +196,11 @@ export function RoleDecompositionPage() {
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-start gap-3">
         <button onClick={() => navigate('/ceo/agents')} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" aria-label="Назад"><ArrowLeft className="w-5 h-5" /></button>
-        <div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Декомпозиция роли</h1><p className="text-sm text-gray-400 mt-1">AI превращает реальную работу роли в проверяемые навыки. Финансовая модель InCORE остаётся отдельно.</p></div>
+        <div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Декомпозиция роли</h1><p className="text-sm text-gray-400 mt-1">AI конвектирует реальную работу роли в проверяемые навыки.</p></div>
       </div>
 
       {!result && (
-        <div className="space-y-5 max-w-4xl">
+        <div className="space-y-5 max-w-5xl">
           <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
             <div>
               <label className="block text-sm font-semibold text-[#000052] mb-1.5">Название роли *</label>
@@ -200,19 +208,21 @@ export function RoleDecompositionPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2"><label className="block text-sm font-semibold text-[#000052]">Что делает человек?</label><span className="text-xs text-gray-400">Конкретные действия</span></div>
-              <div className="space-y-2">
-                {input.actions.map((item, index) => <div key={index} className="flex gap-2"><input value={item} onChange={e => updateList('actions', index, e.target.value)} placeholder="Например: заключает корпоративные договоры" className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-[#000052]" />{input.actions.length > 1 && <button onClick={() => removeListItem('actions', index)} className="p-2 text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}</div>)}
+              <div className="grid grid-cols-[1fr_1fr_40px] gap-3 items-center mb-2">
+                <div><label className="block text-sm font-semibold text-[#000052]">Что делает человек?</label><span className="text-xs text-gray-400">Конкретное действие</span></div>
+                <div><label className="block text-sm font-semibold text-[#000052]">Какой ожидаемый результат?</label><span className="text-xs text-gray-400">Что должно быть достигнуто</span></div>
+                <div />
               </div>
-              <button onClick={() => addListItem('actions')} className="mt-2 inline-flex items-center gap-1 text-sm text-[#000052] font-semibold"><Plus className="w-4 h-4" /> Добавить действие</button>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2"><label className="block text-sm font-semibold text-[#000052]">Какой ожидаемый результат?</label><span className="text-xs text-gray-400">Что должно быть достигнуто</span></div>
               <div className="space-y-2">
-                {input.expected_results.map((item, index) => <div key={index} className="flex gap-2"><input value={item} onChange={e => updateList('expected_results', index, e.target.value)} placeholder="Например: план новых продаж выполнен" className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-[#000052]" />{input.expected_results.length > 1 && <button onClick={() => removeListItem('expected_results', index)} className="p-2 text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>}</div>)}
+                {input.actions.map((item, index) => (
+                  <div key={index} className="grid grid-cols-[1fr_1fr_40px] gap-3 items-center">
+                    <input value={item} onChange={e => updateList('actions', index, e.target.value)} placeholder={`Действие ${index + 1}`} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-[#000052]" />
+                    <div className="relative"><span className="absolute -left-2 top-1/2 -translate-y-1/2 text-gray-300">→</span><input value={input.expected_results[index] ?? ''} onChange={e => updateList('expected_results', index, e.target.value)} placeholder={`Результат ${index + 1}`} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-[#000052] pl-5" /></div>
+                    <button onClick={() => removeListItem(index)} disabled={input.actions.length === 1} className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-30"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
               </div>
-              <button onClick={() => addListItem('expected_results')} className="mt-2 inline-flex items-center gap-1 text-sm text-[#000052] font-semibold"><Plus className="w-4 h-4" /> Добавить результат</button>
+              <button onClick={addListItem} className="mt-3 inline-flex items-center gap-1 text-sm text-[#000052] font-semibold"><Plus className="w-4 h-4" /> Добавить действие</button>
             </div>
 
             <div className="border-t border-gray-100 pt-5">
