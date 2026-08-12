@@ -21,14 +21,14 @@ export default {
           light: '#ff8555',
         },
         success: {
-          DEFAULT: '#4ade80',
-          dark: '#22c55e',
-          light: '#86efac',
+          DEFAULT: '#000052',
+          dark: '#14147a',
+          light: '#46618C',
         },
         error: {
-          DEFAULT: '#ef4444',
-          dark: '#dc2626',
-          light: '#f87171',
+          DEFAULT: '#B8860B',
+          dark: '#8A6508',
+          light: '#D4A017',
         },
         text: {
           primary: '#ffffff',
