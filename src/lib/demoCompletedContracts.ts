@@ -130,17 +130,34 @@ function buildCompletedContract(config: HistoricalContractConfig, index: number)
   };
 }
 
-// Historical demo data: one completed contract for every month January-July.
-// August contracts are supplied by DEMO_AGENTS and are intentionally not duplicated here.
-const HISTORICAL_CONTRACTS: HistoricalContractConfig[] = [
-  { agentId: 'demo-1', month: '2026-01', deadline: '2026-01-28', revenue: 14700 },
-  { agentId: 'demo-2', month: '2026-02', deadline: '2026-02-28', revenue: 18150 },
-  { agentId: 'demo-3', month: '2026-03', deadline: '2026-03-28', revenue: 20250 },
-  { agentId: 'demo-4', month: '2026-04', deadline: '2026-04-28', revenue: 16800 },
-  { agentId: 'demo-5', month: '2026-05', deadline: '2026-05-28', revenue: 21450 },
-  { agentId: 'demo-7', month: '2026-06', deadline: '2026-06-28', revenue: 19320 },
-  { agentId: 'demo-1', month: '2026-07', deadline: '2026-07-28', revenue: 23750 },
-];
+// Historical demo data: every agent gets one completed contract for every month
+// from the agent's start month through July 2026. August is supplied by DEMO_AGENTS.
+const AGENT_HISTORY: Record<string, { firstMonth: number; baseRevenue: number }> = {
+  'demo-1': { firstMonth: 1, baseRevenue: 14700 },
+  'demo-2': { firstMonth: 1, baseRevenue: 18150 },
+  'demo-3': { firstMonth: 2, baseRevenue: 20250 },
+  'demo-4': { firstMonth: 3, baseRevenue: 16800 },
+  'demo-5': { firstMonth: 3, baseRevenue: 21450 },
+  'demo-7': { firstMonth: 3, baseRevenue: 19320 },
+};
+
+const HISTORICAL_CONTRACTS: HistoricalContractConfig[] = DEMO_AGENTS.flatMap(agent => {
+  const config = AGENT_HISTORY[agent.id];
+  if (!config) return [];
+
+  return Array.from({ length: 8 - config.firstMonth }, (_, offset) => {
+    const monthNumber = config.firstMonth + offset;
+    const month = `2026-${String(monthNumber).padStart(2, '0')}`;
+    const monthFactor = 1 + (offset % 4) * 0.06;
+    const revenue = Math.round((config.baseRevenue * monthFactor) / 50) * 50;
+    return {
+      agentId: agent.id,
+      month,
+      deadline: `2026-${String(monthNumber).padStart(2, '0')}-28`,
+      revenue,
+    };
+  });
+});
 
 export const COMPLETED_DEMO_CONTRACTS: DemoContract[] = HISTORICAL_CONTRACTS.map((config, index) =>
   buildCompletedContract(config, index),
