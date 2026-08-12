@@ -21,8 +21,6 @@ interface RoleSkillsProgressPanelProps {
   contractId?: string | null;
 }
 
-const TARGET_CONTRACT_ID = '181b16a7-1c11-4d04-8f9c-dff5795e142d';
-
 function clamp(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
@@ -51,36 +49,38 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
         setLoading(false);
         return;
       }
+
       try {
         let effectiveRoleId = roleId || null;
 
         if (!effectiveRoleId) {
-          const { data: contractData } = await supabase
+          const { data: contractData, error: contractError } = await supabase
             .from('contracts')
             .select('role_id')
             .eq('id', effectiveContractId)
             .maybeSingle();
+
+          if (contractError) {
+            console.error('Не удалось определить роль контракта:', contractError);
+            return;
+          }
+
           effectiveRoleId = contractData?.role_id || null;
         }
 
-        const roleQuery = effectiveRoleId
-          ? supabase
-              .from('roles')
-              .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
-              .eq('id', effectiveRoleId)
-              .maybeSingle()
-          : effectiveContractId === TARGET_CONTRACT_ID
-            ? supabase
-                .from('roles')
-                .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
-                .eq('name', 'Страховой агент')
-                .eq('is_active', true)
-                .limit(1)
-                .maybeSingle()
-            : null;
+        if (!effectiveRoleId) {
+          console.warn('У контракта нет привязанной роли:', effectiveContractId);
+          setRoleName('');
+          setSkills([]);
+          return;
+        }
 
-        const [{ data: roleData, error: roleError }, { data: oracleData }] = await Promise.all([
-          roleQuery || Promise.resolve({ data: null, error: null }),
+        const [{ data: roleData, error: roleError }, { data: oracleData, error: oracleError }] = await Promise.all([
+          supabase
+            .from('roles')
+            .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
+            .eq('id', effectiveRoleId)
+            .maybeSingle(),
           supabase
             .from('oracle_events')
             .select('event_type')
@@ -91,6 +91,8 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
           console.error('Не удалось загрузить роль для прогресса:', roleError);
           return;
         }
+
+        if (oracleError) console.warn('Не удалось загрузить события Oracle:', oracleError);
 
         setRoleName(roleData.name || '');
 
@@ -112,6 +114,7 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
         setLoading(false);
       }
     };
+
     void load();
   }, [roleId, effectiveContractId]);
 
@@ -148,10 +151,11 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
           if (!skill) return null;
           const progress = progressForSkill(skill.name, events, overall);
           const weight = Number(item.weight || 0);
+          const displayWeight = weight <= 1 ? weight * 100 : weight;
           return (
             <div key={`${skill.name}-${index}`} className="border border-gray-100 rounded-xl p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0"><div className="font-semibold text-[#000052]">{skill.name}</div><div className="text-xs text-gray-400 mt-1">Вес {weight}%{skill.verification_level ? ` · ${skill.verification_level}` : ''}</div></div>
+                <div className="min-w-0"><div className="font-semibold text-[#000052]">{skill.name}</div><div className="text-xs text-gray-400 mt-1">Вес {displayWeight}%{skill.verification_level ? ` · ${skill.verification_level}` : ''}</div></div>
                 <div className="flex items-center gap-2 text-sm font-bold text-[#000052]"><Activity className="w-4 h-4 text-[#B8860B]" />{progress}%</div>
               </div>
               <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#000052] rounded-full" style={{ width: `${progress}%` }} /></div>
