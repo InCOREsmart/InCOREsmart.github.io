@@ -74,20 +74,31 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
           actualRevenue: Number(contractData?.revenue || 0), plannedRevenue: Number(contractData?.planned_revenue || 0), isDemo: false,
         });
 
-        const roleQuery = effectiveRoleId
-          ? supabase.from('roles').select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))').eq('id', effectiveRoleId).maybeSingle()
-          : null;
         const [{ data: roleData, error: roleError }, { data: oracleData, error: oracleError }] = await Promise.all([
-          roleQuery || Promise.resolve({ data: null, error: null }),
+          effectiveRoleId
+            ? supabase.from('roles').select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))').eq('id', effectiveRoleId).maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
           supabase.from('oracle_events').select('event_type').eq('contract_id', effectiveContractId),
         ]);
-        if (roleError || !roleData) { console.error('Не удалось загрузить роль для прогресса:', roleError); return; }
+
         if (oracleError) console.warn('Не удалось загрузить события Oracle:', oracleError);
-        const normalizedSkills: SkillRow[] = (roleData.role_skills || []).flatMap((row: any) => {
-          const relatedSkills = Array.isArray(row.skills) ? row.skills : [row.skills];
-          return relatedSkills.filter(Boolean).map((skill: Skill) => ({ weight: Number(row.weight || 0), skills: skill }));
-        });
-        setRoleName(roleData.name || ''); setSkills(normalizedSkills);
+
+        // Реальный контракт не должен исчезать целиком только потому, что RLS
+        // или старая схема роли не вернула связанные role_skills. Контракт уже
+        // содержит role_id, поэтому используем стандартную страховую роль как
+        // безопасный fallback, сохраняя фактические KPI и Oracle-события.
+        if (roleError || !roleData) {
+          console.warn('Не удалось загрузить связанную роль, используется fallback:', roleError);
+          setRoleName('Страховой агент');
+          setSkills(DEMO_SKILLS);
+        } else {
+          const normalizedSkills: SkillRow[] = (roleData.role_skills || []).flatMap((row: any) => {
+            const relatedSkills = Array.isArray(row.skills) ? row.skills : [row.skills];
+            return relatedSkills.filter(Boolean).map((skill: Skill) => ({ weight: Number(row.weight || 0), skills: skill }));
+          });
+          setRoleName(roleData.name || 'Страховой агент');
+          setSkills(normalizedSkills.length ? normalizedSkills : DEMO_SKILLS);
+        }
         setEvents(new Set((oracleData || []).map(event => event.event_type)));
       } catch (error) { console.error('Ошибка загрузки прогресса роли:', error); }
       finally { setLoading(false); }
@@ -110,9 +121,7 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
 
   const progressForSkill = (skillName: string) => {
     const name = skillName.toLowerCase();
-    if (name.includes('кросс') || name.includes('cross')) {
-      return contractProgress?.isDemo ? (contractProgress.actualClients >= Math.ceil(contractProgress.targetClients * 0.6) ? 100 : 0) : events.has('CROSS_SELL_CONFIRMED') ? 100 : 0;
-    }
+    if (name.includes('кросс') || name.includes('cross')) return contractProgress?.isDemo ? (contractProgress.actualClients >= Math.ceil(contractProgress.targetClients * 0.6) ? 100 : 0) : events.has('CROSS_SELL_CONFIRMED') ? 100 : 0;
     if (name.includes('продлен') || name.includes('renewal')) return events.has('RENEWAL_CONFIRMED') ? 100 : 0;
     if (name.includes('план') || name.includes('plan')) return planProgress;
     if (name.includes('удерж') && !name.includes('90')) return events.has('RENEWAL_CONFIRMED') ? 100 : 0;
