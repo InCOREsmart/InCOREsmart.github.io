@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, ClipboardPaste, Download, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, BarChart3, Download, FileUp, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+type SourceType = 'vacancies' | 'resumes';
 
 type MarketRow = {
   id: string;
@@ -8,6 +10,7 @@ type MarketRow = {
   region: string;
   salary: number | null;
   text: string;
+  sourceName: string;
 };
 
 type SkillStat = {
@@ -19,8 +22,8 @@ type SkillStat = {
 
 const SKILL_RULES: Array<{ name: string; patterns: string[] }> = [
   { name: 'Корпоративные продажи', patterns: ['b2b', 'b2б', 'корпоративн', 'юридическ', 'корпоративных клиентов'] },
-  { name: 'Кросс-продажи', patterns: ['кросс-продаж', 'cross-sell', 'cross sell', 'crosssell', 'допродаж', 'дополнительн'] },
-  { name: 'Продление договоров', patterns: ['продлен', 'пролонгац', 'пролонгация'] },
+  { name: 'Кросс-продажи', patterns: ['кросс-продаж', 'cross-sell', 'cross sell', 'crosssell', 'допродаж'] },
+  { name: 'Продление договоров', patterns: ['продлен', 'пролонгац'] },
   { name: 'Телефонные продажи', patterns: ['телефонн', 'телемаркетинг', 'холодных звон', 'cold call'] },
   { name: 'Переговоры', patterns: ['переговор', 'деловые встречи'] },
   { name: 'Продажи', patterns: ['продаж', 'продавать', 'активные продажи'] },
@@ -37,76 +40,6 @@ const KNOWN_REGIONS = [
   'Красноярск', 'Пермь', 'Уфа', 'Омск', 'Баку', 'Астана', 'Удалённая работа', 'Удаленная работа',
 ];
 
-const NOISE_EXACT = new Set([
-  'доверяем', 'ценим смелость', 'поддерживаем', 'помогаем расти', 'уважаем мнение', 'не боимся',
-]);
-
-function extractSalary(text: string): number | null {
-  const matches = [...text.matchAll(/(?:от|до|зарплата|оклад)?\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)]
-    .map(m => Number(m[1].replace(/\s/g, '')))
-    .filter(n => Number.isFinite(n));
-  if (!matches.length) return null;
-  const normalized = matches.map(n => n < 10000 ? n * 1000 : n).filter(n => n >= 20000 && n <= 5000000);
-  return normalized.length ? Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length) : null;
-}
-
-function extractRegion(text: string): string {
-  const lower = text.toLowerCase();
-  const found = KNOWN_REGIONS.find(item => lower.includes(item.toLowerCase()));
-  return found ?? 'Не указан';
-}
-
-function looksLikeTitle(line: string, followingLines: string[]): boolean {
-  const value = line.replace(/^[•·▪●\-–—]+\s*/, '').trim();
-  if (value.length < 4 || value.length > 140) return false;
-  const lower = value.toLowerCase();
-  if (NOISE_EXACT.has(lower)) return false;
-  if (/^(вакансия|резюме|обязанности|требования|условия|компания|работодатель|мы предлагаем|о компании|зарплата|отклик)/i.test(value)) return false;
-  if (/[.!?]$/.test(value) && value.split(/\s+/).length > 5) return false;
-  if (/^(гибкий формат|грамотная устная|консультирование клиентов|высокий доход)/i.test(value)) return false;
-  const context = followingLines.slice(0, 7).join(' ');
-  return extractSalary(context) !== null || extractRegion(context) !== 'Не указан' || /\b(ваканси[яи]|резюме)\b/i.test(context);
-}
-
-function parsePastedText(raw: string): MarketRow[] {
-  const lines = raw.replace(/\r/g, '').split('\n').map(line => line.trim()).filter(Boolean);
-  if (!lines.length) return [];
-
-  const titleIndexes: number[] = [];
-  for (let i = 0; i < lines.length; i += 1) {
-    if (looksLikeTitle(lines[i], lines.slice(i + 1))) titleIndexes.push(i);
-  }
-
-  // If the copied text is a single vacancy, preserve it as one record.
-  if (titleIndexes.length === 0) {
-    return [{
-      id: `${Date.now()}-0`,
-      title: lines[0].replace(/^(вакансия|резюме)\s*[:№-]?\s*/i, '').slice(0, 180),
-      region: extractRegion(raw),
-      salary: extractSalary(raw),
-      text: raw.trim(),
-    }];
-  }
-
-  const rows: MarketRow[] = [];
-  for (let i = 0; i < titleIndexes.length; i += 1) {
-    const start = titleIndexes[i];
-    const end = titleIndexes[i + 1] ?? lines.length;
-    const text = lines.slice(start, end).join('\n').trim();
-    const title = lines[start].replace(/^[•·▪●\-–—]+\s*/, '').replace(/^(вакансия|резюме)\s*[:№-]?\s*/i, '').trim();
-    if (!text || NOISE_EXACT.has(title.toLowerCase())) continue;
-    rows.push({
-      id: `${Date.now()}-${rows.length}`,
-      title: title.slice(0, 180),
-      region: extractRegion(text),
-      salary: extractSalary(text),
-      text,
-    });
-  }
-
-  return rows;
-}
-
 function median(values: number[]): number | null {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -118,54 +51,160 @@ function formatMoney(value: number | null) {
   return value === null ? '—' : `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
 }
 
+function extractSalary(text: string): number | null {
+  const normalizedText = text.replace(/\u00a0/g, ' ');
+  const ranges = [...normalizedText.matchAll(/([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)\s*(?:[-–—]|до|\/)\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)?/gi)];
+  const values: number[] = [];
+  for (const match of ranges) {
+    const a = Number(match[1].replace(/\s/g, ''));
+    const b = Number(match[2].replace(/\s/g, ''));
+    if (Number.isFinite(a) && Number.isFinite(b)) values.push((a + b) / 2);
+  }
+  if (values.length) return Math.round(median(values) ?? values[0]);
+
+  const singles = [...normalizedText.matchAll(/(?:от|до|зарплата|оклад)?\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)]
+    .map(match => Number(match[1].replace(/\s/g, '')))
+    .filter(value => Number.isFinite(value))
+    .map(value => value < 10000 ? value * 1000 : value)
+    .filter(value => value >= 20000 && value <= 1000000);
+
+  return singles.length ? median(singles) : null;
+}
+
+function extractRegion(text: string): string {
+  const lower = text.toLowerCase();
+  return KNOWN_REGIONS.find(region => lower.includes(region.toLowerCase())) ?? 'Не указан';
+}
+
+function cleanText(value: string) {
+  return value
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractTitle(document: Document, text: string, sourceType: SourceType): string {
+  const selectors = sourceType === 'vacancies'
+    ? ['h1', '[data-qa*="vacancy-title"]', '[data-qa*="vacancy-name"]', 'meta[property="og:title"]']
+    : ['h1', '[data-qa*="resume-title"]', '[data-qa*="resume-name"]', 'meta[property="og:title"]'];
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    const value = element?.getAttribute('content') || element?.textContent || '';
+    const title = cleanText(value);
+    if (title && !/^(вакансия|резюме)$/i.test(title)) return title.slice(0, 180);
+  }
+
+  const firstUsefulLine = text.split('\n').map(cleanText).find(line => line.length >= 4 && line.length <= 180);
+  return firstUsefulLine || (sourceType === 'vacancies' ? 'Вакансия HH' : 'Резюме HH');
+}
+
+function parseHtmlFile(content: string, fileName: string, sourceType: SourceType): MarketRow {
+  const document = new DOMParser().parseFromString(content, 'text/html');
+  document.querySelectorAll('script, style, noscript, svg').forEach(node => node.remove());
+  const text = cleanText(document.body?.innerText || document.documentElement?.textContent || '');
+  const title = extractTitle(document, text, sourceType);
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    title,
+    region: extractRegion(text),
+    salary: extractSalary(text),
+    text,
+    sourceName: fileName,
+  };
+}
+
+function parseTextFile(content: string, fileName: string, sourceType: SourceType): MarketRow {
+  const text = cleanText(content);
+  const firstLine = text.split('\n').map(cleanText).find(line => line.length >= 4 && line.length <= 180);
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    title: firstLine || (sourceType === 'vacancies' ? 'Вакансия HH' : 'Резюме HH'),
+    region: extractRegion(text),
+    salary: extractSalary(text),
+    text,
+    sourceName: fileName,
+  };
+}
+
 export function HHMarketCollectorPage() {
   const navigate = useNavigate();
-  const [sourceType, setSourceType] = useState<'vacancies' | 'resumes'>('vacancies');
-  const [raw, setRaw] = useState('');
+  const [sourceType, setSourceType] = useState<SourceType>('vacancies');
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [error, setError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
 
   const stats = useMemo<SkillStat[]>(() => {
-    if (!rows.length) return [];
     return SKILL_RULES.map(rule => {
-      const matched = rows.filter(row => rule.patterns.some(pattern => row.text.toLowerCase().includes(pattern)));
+      const matched = rows.filter(row => {
+        const lower = row.text.toLowerCase();
+        return rule.patterns.some(pattern => lower.includes(pattern));
+      });
       if (!matched.length) return null;
-      const salaryValues = matched.map(row => row.salary).filter((x): x is number => x !== null);
+      const salaries = matched.map(row => row.salary).filter((value): value is number => value !== null);
       return {
         skill: rule.name,
         count: matched.length,
         share: Math.round((matched.length / rows.length) * 100),
-        salaryMedian: salaryValues.length >= 5 ? median(salaryValues) : null,
+        salaryMedian: salaries.length >= 5 ? median(salaries) : null,
       };
     }).filter(Boolean).sort((a, b) => (b?.count ?? 0) - (a?.count ?? 0)) as SkillStat[];
   }, [rows]);
 
-  const importText = () => {
+  const importFiles = async (files: FileList | File[]) => {
     setError('');
-    const parsed = parsePastedText(raw);
-    if (!parsed.length) {
-      setError('Не удалось распознать записи. Вставь текст HH ещё раз.');
+    const selected = Array.from(files).filter(file => /\.(html?|txt)$/i.test(file.name) || file.type === 'text/html' || file.type === 'text/plain');
+    if (!selected.length) {
+      setError('Выбери сохранённые страницы HH в формате HTML или TXT.');
       return;
     }
+
+    const parsed: MarketRow[] = [];
+    for (const file of selected) {
+      try {
+        const content = await file.text();
+        parsed.push(file.type === 'text/html' || /\.html?$/i.test(file.name)
+          ? parseHtmlFile(content, file.name, sourceType)
+          : parseTextFile(content, file.name, sourceType));
+      } catch {
+        // Skip unreadable files and report them below.
+      }
+    }
+
+    if (!parsed.length) {
+      setError('Не удалось прочитать выбранные файлы.');
+      return;
+    }
+
     setRows(prev => [...prev, ...parsed]);
-    setRaw('');
   };
 
-  const clear = () => setRows([]);
+  const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) void importFiles(event.target.files);
+    event.target.value = '';
+  };
 
   const exportCsv = () => {
     const header = ['source', 'title', 'region', 'salary', 'text'];
     const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csv = [header, ...rows.map(row => [sourceType === 'vacancies' ? 'hh.ru/vacancies' : 'hh.ru/resumes', row.title, row.region, row.salary?.toString() ?? '', row.text])]
-      .map(row => row.map(escape).join(';')).join('\n');
+    const csv = [header, ...rows.map(row => [
+      sourceType === 'vacancies' ? 'hh.ru/vacancies' : 'hh.ru/resumes',
+      row.title,
+      row.region,
+      row.salary?.toString() ?? '',
+      row.text,
+    ])].map(row => row.map(escape).join(';')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `incore-hh-${sourceType}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `incore-hh-${sourceType}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
     URL.revokeObjectURL(url);
   };
+
+  const clear = () => setRows([]);
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
@@ -174,13 +213,13 @@ export function HHMarketCollectorPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">HH Market Collector</h1>
-          <p className="text-sm text-gray-500 mt-1">Прототип анализа рынка навыков для роли «Страховой агент».</p>
+          <h1 className="text-[26px] md:text-3xl font-bold text-[#000052]">Рынок навыков</h1>
+          <p className="text-sm text-gray-500 mt-1">HH Market Collector для прототипа роли «Страховой агент».</p>
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900">
-        <b>Как работает прототип:</b> данные из HH не запрашиваются автоматически. Ты копируешь доступный текст из HH и вставляешь его сюда. Обработка происходит в браузере. Это временный сборщик до официальной интеграции через API.
+      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-900">
+        <b>Новый способ импорта:</b> сохраняй страницы HH как HTML и загружай их сюда. Каждый HTML-файл = ровно одна запись. Поэтому 7 сохранённых вакансий дадут 7 записей, а не 55 или 103.
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
@@ -189,15 +228,22 @@ export function HHMarketCollectorPage() {
           <button onClick={() => setSourceType('resumes')} className={`px-4 py-2 rounded-xl text-sm font-semibold ${sourceType === 'resumes' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-[#000052]'}`}>Резюме</button>
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-[#000052] mb-2">Вставь скопированный текст HH</label>
-          <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={10} placeholder={sourceType === 'vacancies' ? 'Вставь текст одной или нескольких вакансий из HH.' : 'Вставь текст одного или нескольких резюме из HH.'} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-[#000052] resize-y focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" />
-        </div>
+        <label
+          onDragOver={event => { event.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={event => { event.preventDefault(); setDragActive(false); void importFiles(event.dataTransfer.files); }}
+          className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition ${dragActive ? 'border-[#B8860B] bg-amber-50' : 'border-gray-300 hover:border-[#000052]'}`}
+        >
+          <FileUp className="w-9 h-9 mx-auto text-[#000052] mb-3" />
+          <div className="font-semibold text-[#000052]">Загрузить сохранённые страницы HH</div>
+          <div className="text-sm text-gray-500 mt-1">HTML / HTM / TXT. Можно выбрать сразу много файлов.</div>
+          <div className="text-xs text-gray-400 mt-2">Каждый файл считается одной вакансией или одним резюме.</div>
+          <input type="file" multiple accept=".html,.htm,.txt,text/html,text/plain" onChange={handleFileInput} className="hidden" />
+        </label>
 
         {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
 
         <div className="flex flex-wrap gap-3">
-          <button onClick={importText} disabled={!raw.trim()} className="inline-flex items-center gap-2 px-5 py-3 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-40"><ClipboardPaste className="w-4 h-4" /> Обработать текст</button>
           <button onClick={exportCsv} disabled={!rows.length} className="inline-flex items-center gap-2 px-5 py-3 border border-gray-200 text-[#000052] rounded-xl font-semibold disabled:opacity-40"><Download className="w-4 h-4" /> Скачать CSV</button>
           <button onClick={clear} disabled={!rows.length} className="inline-flex items-center gap-2 px-5 py-3 text-red-600 rounded-xl font-semibold disabled:opacity-40"><Trash2 className="w-4 h-4" /> Очистить</button>
         </div>
@@ -205,20 +251,29 @@ export function HHMarketCollectorPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Загружено записей</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.length}</div></div>
-        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">С зарплатой</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.filter(r => r.salary !== null).length}</div></div>
-        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Медианная зарплата</div><div className="text-3xl font-bold text-[#000052] mt-1">{formatMoney(median(rows.map(r => r.salary).filter((x): x is number => x !== null)))}</div></div>
+        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">С зарплатой</div><div className="text-3xl font-bold text-[#000052] mt-1">{rows.filter(row => row.salary !== null).length}</div></div>
+        <div className="bg-white rounded-2xl shadow-sm p-5"><div className="text-sm text-gray-500">Медианная зарплата</div><div className="text-3xl font-bold text-[#000052] mt-1">{formatMoney(median(rows.map(row => row.salary).filter((value): value is number => value !== null)))}</div></div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4"><BarChart3 className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Навыки в выборке</h2></div>
-        {!stats.length ? <div className="text-sm text-gray-400 py-6 text-center">После импорта здесь появится анализ навыков.</div> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="text-left text-gray-400 border-b"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Записей</th><th className="py-3 pr-4">Доля</th><th className="py-3">Медианная зарплата</th></tr></thead><tbody>{stats.map(stat => <tr key={stat.skill} className="border-b last:border-0"><td className="py-3 pr-4 font-semibold text-[#000052]">{stat.skill}</td><td className="py-3 pr-4">{stat.count}</td><td className="py-3 pr-4">{stat.share}%</td><td className="py-3">{formatMoney(stat.salaryMedian)}</td></tr>)}</tbody></table></div>
+        {!stats.length ? (
+          <div className="text-sm text-gray-400 py-6 text-center">Загрузи HTML-файлы, чтобы увидеть анализ.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-left text-gray-500"><th className="py-3 pr-4">Навык</th><th className="py-3 pr-4">Записей</th><th className="py-3 pr-4">Доля</th><th className="py-3">Медианная зарплата</th></tr></thead>
+              <tbody>{stats.map(stat => <tr key={stat.skill} className="border-b last:border-0"><td className="py-3 pr-4 font-semibold text-[#000052]">{stat.skill}</td><td className="py-3 pr-4">{stat.count}</td><td className="py-3 pr-4">{stat.share}%</td><td className="py-3">{stat.salaryMedian === null ? 'Недостаточно данных' : formatMoney(stat.salaryMedian)}</td></tr>)}</tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-4"><Upload className="w-5 h-5 text-[#B8860B]" /><h2 className="text-lg font-bold text-[#000052]">Последние записи</h2></div>
-        {!rows.length ? <div className="text-sm text-gray-400">Пока ничего не загружено.</div> : <div className="space-y-2">{rows.slice(-10).reverse().map(row => <div key={row.id} className="p-3 rounded-xl bg-gray-50 flex items-center justify-between gap-4"><div className="min-w-0"><div className="font-semibold text-[#000052] truncate">{row.title}</div><div className="text-xs text-gray-500 mt-1">{row.region} · {formatMoney(row.salary)}</div></div><span className="text-xs text-gray-400">{sourceType === 'vacancies' ? 'Вакансия' : 'Резюме'}</span></div>)}</div>}
+        <h2 className="text-lg font-bold text-[#000052] mb-4">Последние записи</h2>
+        {!rows.length ? <div className="text-sm text-gray-400">Пока ничего не загружено.</div> : (
+          <div className="space-y-2">{rows.slice(-10).reverse().map(row => <div key={row.id} className="border border-gray-100 rounded-xl p-3"><div className="font-semibold text-[#000052]">{row.title}</div><div className="text-xs text-gray-500 mt-1">{row.region} · {formatMoney(row.salary)} · {row.sourceName}</div></div>)}</div>
+        )}
       </div>
     </div>
   );
