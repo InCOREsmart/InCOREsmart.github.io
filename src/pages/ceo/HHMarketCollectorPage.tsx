@@ -18,51 +18,93 @@ type SkillStat = {
 };
 
 const SKILL_RULES: Array<{ name: string; patterns: string[] }> = [
-  { name: 'Продажи', patterns: ['продаж', 'продавать', 'активные продажи'] },
-  { name: 'Корпоративные продажи', patterns: ['b2b', 'корпоративн', 'юридическ', 'корпоративных клиентов'] },
-  { name: 'Страхование', patterns: ['страхован', 'страховой', 'страховых продукт'] },
-  { name: 'Работа с клиентами', patterns: ['работа с клиент', 'клиентск', 'клиентами', 'клиентскую баз'] },
-  { name: 'Переговоры', patterns: ['переговор', 'деловые встречи'] },
-  { name: 'Кросс-продажи', patterns: ['кросс-продаж', 'cross-sell', 'cross sell', 'допродаж', 'дополнительн'] },
+  { name: 'Корпоративные продажи', patterns: ['b2b', 'b2б', 'корпоративн', 'юридическ', 'корпоративных клиентов'] },
+  { name: 'Кросс-продажи', patterns: ['кросс-продаж', 'cross-sell', 'cross sell', 'crosssell', 'допродаж', 'дополнительн'] },
   { name: 'Продление договоров', patterns: ['продлен', 'пролонгац', 'пролонгация'] },
+  { name: 'Телефонные продажи', patterns: ['телефонн', 'телемаркетинг', 'холодных звон', 'cold call'] },
+  { name: 'Переговоры', patterns: ['переговор', 'деловые встречи'] },
+  { name: 'Продажи', patterns: ['продаж', 'продавать', 'активные продажи'] },
+  { name: 'Страхование', patterns: ['страхован', 'страховой', 'страховых продукт'] },
+  { name: 'Работа с клиентами', patterns: ['работа с клиент', 'клиентск', 'клиентами', 'клиентскую баз', 'консультирование клиентов'] },
   { name: 'План продаж', patterns: ['план продаж', 'выполнения плана', 'выполнение плана', 'kpi'] },
-  { name: 'Холодные продажи', patterns: ['холодн', 'холодных звон', 'cold call'] },
   { name: 'CRM', patterns: ['crm', 'битрикс', 'amocrm', 'salesforce'] },
-  { name: 'Телефонные продажи', patterns: ['телефонн', 'звонк', 'телемаркетинг'] },
   { name: 'Развитие клиентской базы', patterns: ['развитие клиентской', 'расширение клиентской', 'привлечение клиентов'] },
 ];
 
+const KNOWN_REGIONS = [
+  'Москва', 'Санкт-Петербург', 'Московская область', 'Краснодар', 'Сочи', 'Екатеринбург',
+  'Казань', 'Новосибирск', 'Ростов-на-Дону', 'Нижний Новгород', 'Самара', 'Воронеж',
+  'Красноярск', 'Пермь', 'Уфа', 'Омск', 'Баку', 'Астана', 'Удалённая работа', 'Удаленная работа',
+];
+
+const NOISE_EXACT = new Set([
+  'доверяем', 'ценим смелость', 'поддерживаем', 'помогаем расти', 'уважаем мнение', 'не боимся',
+]);
+
 function extractSalary(text: string): number | null {
-  const matches = [...text.matchAll(/(?:от|до)?\s*([0-9][0-9\s]{2,7})\s*(?:₽|руб|руб\.?|тыс\.?\s*руб)/gi)]
+  const matches = [...text.matchAll(/(?:от|до|зарплата|оклад)?\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)]
     .map(m => Number(m[1].replace(/\s/g, '')))
     .filter(n => Number.isFinite(n));
   if (!matches.length) return null;
-  const normalized = matches.map(n => n < 10000 ? n * 1000 : n);
-  return Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length);
+  const normalized = matches.map(n => n < 10000 ? n * 1000 : n).filter(n => n >= 20000 && n <= 5000000);
+  return normalized.length ? Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length) : null;
 }
 
 function extractRegion(text: string): string {
-  const known = ['Москва', 'Санкт-Петербург', 'Московская область', 'Краснодар', 'Сочи', 'Екатеринбург', 'Казань', 'Новосибирск', 'Ростов-на-Дону', 'Астана', 'Баку', 'Удалённая работа', 'Удаленная работа'];
-  const found = known.find(item => text.toLowerCase().includes(item.toLowerCase()));
+  const lower = text.toLowerCase();
+  const found = KNOWN_REGIONS.find(item => lower.includes(item.toLowerCase()));
   return found ?? 'Не указан';
 }
 
-function parsePastedText(raw: string): MarketRow[] {
-  const cleaned = raw.replace(/\r/g, '').trim();
-  if (!cleaned) return [];
+function looksLikeTitle(line: string, followingLines: string[]): boolean {
+  const value = line.replace(/^[•·▪●\-–—]+\s*/, '').trim();
+  if (value.length < 4 || value.length > 140) return false;
+  const lower = value.toLowerCase();
+  if (NOISE_EXACT.has(lower)) return false;
+  if (/^(вакансия|резюме|обязанности|требования|условия|компания|работодатель|мы предлагаем|о компании|зарплата|отклик)/i.test(value)) return false;
+  if (/[.!?]$/.test(value) && value.split(/\s+/).length > 5) return false;
+  if (/^(гибкий формат|грамотная устная|консультирование клиентов|высокий доход)/i.test(value)) return false;
+  const context = followingLines.slice(0, 7).join(' ');
+  return extractSalary(context) !== null || extractRegion(context) !== 'Не указан' || /\b(ваканси[яи]|резюме)\b/i.test(context);
+}
 
-  const blocks = cleaned.split(/\n\s*\n+/).map(x => x.trim()).filter(Boolean);
-  return blocks.map((text, index) => {
-    const lines = text.split('\n').map(x => x.trim()).filter(Boolean);
-    const title = lines[0]?.replace(/^(вакансия|резюме)\s*[:№-]?\s*/i, '').trim() || `Запись ${index + 1}`;
-    return {
-      id: `${Date.now()}-${index}`,
+function parsePastedText(raw: string): MarketRow[] {
+  const lines = raw.replace(/\r/g, '').split('\n').map(line => line.trim()).filter(Boolean);
+  if (!lines.length) return [];
+
+  const titleIndexes: number[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (looksLikeTitle(lines[i], lines.slice(i + 1))) titleIndexes.push(i);
+  }
+
+  // If the copied text is a single vacancy, preserve it as one record.
+  if (titleIndexes.length === 0) {
+    return [{
+      id: `${Date.now()}-0`,
+      title: lines[0].replace(/^(вакансия|резюме)\s*[:№-]?\s*/i, '').slice(0, 180),
+      region: extractRegion(raw),
+      salary: extractSalary(raw),
+      text: raw.trim(),
+    }];
+  }
+
+  const rows: MarketRow[] = [];
+  for (let i = 0; i < titleIndexes.length; i += 1) {
+    const start = titleIndexes[i];
+    const end = titleIndexes[i + 1] ?? lines.length;
+    const text = lines.slice(start, end).join('\n').trim();
+    const title = lines[start].replace(/^[•·▪●\-–—]+\s*/, '').replace(/^(вакансия|резюме)\s*[:№-]?\s*/i, '').trim();
+    if (!text || NOISE_EXACT.has(title.toLowerCase())) continue;
+    rows.push({
+      id: `${Date.now()}-${rows.length}`,
       title: title.slice(0, 180),
       region: extractRegion(text),
       salary: extractSalary(text),
       text,
-    };
-  });
+    });
+  }
+
+  return rows;
 }
 
 function median(values: number[]): number | null {
@@ -88,11 +130,12 @@ export function HHMarketCollectorPage() {
     return SKILL_RULES.map(rule => {
       const matched = rows.filter(row => rule.patterns.some(pattern => row.text.toLowerCase().includes(pattern)));
       if (!matched.length) return null;
+      const salaryValues = matched.map(row => row.salary).filter((x): x is number => x !== null);
       return {
         skill: rule.name,
         count: matched.length,
         share: Math.round((matched.length / rows.length) * 100),
-        salaryMedian: median(matched.map(row => row.salary).filter((x): x is number => x !== null)),
+        salaryMedian: salaryValues.length >= 5 ? median(salaryValues) : null,
       };
     }).filter(Boolean).sort((a, b) => (b?.count ?? 0) - (a?.count ?? 0)) as SkillStat[];
   }, [rows]);
@@ -101,7 +144,7 @@ export function HHMarketCollectorPage() {
     setError('');
     const parsed = parsePastedText(raw);
     if (!parsed.length) {
-      setError('Не удалось найти записи. Вставьте текст вакансий или резюме, разделяя записи пустой строкой.');
+      setError('Не удалось распознать записи. Вставь текст HH ещё раз.');
       return;
     }
     setRows(prev => [...prev, ...parsed]);
@@ -148,7 +191,7 @@ export function HHMarketCollectorPage() {
 
         <div>
           <label className="block text-sm font-semibold text-[#000052] mb-2">Вставь скопированный текст HH</label>
-          <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={10} placeholder={sourceType === 'vacancies' ? 'Например: Страховой агент\nМосква\nот 100 000 ₽\nПродажи, работа с клиентами, страхование...' : 'Например: Страховой агент\nМосква\nЖелаемая зарплата 150 000 ₽\nПродажи, страхование, B2B...'} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-[#000052] resize-y focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" />
+          <textarea value={raw} onChange={e => setRaw(e.target.value)} rows={10} placeholder={sourceType === 'vacancies' ? 'Вставь текст одной или нескольких вакансий из HH.' : 'Вставь текст одного или нескольких резюме из HH.'} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-[#000052] resize-y focus:outline-none focus:ring-2 focus:ring-[#B8860B]/20" />
         </div>
 
         {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
