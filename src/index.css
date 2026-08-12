@@ -52,7 +52,6 @@ button, a, input, select, textarea {
 
 button svg { flex-shrink: 0; }
 
-/* Цифры в таблицах — по разрядам, везде */
 td, th, .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
@@ -78,7 +77,7 @@ main .overflow-y-auto > div {
 }
 .page-enter { animation: fadeInUp 0.3s ease; }
 
-/* ---------- POLISH: СКЕЛЕТОНЫ ВМЕСТО СПИННЕРОВ ---------- */
+/* ---------- POLISH: СКЕЛЕТОНЫ ВМЕСТО СПИННЕРOВ ---------- */
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -120,12 +119,9 @@ div.animate-spin.rounded-full {
 
 button { border-radius: var(--radius-button); }
 
-/* Карточки: линия почти невидимая + тень очень мягкая */
 [class*="border-[#000052]"] { border-color: var(--hairline) !important; }
 .border-gray-100 { border-color: var(--hairline) !important; }
 .border-gray-200 { border-color: var(--line) !important; }
-
-.p-5, .p-6 { padding: 24px !important; }
 
 /* ---------- POLISH: ЗОЛОТЫЕ КНОПКИ → NAVY (действие = navy) ---------- */
 button[class*="bg-[#B8860B]"] {
@@ -156,12 +152,11 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 
 /* ---------- ПРОГРЕСС-БАРЫ: тоньше, глубже, различимы ---------- */
-.h-2, .h-2\.5 { height: 6px !important; }
+.h-2, .h-2\\.5 { height: 6px !important; }
 [class*="from-[#000052]"] { background-image: linear-gradient(90deg, var(--steel-from), var(--steel-to)) !important; }
 [class*="from-[#B8860B]"] { background-image: linear-gradient(90deg, var(--bronze-from), var(--bronze-to)) !important; }
 
 /* ---------- КОМПОНЕНТНЫЕ КЛАССЫ ---------- */
-
 .card {
   background: #ffffff;
   border-radius: var(--radius-card);
@@ -198,8 +193,8 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 }
 .icon-box-navy { background: var(--navy-soft); color: var(--navy); }
 .icon-box-gold { background: var(--gold-soft); color: var(--bronze-from); }
-.icon-box-green { background: #ecfdf5; color: #047857; }
-.icon-box-red { background: #fef2f2; color: #dc2626; }
+.icon-box-green { background: var(--navy-soft); color: var(--navy); }
+.icon-box-red { background: #f7eeee; color: #7f1d1d; }
 
 .btn-primary {
   display: inline-flex;
@@ -269,12 +264,12 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
   border-radius: 999px;
   background: currentColor;
 }
-.badge-green { background: #ecfdf5; color: #047857; }
+.badge-green { background: var(--navy-soft); color: var(--navy); }
 .badge-navy  { background: var(--navy-soft); color: var(--navy); }
 .badge-gold  { background: var(--gold-soft); color: var(--bronze-from); }
-.badge-red   { background: #fef2f2; color: #dc2626; }
-.badge-amber { background: #fffbeb; color: #b45309; }
-.badge-gray  { background: #f3f4f6; color: #475569; }
+.badge-red   { background: #f7eeee; color: #7f1d1d; }
+.badge-amber { background: var(--gold-soft); color: var(--bronze-from); }
+.badge-gray  { background: #eef2f6; color: #475569; }
 
 .table-clean { width: 100%; border-collapse: collapse; }
 .table-clean thead th {
