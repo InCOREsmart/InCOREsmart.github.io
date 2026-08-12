@@ -52,11 +52,12 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
 
       try {
         let effectiveRoleId = roleId || null;
+        let agentSpecialization = '';
 
         if (!effectiveRoleId) {
           const { data: contractData, error: contractError } = await supabase
             .from('contracts')
-            .select('role_id')
+            .select('role_id, agent_id')
             .eq('id', effectiveContractId)
             .maybeSingle();
 
@@ -66,21 +67,37 @@ export function RoleSkillsProgressPanel({ roleId, contractId }: RoleSkillsProgre
           }
 
           effectiveRoleId = contractData?.role_id || null;
+
+          // Старые контракты могли быть созданы до появления привязки role_id.
+          // Для них определяем роль через специализацию назначенного агента.
+          if (!effectiveRoleId && contractData?.agent_id) {
+            const { data: agentData } = await supabase
+              .from('agents')
+              .select('specialization')
+              .eq('id', contractData.agent_id)
+              .maybeSingle();
+            agentSpecialization = (agentData?.specialization || '').trim().toLowerCase();
+          }
         }
 
-        if (!effectiveRoleId) {
-          console.warn('У контракта нет привязанной роли:', effectiveContractId);
-          setRoleName('');
-          setSkills([]);
-          return;
-        }
+        const roleQuery = effectiveRoleId
+          ? supabase
+              .from('roles')
+              .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
+              .eq('id', effectiveRoleId)
+              .maybeSingle()
+          : agentSpecialization.includes('страх') || agentSpecialization.includes('insurance')
+            ? supabase
+                .from('roles')
+                .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
+                .eq('name', 'Страховой агент')
+                .eq('is_active', true)
+                .limit(1)
+                .maybeSingle()
+            : null;
 
         const [{ data: roleData, error: roleError }, { data: oracleData, error: oracleError }] = await Promise.all([
-          supabase
-            .from('roles')
-            .select('name, role_skills(weight, skills(name, description, verification_level, expected_outcomes, verification_criteria))')
-            .eq('id', effectiveRoleId)
-            .maybeSingle(),
+          roleQuery || Promise.resolve({ data: null, error: null }),
           supabase
             .from('oracle_events')
             .select('event_type')
