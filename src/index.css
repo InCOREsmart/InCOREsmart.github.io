@@ -128,3 +128,8 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600 { background-color: var(--bronze-to) !important; color: #ffffff !important; }
 .bg-success, .text-success { background-color: var(--navy) !important; color: var(--navy) !important; }
 .bg-error, .text-error { background-color: var(--bronze-from) !important; color: var(--bronze-from) !important; }
+
+/* HH Market inline styles: the market-gap chart uses React inline #dc2626,
+   which cannot be overridden by the Tailwind utility remapping above. */
+[style*="#dc2626"], [style*="rgb(220, 38, 38)"], [style*="rgb(220,38,38)"] { color: var(--navy-light) !important; }
+[style*="background: rgb(220, 38, 38)"], [style*="background: rgb(220,38,38)"], [style*="background:#dc2626"], [style*="background: #dc2626"] { background: var(--navy-light) !important; }
