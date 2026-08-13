@@ -49,7 +49,16 @@ type SavedRole = {
   industry: string;
   category: string | null;
   created_at: string;
-  role_skills: Array<{ weight: number; skills: Array<{ name: string }> | null }>;
+  role_skills: Array<{ weight: number; is_required?: boolean; skills: {
+    id: string;
+    name: string;
+    description: string | null;
+    skill_type: 'hard' | 'soft' | 'hybrid';
+    verification_level: 'L1_bio' | 'L2_simulation' | 'L3_digital_twin' | 'L4_smart_contract';
+    is_required: boolean;
+    expected_outcomes: string[];
+    verification_criteria: string[];
+  } | null }>;
 };
 
 function cleanList(items: string[]) {
@@ -66,6 +75,7 @@ export function RoleDecompositionPage() {
   const [loading, setLoading] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [openingRoleId, setOpeningRoleId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [documentName, setDocumentName] = useState('');
 
@@ -77,7 +87,7 @@ export function RoleDecompositionPage() {
     try {
       const { data, error: rolesError } = await supabase
         .from('roles')
-        .select('id, name, description, industry, category, created_at, role_skills(weight, skills(name))')
+        .select('id, name, description, industry, category, created_at, role_skills(weight, is_required, skills(id, name, description, skill_type, verification_level, is_required, expected_outcomes, verification_criteria))')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       if (rolesError) throw rolesError;
@@ -93,6 +103,56 @@ export function RoleDecompositionPage() {
   useEffect(() => {
     if (user) void loadSavedRoles();
   }, [user]);
+
+  const openSavedRole = async (role: SavedRole) => {
+    setOpeningRoleId(role.id);
+    setError('');
+    try {
+      const { data: relationRows, error: relationError } = await supabase
+        .from('skills_relations')
+        .select('relation_type, strength, is_directed, skill_from_id, skill_to_id')
+        .eq('role_id', role.id);
+      if (relationError) throw relationError;
+
+      const skills = (role.role_skills ?? []).map(item => item.skills).filter((skill): skill is NonNullable<SavedRole['role_skills'][number]['skills']> => Boolean(skill));
+      const skillById = new Map(skills.map(skill => [skill.id, skill.name]));
+      const relations = (relationRows ?? []).map(row => ({
+        skill_from: skillById.get(row.skill_from_id) ?? '',
+        skill_to: skillById.get(row.skill_to_id) ?? '',
+        relation_type: row.relation_type,
+        strength: Number(row.strength),
+        is_directed: Boolean(row.is_directed),
+      })).filter(row => row.skill_from && row.skill_to) as RoleDecomposition['skills_relations'];
+
+      const decomposition: RoleDecomposition = {
+        role: {
+          name: role.name,
+          description: role.description ?? '',
+          industry: role.industry,
+          category: role.category ?? '',
+        },
+        skills: (role.role_skills ?? []).map(item => item.skills ? ({
+          name: item.skills.name,
+          description: item.skills.description ?? '',
+          skill_type: item.skills.skill_type,
+          verification_level: item.skills.verification_level,
+          weight: Number(item.weight),
+          is_required: Boolean(item.is_required ?? item.skills.is_required),
+          expected_outcomes: Array.isArray(item.skills.expected_outcomes) ? item.skills.expected_outcomes : [],
+          verification_criteria: Array.isArray(item.skills.verification_criteria) ? item.skills.verification_criteria : [],
+        }) : null).filter((skill): skill is NonNullable<typeof skill> => Boolean(skill)),
+        skills_relations: relations,
+      };
+
+      setInput(prev => ({ ...prev, name: role.name, description: role.description ?? '', industry: role.industry, region: 'az', actions: [''], expected_results: [''] }));
+      setResult(decomposition);
+    } catch (err) {
+      console.error('Ошибка открытия сохранённой роли:', err);
+      setError('Не удалось открыть сохранённую роль.');
+    } finally {
+      setOpeningRoleId(null);
+    }
+  };
 
   const updateList = (field: 'actions' | 'expected_results', index: number, value: string) => {
     setInput(prev => ({ ...prev, [field]: prev[field].map((item, i) => i === index ? value : item) }));
@@ -258,7 +318,7 @@ export function RoleDecompositionPage() {
         </div>
       )}
 
-      {!result && <section className="space-y-4"><div className="flex items-center justify-between"><div><h2 className="text-xl font-bold text-[#000052]">Сохранённые роли</h2><p className="text-sm text-gray-400 mt-1">Все сохранённые декомпозиции вашей компании.</p></div><button onClick={() => void loadSavedRoles()} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" title="Обновить"><RefreshCw className="w-4 h-4" /></button></div>{loadingRoles ? <div className="bg-white rounded-2xl p-6 text-sm text-gray-400">Загрузка ролей...</div> : savedRoles.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center text-sm text-gray-400">Сохранённых ролей пока нет.</div> : <div className="grid gap-4 md:grid-cols-2">{savedRoles.map(role => <div key={role.id} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100"><div className="flex items-start justify-between gap-3"><div><h3 className="font-bold text-[#000052] text-lg">{role.name}</h3><p className="text-xs text-gray-400 mt-1">{role.industry}{role.category ? ` · ${role.category}` : ''}</p></div><span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">Сохранена</span></div>{role.description && <p className="text-sm text-gray-500 mt-3">{role.description}</p>}<div className="mt-4 space-y-2">{role.role_skills?.map((item, index) => { const skillName = item.skills?.[0]?.name; return skillName ? <div key={`${skillName}-${index}`} className="flex items-center justify-between gap-3 text-sm"><span className="text-[#000052]">{skillName}</span><span className="font-bold text-[#B8860B]">{Math.round(Number(item.weight) * 100)}%</span></div> : null; })}</div><div className="mt-5 pt-4 border-t border-gray-100 flex gap-2"><button onClick={() => navigate(`/ceo/contracts?roleId=${role.id}`)} className="flex-1 px-3 py-2.5 rounded-xl bg-[#000052] text-white text-sm font-semibold">Создать контракт</button></div></div>)}</div>}</section>}
+      {!result && <section className="space-y-4"><div className="flex items-center justify-between"><div><h2 className="text-xl font-bold text-[#000052]">Сохранённые роли</h2><p className="text-sm text-gray-400 mt-1">Все сохранённые декомпозиции вашей компании.</p></div><button onClick={() => void loadSavedRoles()} className="p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" title="Обновить"><RefreshCw className="w-4 h-4" /></button></div>{loadingRoles ? <div className="bg-white rounded-2xl p-6 text-sm text-gray-400">Загрузка ролей...</div> : savedRoles.length === 0 ? <div className="bg-white rounded-2xl p-8 text-center text-sm text-gray-400">Сохранённых ролей пока нет.</div> : <div className="grid gap-4 md:grid-cols-2">{savedRoles.map(role => <div key={role.id} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100"><div className="flex items-start justify-between gap-3"><div><h3 className="font-bold text-[#000052] text-lg">{role.name}</h3><p className="text-xs text-gray-400 mt-1">{role.industry}{role.category ? ` · ${role.category}` : ''}</p></div><span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">Сохранена</span></div>{role.description && <p className="text-sm text-gray-500 mt-3">{role.description}</p>}<div className="mt-4 space-y-2">{role.role_skills?.map((item, index) => { const skillName = item.skills?.name; return skillName ? <div key={`${skillName}-${index}`} className="flex items-center justify-between gap-3 text-sm"><span className="text-[#000052]">{skillName}</span><span className="font-bold text-[#B8860B]">{Math.round(Number(item.weight) * 100)}%</span></div> : null; })}</div><div className="mt-5 pt-4 border-t border-gray-100 flex gap-2"><button onClick={() => void openSavedRole(role)} disabled={openingRoleId === role.id} className="flex-1 px-3 py-2.5 rounded-xl border border-[#000052] text-[#000052] text-sm font-semibold disabled:opacity-50">{openingRoleId === role.id ? 'Открываем...' : 'Открыть роль'}</button><button onClick={() => navigate(`/ceo/contracts?roleId=${role.id}`)} className="flex-1 px-3 py-2.5 rounded-xl bg-[#000052] text-white text-sm font-semibold">Создать контракт</button></div></div>)}</div>}</section>}
     </div>
   );
 }
