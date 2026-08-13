@@ -39,26 +39,37 @@ function AgentContractWithRoleProgress() {
 }
 
 function App() {
-  return <LegacyUiTranslator><AuthProvider><Router><Routes>
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<RegisterPage />} />
-    <Route path="/ceo" element={<ProtectedRoute><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/settings" element={<ProtectedRoute><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/contracts" element={<ProtectedRoute><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/contracts/:id" element={<ProtectedRoute><DashboardLayout><CEOContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/agents/:id" element={<ProtectedRoute><DashboardLayout><AgentProfilePage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/roles/decompose" element={<ProtectedRoute><DashboardLayout><RoleDecompositionPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/integrations" element={<ProtectedRoute><DashboardLayout><CEOIntegrationsPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/ceo/accounting" element={<ProtectedRoute><DashboardLayout><CEOAccountingExport /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/agent/contracts" element={<ProtectedRoute><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/agent/payouts" element={<ProtectedRoute><DashboardLayout><AgentPayoutsPage /></DashboardLayout></ProtectedRoute>} />
-    <Route path="/" element={<Navigate to="/login" replace />} />
-  </Routes></Router></AuthProvider></LegacyUiTranslator>;
+  const { i18n } = useTranslation();
+  const languageKey = i18n.resolvedLanguage || i18n.language || 'ru';
+
+  return (
+    <LegacyUiTranslator key={languageKey}>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/ceo" element={<ProtectedRoute><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/settings" element={<ProtectedRoute><DashboardLayout><CEOSettings /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/contracts" element={<ProtectedRoute><DashboardLayout><CEOContractsPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/contracts/:id" element={<ProtectedRoute><DashboardLayout><CEOContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/disputes" element={<ProtectedRoute><DashboardLayout><CEODisputesPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/agents" element={<ProtectedRoute><DashboardLayout><CEOAgentsPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/agents/:id" element={<ProtectedRoute><DashboardLayout><AgentProfilePage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/roles/decompose" element={<ProtectedRoute><DashboardLayout><RoleDecompositionPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/integrations" element={<ProtectedRoute><DashboardLayout><CEOIntegrationsPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/ceo/accounting" element={<ProtectedRoute><DashboardLayout><CEOAccountingExport /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent/contracts" element={<ProtectedRoute><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent/payouts" element={<ProtectedRoute><DashboardLayout><AgentPayoutsPage /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </LegacyUiTranslator>
+  );
 }
 
 export default App;
