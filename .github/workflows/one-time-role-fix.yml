@@ -14,40 +14,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Apply focused fix
+
+      - name: Repair translation map
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('src/pages/ceo/RoleDecompositionPage.tsx')
+          path = Path('src/i18n/featureTranslations.ts')
           text = path.read_text(encoding='utf-8')
-          old = '''function normalizeRoleSkills(rows: SavedRoleSkill[]): Array<{ weight: number; is_required?: boolean; skills: SavedSkill | null }> {
-            return rows.flatMap(row => {
-              if (!row.skills) return [];
-              if (Array.isArray(row.skills)) return row.skills.map(skill => ({ ...row, skills: skill }));
-              return [row];
-            });
-          }'''
-          new = '''function normalizeRoleSkills(rows: SavedRoleSkill[]): Array<{ weight: number; is_required?: boolean; skills: SavedSkill | null }> {
-            return rows.flatMap(row => {
-              const skill = row.skills;
-              if (!skill) return [];
-              if (Array.isArray(skill)) return skill.map(item => ({ ...row, skills: item }));
-              return [{ ...row, skills: skill }];
-            });
-          }'''
-          if old not in text:
-              raise SystemExit('Expected block not found; no changes made.')
-          path.write_text(text.replace(old, new), encoding='utf-8')
+          duplicate = "'Декомпозиция роли': 'Рөлді декомпозициялау', 'Декомпозиция роли': 'Рөлді декомпозициялау',"
+          fixed = "'Декомпозиция роли': 'Рөлді декомпозициялау',"
+          if duplicate in text:
+              text = text.replace(duplicate, fixed, 1)
+              path.write_text(text, encoding='utf-8')
+              print('Removed duplicate translation key in kk.legacyUi.')
+          else:
+              print('Duplicate translation key already absent.')
           PY
+
       - name: Verify TypeScript
         run: |
           npm ci
           npm run typecheck
-      - name: Commit fix and remove temporary workflows
+
+      - name: Commit repair and remove temporary workflow
         run: |
           git config user.name "InCOREsmart"
           git config user.email "tihonova02@gmail.com"
-          rm -f .github/workflows/one-time-role-fix.yml .github/workflows/fix-role-decomposition-types.yml
-          git add src/pages/ceo/RoleDecompositionPage.tsx .github/workflows/one-time-role-fix.yml .github/workflows/fix-role-decomposition-types.yml
-          git commit -m "Apply role decomposition typing fix"
-          git push origin main
+          rm -f .github/workflows/one-time-role-fix.yml
+          git add src/i18n/featureTranslations.ts .github/workflows/one-time-role-fix.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "fix: remove duplicate i18n translation key"
+            git push origin main
+          fi
