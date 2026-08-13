@@ -21,6 +21,7 @@ import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
 import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
 import { RoleSkillsProgressPanel } from './components/role/RoleSkillsProgressPanel';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
+import { LegacyUiTranslator } from './components/common/LegacyUiTranslator';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -39,7 +40,7 @@ function AgentContractWithRoleProgress() {
 }
 
 function App() {
-  return <AuthProvider><Router><Routes>
+  return <LegacyUiTranslator><AuthProvider><Router><Routes>
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/ceo" element={<ProtectedRoute><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
@@ -59,7 +60,7 @@ function App() {
     <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
     <Route path="/agent/payouts" element={<ProtectedRoute><DashboardLayout><AgentPayoutsPage /></DashboardLayout></ProtectedRoute>} />
     <Route path="/" element={<Navigate to="/login" replace />} />
-  </Routes></Router></AuthProvider>;
+  </Routes></Router></AuthProvider></LegacyUiTranslator>;
 }
 
 export default App;
