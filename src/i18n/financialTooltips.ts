@@ -1,0 +1,53 @@
+export const financialTooltips: Record<string, Record<string, string>> = {
+  en: {
+    'Прибыль компании: выручка по активным контрактам минус рассчитанный payout агенту.': 'Company profit: revenue from active contracts minus the calculated agent payout.',
+    'Количество контрактов со статусом ACTIVE или IN_PROGRESS.': 'Number of contracts with ACTIVE or IN_PROGRESS status.',
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.': 'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.': 'Amount of payout streams with PAID status. These are funds already paid to agents, not merely created obligations.',
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.': 'Current obligations for active contracts: LOCKED + UNLOCKED + PAYABLE. PAID is not included.',
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.': 'Current-month payouts are compared with expected payouts. The percentage shows the share of funds already paid out of PAID + UNLOCKED/PAYABLE.',
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.': 'Total payout amount for active contracts, calculated by the financial core.',
+    'Сумма payout по активным контрактам. Иллный бонус в неё не включается.': 'Payout amount for active contracts. The annual bonus is not included.',
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.': 'Amount of PAID streams whose date falls within the current month.',
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.': 'Amount of streams with UNLOCKED or PAYABLE status that do not yet have PAID status.',
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.': 'Shows the monthly payout for each agent’s active contracts. This is the expected amount, not money already paid.',
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.': 'Accumulation of the bonus based on achievement of the annual sales plan. The bonus is displayed separately and is not included in escrow.',
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.': 'Percentage of the annual sales plan achieved across the months accounted for. It is used to calculate the accumulated annual bonus.',
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.': 'Average agent KPI across their contracts. For real contracts, actual KPI values are used; when unavailable, the ratio of actual revenue to planned revenue is used.',
+    'Доля максимально возможного годового бонуса, которая уже накоплена.': 'Share of the maximum possible annual bonus that has already been accumulated.'
+  },
+  kk: {
+    'Прибыль компании: выручка по активным контрактам минус рассчитанный payout агенту.': 'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.',
+    'Количество контрактов со статусом ACTIVE или IN_PROGRESS.': 'ACTIVE немесе IN_PROGRESS мәртебесіндегі келісімшарттар саны.',
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.': 'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.': 'PAID мәртебесіндегі төлем ағындарының сомасы. Бұл агенттерге әлдеқашан төленген қаражат, жай ғана қалыптастырылған міндеттемелер емес.',
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.': 'Белсенді келісімшарттар бойынша ағымдағы міндеттемелер: LOCKED + UNLOCKED + PAYABLE. PAID бұл құрамға кірмейді.',
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.': 'Ағымдағы айдағы төлемдер мен күтілетін төлемдер салыстырылады. Пайыз PAID + UNLOCKED/PAYABLE сомасының ішінде төленіп қойған қаражаттың үлесін көрсетеді.',
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.': 'Қаржылық ядро есептеген белсенді келісімшарттар бойынша жалпы payout сомасы.',
+    'Сумма payout по активным контрактам. Иллный бонус в неё не включается.': 'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.': 'Күні ағымдағы айға жататын PAID мәртебесіндегі төлем ағындарының сомасы.',
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.': 'UNLOCKED немесе PAYABLE мәртебесіндегі, әлі PAID мәртебесіне өтпеген ағындардың сомасы.',
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.': 'Әр агенттің белсенді келісімшарты бойынша айлық payout сомасын көрсетеді. Бұл күтілетін сома, әлдеқашан төленген ақша емес.',
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.': 'Жылдық сату жоспарын орындауға байланысты бонустың жинақталуы. Бонус бөлек көрсетіледі және escrow құрамына кірмейді.',
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.': 'Есепке алынған айлар бойынша жылдық сату жоспарының орындалу пайызы. Ол жинақталған жылдық бонусты есептеу үшін пайдаланылады.',
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.': 'Агенттің келісімшарттары бойынша орташа KPI. Нақты келісімшарттар үшін нақты KPI көрсеткіштері есепке алынады, ал олар болмаған жағдайда нақты түсімнің жоспарланған түсімге қатынасы пайдаланылады.',
+    'Доля максимально возможного годового бонуса, которая уже накоплена.': 'Ең жоғары мүмкін болатын жылдық бонустың жинақталған үлесі.'
+  },
+  az: {
+    'Прибыль компании: выручка по активным контрактам минус рассчитанный payout агенту.': 'Şirkətin mənfəəti: aktiv müqavilələr üzrə gəlirdən agentə hesablanmış payout çıxılır.',
+    'Количество контрактов со статусом ACTIVE или IN_PROGRESS.': 'ACTIVE və ya IN_PROGRESS statusunda olan müqavilələrin sayı.',
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.': 'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.': 'PAID statusunda olan ödəniş axınlarının məbləği. Bunlar artıq agentlərə ödənilmiş vəsaitlərdir, sadəcə formalaşdırılmış öhdəliklər deyil.',
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.': 'Aktiv müqavilələr üzrə cari öhdəliklər: LOCKED + UNLOCKED + PAYABLE. PAID bu məbləğə daxil deyil.',
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.': 'Cari ayın ödənişləri ilə gözlənilən ödənişlər müqayisə edilir. Faiz PAID + UNLOCKED/PAYABLE məbləğinin artıq ödənilmiş hissəsini göstərir.',
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.': 'Maliyyə nüvəsi tərəfindən hesablanmış aktiv müqavilələr üzrə ümumi payout məbləği.',
+    'Сумма payout по активным контрактам. Иллный бонус в неё не включается.': 'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.': 'Tarixi cari aya aid olan PAID statuslu ödəniş axınlarının məbləği.',
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.': 'UNLOCKED və ya PAYABLE statusunda olan və hələ PAID statusuna keçməmiş axınların məbləği.',
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.': 'Hər agentin aktiv müqaviləsi üzrə aylıq payout məbləğini göstərir. Bu gözlənilən məbləğdir, artıq ödənilmiş pul deyil.',
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.': 'İllik satış planının yerinə yetirilməsinə əsasən bonusun toplanmasını göstərir. Bonus ayrıca göstərilir və escrow-a daxil deyil.',
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.': 'Hesablanmış aylar üzrə illik satış planının yerinə yetirilmə faizidir. Bu göstərici toplanmış illik bonusun hesablanması üçün istifadə olunur.',
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.': 'Agentin müqavilələri üzrə orta KPI göstəricisi. Real müqavilələr üçün faktiki KPI göstəriciləri nəzərə alınır, onlar olmadıqda faktiki gəlirin planlaşdırılmış gəlirə nisbəti istifadə olunur.',
+    'Доля максимально возможного годового бонуса, которая уже накоплена.': 'Mümkün olan maksimum illik bonusun artıq toplanmış hissəsi.'
+  }
+};
