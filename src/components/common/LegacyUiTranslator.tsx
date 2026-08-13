@@ -4,31 +4,111 @@ import i18n from '../../i18n';
 import { dynamicTranslations } from '../../i18n/dynamicTranslations';
 import { financialTooltips } from '../../i18n/financialTooltips';
 
+/**
+ * Некоторые старые подсказки финансового ядра уже частично
+ * переведены в исходном тексте.
+ *
+ * Например:
+ *
+ * "Məbləğ ödəniş axını со статусом LOCKED по активным контрактам.
+ *  Эти средства ещё не доступны агенту."
+ *
+ * Поэтому обычный поиск по русскому ключу их не находит.
+ *
+ * Здесь мы явно нормализуем такие смешанные строки.
+ */
+const MIXED_FINANCIAL_TOOLTIPS: Record<
+  string,
+  Record<string, string>
+> = {
+  en: {
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Payout amount for active contracts. The annual bonus is not included.',
+  },
+
+  kk: {
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+  },
+
+  az: {
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+  },
+};
+
 function flatten(
   value: unknown,
   prefix = '',
   result: Record<string, string> = {}
 ) {
-  if (!value || typeof value !== 'object') return result;
+  if (!value || typeof value !== 'object') {
+    return result;
+  }
 
   for (const [key, child] of Object.entries(
     value as Record<string, unknown>
   )) {
-    const path = prefix ? `${prefix}.${key}` : key;
+    const path = prefix
+      ? `${prefix}.${key}`
+      : key;
 
     if (typeof child === 'string') {
       result[path] = child;
     } else {
-      flatten(child, path, result);
+      flatten(
+        child,
+        path,
+        result
+      );
     }
   }
 
   return result;
 }
 
+function addTranslationsToDictionary(
+  dictionary: Map<string, string>,
+  translations: Record<string, string>
+) {
+  for (const [
+    source,
+    targetValue,
+  ] of Object.entries(translations)) {
+    const trimmedSource =
+      source.trim();
+
+    const trimmedTarget =
+      targetValue.trim();
+
+    if (
+      trimmedSource &&
+      trimmedTarget &&
+      trimmedSource !== trimmedTarget
+    ) {
+      dictionary.set(
+        trimmedSource,
+        trimmedTarget
+      );
+    }
+  }
+}
+
 function buildDictionary() {
   const ru = flatten(
-    i18n.getResourceBundle('ru', 'translation')
+    i18n.getResourceBundle(
+      'ru',
+      'translation'
+    )
   );
 
   const target = (
@@ -38,19 +118,28 @@ function buildDictionary() {
   ).split('-')[0];
 
   const translated = flatten(
-    i18n.getResourceBundle(target, 'translation')
+    i18n.getResourceBundle(
+      target,
+      'translation'
+    )
   );
 
-  const dictionary = new Map<string, string>();
+  const dictionary =
+    new Map<string, string>();
 
   // =========================================================
   // 1. Основной i18n-словарь
   // =========================================================
 
-  for (const [key, russian] of Object.entries(ru)) {
-    const value = translated[key];
+  for (const [
+    key,
+    russian,
+  ] of Object.entries(ru)) {
+    const value =
+      translated[key];
 
-    const source = russian.trim();
+    const source =
+      russian.trim();
 
     const targetValue =
       typeof value === 'string'
@@ -71,70 +160,46 @@ function buildDictionary() {
 
   // =========================================================
   // 2. Динамический контент
-  //
-  // Используется для данных, которые приходят из:
-  // - ролей;
-  // - Supabase;
-  // - декомпозиции;
-  // - контрактов;
-  // - других динамических источников.
   // =========================================================
 
   const dynamic =
-    dynamicTranslations[target] || {};
+    dynamicTranslations[target] ||
+    {};
 
-  for (const [source, targetValue] of Object.entries(
+  addTranslationsToDictionary(
+    dictionary,
     dynamic
-  )) {
-    const trimmedSource =
-      source.trim();
-
-    const trimmedTarget =
-      targetValue.trim();
-
-    if (
-      trimmedSource &&
-      trimmedTarget &&
-      trimmedSource !== trimmedTarget
-    ) {
-      dictionary.set(
-        trimmedSource,
-        trimmedTarget
-      );
-    }
-  }
+  );
 
   // =========================================================
   // 3. Финансовое ядро
-  //
-  // Отдельный словарь для длинных подсказок,
-  // которые находятся непосредственно в финансовом UI
-  // и не являются обычными i18n-ключами.
   // =========================================================
 
   const financial =
-    financialTooltips[target] || {};
+    financialTooltips[target] ||
+    {};
 
-  for (const [source, targetValue] of Object.entries(
+  addTranslationsToDictionary(
+    dictionary,
     financial
-  )) {
-    const trimmedSource =
-      source.trim();
+  );
 
-    const trimmedTarget =
-      targetValue.trim();
+  // =========================================================
+  // 4. Смешанные финансовые подсказки
+  //
+  // В исходном интерфейсе некоторые строки уже частично
+  // переведены на азербайджанский язык.
+  // =========================================================
 
-    if (
-      trimmedSource &&
-      trimmedTarget &&
-      trimmedSource !== trimmedTarget
-    ) {
-      dictionary.set(
-        trimmedSource,
-        trimmedTarget
-      );
-    }
-  }
+  const mixedFinancial =
+    MIXED_FINANCIAL_TOOLTIPS[
+      target
+    ] || {};
+
+  addTranslationsToDictionary(
+    dictionary,
+    mixedFinancial
+  );
 
   return dictionary;
 }
@@ -143,39 +208,40 @@ function translateValue(
   value: string,
   dictionary: Map<string, string>
 ) {
-  const trimmed = value.trim();
+  const trimmed =
+    value.trim();
 
   // =========================================================
-  // Сначала ищем полное совпадение строки.
+  // 1. Полное совпадение
   // =========================================================
 
   const exact =
     dictionary.get(trimmed);
 
   if (exact) {
-    const leading = value.slice(
-      0,
-      value.length -
-        value.trimStart().length
-    );
+    const leading =
+      value.slice(
+        0,
+        value.length -
+          value.trimStart().length
+      );
 
-    const trailing = value.slice(
-      value.trimEnd().length
-    );
+    const trailing =
+      value.slice(
+        value.trimEnd().length
+      );
 
     return `${leading}${exact}${trailing}`;
   }
 
   // =========================================================
-  // Затем пытаемся перевести фрагменты
-  // внутри строки.
+  // 2. Перевод фрагментов внутри строки
   //
-  // Сначала длинные строки, затем короткие.
-  // Это важно для финансовых подсказок,
-  // где одна строка может содержать другую.
+  // Длинные фрагменты обрабатываются первыми.
   // =========================================================
 
-  let result = value;
+  let result =
+    value;
 
   const entries = [
     ...dictionary.entries(),
@@ -185,8 +251,13 @@ function translateValue(
       a[0].length
   );
 
-  for (const [source, target] of entries) {
-    if (!result.includes(source)) {
+  for (const [
+    source,
+    target,
+  ] of entries) {
+    if (
+      !result.includes(source)
+    ) {
       continue;
     }
 
@@ -200,13 +271,14 @@ function translateValue(
     : result;
 }
 
-const SKIP_TAGS = new Set([
-  'SCRIPT',
-  'STYLE',
-  'NOSCRIPT',
-  'CODE',
-  'PRE',
-]);
+const SKIP_TAGS =
+  new Set([
+    'SCRIPT',
+    'STYLE',
+    'NOSCRIPT',
+    'CODE',
+    'PRE',
+  ]);
 
 const ATTRIBUTES = [
   'placeholder',
@@ -221,7 +293,8 @@ function translateDocument() {
 
   if (
     !dictionary.size ||
-    typeof document === 'undefined'
+    typeof document ===
+      'undefined'
   ) {
     return;
   }
@@ -232,7 +305,8 @@ function translateDocument() {
       NodeFilter.SHOW_TEXT
     );
 
-  const textNodes: Text[] = [];
+  const textNodes: Text[] =
+    [];
 
   let node: Node | null;
 
@@ -255,14 +329,17 @@ function translateDocument() {
   }
 
   // =========================================================
-  // Перевод обычного текстового содержимого
+  // Перевод обычного текста
   // =========================================================
 
   for (const textNode of textNodes) {
     const original =
-      textNode.nodeValue ?? '';
+      textNode.nodeValue ??
+      '';
 
-    if (!original.trim()) {
+    if (
+      !original.trim()
+    ) {
       continue;
     }
 
@@ -282,11 +359,7 @@ function translateDocument() {
   }
 
   // =========================================================
-  // Перевод:
-  // - placeholder
-  // - title
-  // - aria-label
-  // - aria-description
+  // Перевод атрибутов
   // =========================================================
 
   const elements =
@@ -350,17 +423,10 @@ export function LegacyUiTranslator({
         );
     };
 
-    // =======================================================
     // Первый запуск
-    // =======================================================
-
     schedule();
 
-    // =======================================================
-    // Следим за динамически появляющимися элементами
-    // и изменениями текста.
-    // =======================================================
-
+    // Следим за динамическими изменениями DOM
     const observer =
       new MutationObserver(
         schedule
@@ -375,10 +441,7 @@ export function LegacyUiTranslator({
       }
     );
 
-    // =======================================================
-    // Повторный запуск после смены языка.
-    // =======================================================
-
+    // Повторный запуск после смены языка
     const unsubscribe =
       () => schedule();
 
