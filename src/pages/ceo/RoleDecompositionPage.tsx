@@ -71,9 +71,10 @@ type SavedRole = {
 
 function normalizeRoleSkills(rows: SavedRoleSkill[]): Array<{ weight: number; is_required?: boolean; skills: SavedSkill | null }> {
   return rows.flatMap(row => {
-    if (!row.skills) return [];
-    if (Array.isArray(row.skills)) return row.skills.map(skill => ({ ...row, skills: skill }));
-    return [row];
+    const skill = row.skills;
+    if (!skill) return [];
+    if (Array.isArray(skill)) return skill.map(item => ({ ...row, skills: item }));
+    return [{ ...row, skills: skill }];
   });
 }
 
