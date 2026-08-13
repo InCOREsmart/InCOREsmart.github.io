@@ -14,46 +14,53 @@ function flatten(value: unknown, prefix = '', result: Record<string, string> = {
 
 function buildDictionary() {
   const ru = flatten(i18n.getResourceBundle('ru', 'translation'));
-  const target = i18n.resolvedLanguage || i18n.language || 'ru';
+  const target = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0];
   const translated = flatten(i18n.getResourceBundle(target, 'translation'));
   const dictionary = new Map<string, string>();
 
   for (const [key, russian] of Object.entries(ru)) {
     const value = translated[key];
-    if (value && value !== russian) dictionary.set(russian.trim(), value);
+    const source = russian.trim();
+    const targetValue = typeof value === 'string' ? value.trim() : '';
+    if (source && targetValue && targetValue !== source) {
+      dictionary.set(source, targetValue);
+    }
   }
 
   return dictionary;
 }
 
 function translateValue(value: string, dictionary: Map<string, string>) {
-  const exact = dictionary.get(value.trim());
-  if (exact) return exact;
-
-  const prefixes = [...dictionary.entries()]
-    .filter(([source]) => source.length > 2 && value.trimStart().startsWith(source) && source.endsWith(':'))
-    .sort((a, b) => b[0].length - a[0].length);
-
-  if (prefixes.length) {
-    const [source, target] = prefixes[0];
+  const trimmed = value.trim();
+  const exact = dictionary.get(trimmed);
+  if (exact) {
     const leading = value.slice(0, value.length - value.trimStart().length);
-    const rest = value.trimStart().slice(source.length);
-    return `${leading}${target}${rest}`;
+    const trailing = value.slice(value.trimEnd().length);
+    return `${leading}${exact}${trailing}`;
   }
 
-  return null;
+  let result = value;
+  const entries = [...dictionary.entries()].sort((a, b) => b[0].length - a[0].length);
+
+  for (const [source, target] of entries) {
+    if (!result.includes(source)) continue;
+    result = result.split(source).join(target);
+  }
+
+  return result === value ? null : result;
 }
 
-const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE']);
+const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE']);
 const ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'aria-description'];
 
 function translateDocument() {
   const dictionary = buildDictionary();
-  if (!dictionary.size) return;
+  if (!dictionary.size || typeof document === 'undefined') return;
 
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
   let node: Node | null;
+
   while ((node = walker.nextNode())) {
     const parent = node.parentElement;
     if (parent && !SKIP_TAGS.has(parent.tagName)) textNodes.push(node as Text);
@@ -61,13 +68,9 @@ function translateDocument() {
 
   for (const textNode of textNodes) {
     const original = textNode.nodeValue ?? '';
-    const trimmed = original.trim();
-    if (!trimmed) continue;
-    const translated = translateValue(trimmed, dictionary);
-    if (!translated || translated === trimmed) continue;
-    const start = original.indexOf(trimmed);
-    const end = start + trimmed.length;
-    textNode.nodeValue = `${original.slice(0, start)}${translated}${original.slice(end)}`;
+    if (!original.trim()) continue;
+    const translated = translateValue(original, dictionary);
+    if (translated && translated !== original) textNode.nodeValue = translated;
   }
 
   const elements = document.querySelectorAll<HTMLElement>('[placeholder],[title],[aria-label],[aria-description]');
@@ -84,6 +87,7 @@ function translateDocument() {
 export function LegacyUiTranslator({ children }: { children: ReactNode }) {
   useEffect(() => {
     let timer: number | undefined;
+
     const schedule = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(translateDocument, 0);
@@ -92,6 +96,7 @@ export function LegacyUiTranslator({ children }: { children: ReactNode }) {
     schedule();
     const observer = new MutationObserver(schedule);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
     const unsubscribe = () => schedule();
     i18n.on('languageChanged', unsubscribe);
 
