@@ -1,0 +1,78 @@
+name: Fix dynamic translations
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove duplicate translation keys
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/i18n/dynamicTranslations.ts')
+          lines = p.read_text(encoding='utf-8').splitlines(keepends=True)
+          lang = None
+          seen = set()
+          out = []
+          i = 0
+
+          while i < len(lines):
+              line = lines[i]
+              stripped = line.strip()
+
+              if stripped in ('en: {', 'kk: {', 'az: {'):
+                  lang = stripped[:2]
+                  seen = set()
+                  out.append(line)
+                  i += 1
+                  continue
+
+              if lang and stripped == '},':
+                  lang = None
+                  out.append(line)
+                  i += 1
+                  continue
+
+              match = re.match(r"\s*(['\"])(.*?)\1:\s*$", line)
+              if lang and match:
+                  key = match.group(2)
+                  if key in seen:
+                      i += 1
+                      if i < len(lines):
+                          i += 1
+                      if i < len(lines) and lines[i].strip() == '':
+                          i += 1
+                      continue
+                  seen.add(key)
+
+              out.append(line)
+              i += 1
+
+          p.write_text(''.join(out), encoding='utf-8')
+          PY
+
+      - name: Verify typecheck
+        run: |
+          npm ci
+          npm run check
+
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/i18n/dynamicTranslations.ts
+          git commit -m 'fix: remove duplicate dynamic translation keys' || true
+          git push
+          git rm .github/workflows/fix-dynamic-translations.yml
+          git commit -m 'chore: remove temporary translation fixer'
+          git push
