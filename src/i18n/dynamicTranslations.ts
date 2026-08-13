@@ -384,9 +384,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'Продление договоров':
       'Contract renewals',
 
-    'Кросс-продажи':
-      'Cross-sales',
-
     'Бонус за выполнение плана':
       'Sales plan bonus',
 
@@ -418,9 +415,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'Платёжные потоки':
       'Payout streams',
 
-    'Журнал Escrow':
-      'Escrow journal',
-
     'События Oracle':
       'Oracle events',
 
@@ -439,15 +433,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'Заблокировано':
       'Locked',
 
-    'Разблокировано':
-      'Unlocked',
-
-    'Доступно к выплате':
-      'Payable',
-
-    'Оплачено':
-      'Paid',
-
     'Возвращено':
       'Clawed back',
 
@@ -457,17 +442,11 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'Результат компании':
       'Company result',
 
-    'Фактическая сумма договоров':
-      'Actual contract amount',
-
     'KPI':
       'KPI',
 
     'Оплата':
       'Payment',
-
-    'Не удалось оплатить escrow':
-      'Failed to fund escrow',
 
     'Не удалось оплатить Escrow':
       'Failed to fund Escrow',
@@ -494,9 +473,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'GMV':
       'GMV',
 
-    'Объём договоров':
-      'Contract volume',
-
     'Объём продаж':
       'Sales volume',
 
@@ -518,9 +494,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
     'Защита от риска':
       'Risk protection',
 
-    'Контракты в работе':
-      'Contracts in progress',
-
     'Активные контракты':
       'Active contracts',
 
@@ -535,9 +508,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Создано':
       'Created',
-
-    'Не назначен':
-      'Not assigned',
 
     'Все статусы':
       'All statuses',
@@ -1019,9 +989,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Заблокировано':
       'Бұғатталған',
-
-    'Доступно к выплате':
-      'Төлеуге қолжетімді',
 
     'Возвращено':
       'Қайтарылды',
@@ -1578,9 +1545,6 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Заблокировано':
       'Bloklanıb',
-
-    'Доступно к выплате':
-      'Ödəniş üçün əlçatandır',
 
     'Возвращено':
       'Geri qaytarılıb',
