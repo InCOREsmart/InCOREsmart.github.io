@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import i18n from '../../i18n';
 
 function flatten(value: unknown, prefix = '', result: Record<string, string> = {}) {
@@ -25,6 +26,24 @@ function buildDictionary() {
   return dictionary;
 }
 
+function translateValue(value: string, dictionary: Map<string, string>) {
+  const exact = dictionary.get(value.trim());
+  if (exact) return exact;
+
+  const prefixes = [...dictionary.entries()]
+    .filter(([source]) => source.length > 2 && value.trimStart().startsWith(source) && source.endsWith(':'))
+    .sort((a, b) => b[0].length - a[0].length);
+
+  if (prefixes.length) {
+    const [source, target] = prefixes[0];
+    const leading = value.slice(0, value.length - value.trimStart().length);
+    const rest = value.trimStart().slice(source.length);
+    return `${leading}${target}${rest}`;
+  }
+
+  return null;
+}
+
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE']);
 const ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'aria-description'];
 
@@ -44,8 +63,8 @@ function translateDocument() {
     const original = textNode.nodeValue ?? '';
     const trimmed = original.trim();
     if (!trimmed) continue;
-    const translated = dictionary.get(trimmed);
-    if (!translated) continue;
+    const translated = translateValue(trimmed, dictionary);
+    if (!translated || translated === trimmed) continue;
     const start = original.indexOf(trimmed);
     const end = start + trimmed.length;
     textNode.nodeValue = `${original.slice(0, start)}${translated}${original.slice(end)}`;
@@ -56,13 +75,13 @@ function translateDocument() {
     for (const attribute of ATTRIBUTES) {
       const value = element.getAttribute(attribute);
       if (!value) continue;
-      const translated = dictionary.get(value.trim());
-      if (translated) element.setAttribute(attribute, translated);
+      const translated = translateValue(value, dictionary);
+      if (translated && translated !== value) element.setAttribute(attribute, translated);
     }
   });
 }
 
-export function LegacyUiTranslator({ children }: { children: React.ReactNode }) {
+export function LegacyUiTranslator({ children }: { children: ReactNode }) {
   useEffect(() => {
     let timer: number | undefined;
     const schedule = () => {
