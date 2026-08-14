@@ -30,14 +30,60 @@ const SKILL_PATTERNS: Record<string, string[]> = {
 };
 
 const REGIONS = ['Москва', 'Санкт-Петербург', 'Московская область', 'Краснодар', 'Сочи', 'Екатеринбург', 'Казань', 'Новосибирск', 'Ростов-на-Дону', 'Баку', 'Астана', 'Удалённая работа', 'Удаленная работа'];
-
-function cleanText(value: string) { return value.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim(); }
-function median(values: number[]) { if (!values.length) return null; const sorted = [...values].sort((a, b) => a - b); const m = Math.floor(sorted.length / 2); return sorted.length % 2 ? sorted[m] : Math.round((sorted[m - 1] + sorted[m]) / 2); }
-function salary(text: string) { const values: number[] = []; const normalized = text.replace(/\u00a0/g, ' '); for (const m of normalized.matchAll(/([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)?\s*[-–—]\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)) { const a = Number(m[1].replace(/\s/g, '')); const b = Number(m[2].replace(/\s/g, '')); const aa = a < 10000 ? a * 1000 : a; const bb = b < 10000 ? b * 1000 : b; if (aa >= 20000 && bb <= 1000000) values.push((aa + bb) / 2); } if (values.length) return Math.round(median(values)!); for (const m of normalized.matchAll(/(?:от|до|зарплата|оклад)?\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)) { const v = Number(m[1].replace(/\s/g, '')); const n = v < 10000 ? v * 1000 : v; if (n >= 20000 && n <= 1000000) values.push(n); } return median(values); }
-function skills(text: string) { const lower = text.toLowerCase(); return Object.entries(SKILL_PATTERNS).filter(([, patterns]) => patterns.some(pattern => lower.includes(pattern))).map(([name]) => name); }
-function parse(content: string, fileName: string, sourceType: SourceType): MarketProfile { let text = content; let title = ''; if (/\.html?$/i.test(fileName)) { const doc = new DOMParser().parseFromString(content, 'text/html'); doc.querySelectorAll('script,style,noscript,svg').forEach(node => node.remove()); text = cleanText(doc.body?.innerText || doc.documentElement?.textContent || ''); title = cleanText(doc.querySelector('h1')?.textContent || doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || ''); } else { text = cleanText(content); } if (!title) title = text.split('\n').map(cleanText).find(line => line.length >= 4 && line.length <= 180) || (sourceType === 'vacancy' ? 'Вакансия HH' : 'Резюме HH'); const lower = text.toLowerCase(); return { source_type: sourceType, source_name: fileName, title, region: REGIONS.find(region => lower.includes(region.toLowerCase())) || 'Не указан', salary: salary(text), text, skills: skills(text) }; }
-
 const IMPORT_BATCH_SIZE = 10;
+
+function cleanText(value: string) {
+  return value.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function median(values: number[]) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const m = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[m] : Math.round((sorted[m - 1] + sorted[m]) / 2);
+}
+
+function salary(text: string) {
+  const values: number[] = [];
+  const normalized = text.replace(/\u00a0/g, ' ');
+  for (const m of normalized.matchAll(/([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)?\s*[-–—]\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)) {
+    const a = Number(m[1].replace(/\s/g, ''));
+    const b = Number(m[2].replace(/\s/g, ''));
+    const aa = a < 10000 ? a * 1000 : a;
+    const bb = b < 10000 ? b * 1000 : b;
+    if (aa >= 20000 && bb <= 1000000) values.push((aa + bb) / 2);
+  }
+  if (values.length) return Math.round(median(values)!);
+  for (const m of normalized.matchAll(/(?:от|до|зарплата|оклад)?\s*([0-9][0-9\s]{2,8})\s*(?:₽|руб(?:\.?|лей)?|тыс\.?\s*руб)/gi)) {
+    const v = Number(m[1].replace(/\s/g, ''));
+    const n = v < 10000 ? v * 1000 : v;
+    if (n >= 20000 && n <= 1000000) values.push(n);
+  }
+  return median(values);
+}
+
+function skills(text: string) {
+  const lower = text.toLowerCase();
+  return Object.entries(SKILL_PATTERNS)
+    .filter(([, patterns]) => patterns.some(pattern => lower.includes(pattern)))
+    .map(([name]) => name);
+}
+
+function parse(content: string, fileName: string, sourceType: SourceType): MarketProfile {
+  let text = content;
+  let title = '';
+  if (/\.html?$/i.test(fileName)) {
+    const doc = new DOMParser().parseFromString(content, 'text/html');
+    doc.querySelectorAll('script,style,noscript,svg').forEach(node => node.remove());
+    text = cleanText(doc.body?.innerText || doc.documentElement?.textContent || '');
+    title = cleanText(doc.querySelector('h1')?.textContent || doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || '');
+  } else {
+    text = cleanText(content);
+  }
+  if (!title) title = text.split('\n').map(cleanText).find(line => line.length >= 4 && line.length <= 180) || (sourceType === 'vacancy' ? 'Вакансия HH' : 'Резюме HH');
+  const lower = text.toLowerCase();
+  return { source_type: sourceType, source_name: fileName, title, region: REGIONS.find(region => lower.includes(region.toLowerCase())) || 'Не указан', salary: salary(text), text, skills: skills(text) };
+}
 
 export function HHMarketUploadPanel() {
   const [sourceType, setSourceType] = useState<SourceType>('vacancy');
@@ -48,7 +94,14 @@ export function HHMarketUploadPanel() {
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
-  const load = async () => { setLoading(true); const { data, error: loadError } = await supabase.from('market_profiles').select('id, source_type, text, salary, skills, source_name, title, region').order('created_at', { ascending: false }); if (loadError) setError(loadError.message); else setProfiles((data ?? []) as MarketProfile[]); setLoading(false); };
+  const load = async () => {
+    setLoading(true);
+    const { data, error: loadError } = await supabase.from('market_profiles').select('id, source_type, text, salary, skills, source_name, title, region').order('created_at', { ascending: false });
+    if (loadError) setError(loadError.message);
+    else setProfiles((data ?? []) as MarketProfile[]);
+    setLoading(false);
+  };
+
   useEffect(() => { void load(); }, []);
 
   const importFiles = async (files: FileList | File[]) => {
@@ -73,20 +126,40 @@ export function HHMarketUploadPanel() {
 
       if (!parsed.length) { setError('Не удалось прочитать выбранные файлы.'); return; }
 
-      const names = [...new Set(parsed.map(row => row.source_name).filter(Boolean))];
-      const { data: existing, error: existingError } = await supabase.from('market_profiles').select('source_name').eq('source_type', sourceType).in('source_name', names);
-      if (existingError) { setError(existingError.message); return; }
-      const existingNames = new Set((existing ?? []).map(row => row.source_name));
-      const newRows = parsed.filter(row => !existingNames.has(row.source_name));
-      skipped += parsed.length - newRows.length;
-
       const inserted: MarketProfile[] = [];
-      for (let i = 0; i < newRows.length; i += IMPORT_BATCH_SIZE) {
-        const batch = newRows.slice(i, i + IMPORT_BATCH_SIZE);
-        const { data, error: insertError } = await supabase.from('market_profiles').insert(batch).select('id, source_type, text, salary, skills, source_name, title, region');
-        if (insertError) { failed += batch.length; continue; }
+      for (let i = 0; i < parsed.length; i += IMPORT_BATCH_SIZE) {
+        const parsedBatch = parsed.slice(i, i + IMPORT_BATCH_SIZE);
+        const names = [...new Set(parsedBatch.map(row => row.source_name).filter(Boolean))];
+
+        const { data: existing, error: existingError } = await supabase
+          .from('market_profiles')
+          .select('source_name')
+          .eq('source_type', sourceType)
+          .in('source_name', names);
+
+        if (existingError) {
+          failed += parsedBatch.length;
+          continue;
+        }
+
+        const existingNames = new Set((existing ?? []).map(row => row.source_name));
+        const newRows = parsedBatch.filter(row => !existingNames.has(row.source_name));
+        skipped += parsedBatch.length - newRows.length;
+
+        if (!newRows.length) continue;
+
+        const { data, error: insertError } = await supabase
+          .from('market_profiles')
+          .insert(newRows)
+          .select('id, source_type, text, salary, skills, source_name, title, region');
+
+        if (insertError) {
+          failed += newRows.length;
+          continue;
+        }
+
         inserted.push(...((data ?? []) as MarketProfile[]));
-        uploaded += batch.length;
+        uploaded += newRows.length;
       }
 
       if (inserted.length) setProfiles(prev => [...inserted, ...prev]);
