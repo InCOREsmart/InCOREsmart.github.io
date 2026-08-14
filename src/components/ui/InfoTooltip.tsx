@@ -2,11 +2,12 @@ import { Info } from 'lucide-react';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { financialTooltips } from '../../i18n/financialTooltips';
 
 type InfoTooltipProps = { children: ReactNode };
 
 export function InfoTooltip({ children }: InfoTooltipProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -37,6 +38,13 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
   }, [open]);
   useEffect(() => () => clearCloseTimer(), []);
 
+  const language = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0] as keyof typeof financialTooltips;
+  const translateLegacyTooltip = (content: ReactNode): ReactNode => {
+    if (typeof content !== 'string') return content;
+    const dictionary = financialTooltips[language] || financialTooltips.ru;
+    return dictionary[content] || content;
+  };
+
   return (
     <>
       <span className="inline-flex items-center align-middle ml-1">
@@ -46,7 +54,7 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
       </span>
       {open && createPortal(
         <span role="tooltip" onMouseEnter={clearCloseTimer} onMouseLeave={scheduleClose} className="fixed z-[99999] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-[#000052] px-3 py-2 text-left text-xs leading-relaxed text-white shadow-2xl" style={{ top: position.top, left: position.left }}>
-          {children}
+          {translateLegacyTooltip(children)}
         </span>, document.body
       )}
     </>
