@@ -42,6 +42,7 @@ export function HHMarketUploadPanel() {
   const [profiles, setProfiles] = useState<MarketProfile[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const load = async () => { setLoading(true); const { data, error: loadError } = await supabase.from('market_profiles').select('id, source_type, text, salary, skills, source_name, title, region').order('created_at', { ascending: false }); if (loadError) setError(loadError.message); else setProfiles((data ?? []) as MarketProfile[]); setLoading(false); };
@@ -61,11 +62,13 @@ export function HHMarketUploadPanel() {
   };
 
   const onFile = (event: ChangeEvent<HTMLInputElement>) => { if (event.target.files) void importFiles(event.target.files); event.target.value = ''; };
+  const removeProfile = async (id: string) => { setError(''); setDeletingId(id); const { error: deleteError } = await supabase.from('market_profiles').delete().eq('id', id); setDeletingId(null); if (deleteError) { setError(deleteError.message); return; } setProfiles(prev => prev.filter(row => row.id !== id)); };
   const clear = async (type: SourceType) => { setError(''); const { error: deleteError } = await supabase.from('market_profiles').delete().eq('source_type', type); if (deleteError) { setError(deleteError.message); return; } setProfiles(prev => prev.filter(row => row.source_type !== type)); };
   const exportCsv = () => { const rows = [['source_type', 'title', 'region', 'salary', 'skills', 'text'], ...profiles.map(row => [row.source_type, row.title ?? '', row.region ?? '', row.salary?.toString() ?? '', (row.skills ?? []).join(', '), row.text])]; const escape = (v: string) => `"${v.replace(/"/g, '""')}"`; const csv = rows.map(row => row.map(escape).join(';')).join('\n'); const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = `incore-hh-market-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url); };
 
   const vacancies = profiles.filter(row => row.source_type === 'vacancy').length;
   const resumes = profiles.filter(row => row.source_type === 'resume').length;
+  const visibleProfiles = profiles.filter(row => row.source_type === sourceType);
 
   return <div className="bg-white rounded-xl border border-[#000052]/10 overflow-hidden">
     <div className="p-6 border-b border-[#000052]/10">
@@ -76,5 +79,6 @@ export function HHMarketUploadPanel() {
       {saving && <div className="text-sm text-gray-500 mt-3">Сохраняем данные…</div>}{error && <div className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>}
     </div>
     <div className="grid grid-cols-2 border-t border-[#000052]/10"><div className="p-4"><div className="text-xs text-[#000052]/60">Вакансий в базе</div><div className="text-2xl font-bold text-[#000052] mt-1">{vacancies}</div></div><div className="p-4 border-l border-[#000052]/10"><div className="text-xs text-[#000052]/60">Резюме в базе</div><div className="text-2xl font-bold text-[#000052] mt-1">{resumes}</div></div></div>
+    <div className="border-t border-[#000052]/10 p-6"><div className="flex items-center justify-between gap-3 mb-4"><h3 className="font-bold text-[#000052]">{sourceType === 'vacancy' ? 'Загруженные вакансии' : 'Загруженные резюме'}</h3><span className="text-xs text-[#000052]/50">{visibleProfiles.length} в текущем разделе</span></div>{visibleProfiles.length === 0 ? <div className="text-sm text-gray-400 py-4">В этом разделе пока нет загруженных данных.</div> : <div className="space-y-2">{visibleProfiles.map(profile => <div key={profile.id} className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-100 hover:bg-gray-50"><div className="min-w-0"><div className="font-semibold text-sm text-[#000052] truncate">{profile.title || profile.source_name || 'Без названия'}</div><div className="text-xs text-gray-500 truncate mt-1">{profile.source_name || 'Файл без имени'}</div></div><button onClick={() => profile.id && void removeProfile(profile.id)} disabled={!profile.id || deletingId === profile.id || saving} className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-xs font-semibold disabled:opacity-50" title="Удалить только эту запись"><Trash2 className="w-4 h-4" />{deletingId === profile.id ? 'Удаляем…' : 'Удалить'}</button></div>)}</div>}</div>
   </div>;
 }
