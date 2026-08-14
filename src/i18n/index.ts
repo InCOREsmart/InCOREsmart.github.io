@@ -16,15 +16,7 @@ import { featureTranslationsI18nFix } from "./featureTranslationsI18nFix";
 import { tooltipTranslations } from "./tooltips";
 
 const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any) => ({
-  ...base,
-  ...extra,
-  ...ui,
-  ...supplement,
-  ...feature,
-  ...extendedFeature,
-  ...uiPatch,
-  ...demoPatch,
-  ...i18nFix,
+  ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   tooltips,
   layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}), ...(feature.layout || {}), ...(extendedFeature.layout || {}), ...(uiPatch.layout || {}), ...(demoPatch.layout || {}) },
   accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}), ...(feature.accounting || {}), ...(extendedFeature.accounting || {}), ...(uiPatch.accounting || {}), ...(demoPatch.accounting || {}) },
@@ -32,7 +24,7 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
   payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}), ...(supplement.payouts || {}), ...(feature.payouts || {}), ...(extendedFeature.payouts || {}), ...(uiPatch.payouts || {}), ...(demoPatch.payouts || {}) },
   ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}), ...(supplement.ceo || {}), ...(feature.ceo || {}), ...(extendedFeature.ceo || {}), ...(uiPatch.ceo || {}), ...(demoPatch.ceo || {}) },
   ui: { ...(base.ui || {}), ...(extra.ui || {}), ...(ui.ui || {}), ...(supplement.ui || {}), ...(feature.ui || {}), ...(extendedFeature.ui || {}), ...(uiPatch.ui || {}), ...(demoPatch.ui || {}) },
-  contractDetail: { ...(base.contractDetail || {}), ...(extra.contractDetail || {}), ...(ui.contractDetail || {}), ...(supplement.contractDetail || {}), ...(feature.contractDetail || {}), ...(extendedFeature.contractDetail || {}), ...(uiPatch.contractDetail || {}), ...(demoPatch.ui || {}) },
+  contractDetail: { ...(base.contractDetail || {}), ...(extra.contractDetail || {}), ...(ui.contractDetail || {}), ...(supplement.contractDetail || {}), ...(feature.contractDetail || {}), ...(extendedFeature.contractDetail || {}), ...(uiPatch.contractDetail || {}), ...(demoPatch.contractDetail || {}) },
   agentContractDetail: { ...(base.agentContractDetail || {}), ...(extra.agentContractDetail || {}), ...(ui.agentContractDetail || {}), ...(supplement.agentContractDetail || {}), ...(feature.agentContractDetail || {}), ...(extendedFeature.agentContractDetail || {}), ...(uiPatch.agentContractDetail || {}), ...(demoPatch.agentContractDetail || {}) },
   agentProfile: { ...(base.agentProfile || {}), ...(extra.agentProfile || {}), ...(ui.agentProfile || {}), ...(supplement.agentProfile || {}), ...(feature.agentProfile || {}), ...(extendedFeature.agentProfile || {}), ...(uiPatch.agentProfile || {}), ...(demoPatch.agentProfile || {}) },
   company: { ...(base.company || {}), ...(extra.company || {}), ...(ui.company || {}), ...(supplement.company || {}), ...(feature.company || {}), ...(extendedFeature.company || {}), ...(uiPatch.company || {}), ...(demoPatch.company || {}) },
@@ -41,32 +33,19 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
   legacyUi: { ...(feature.legacyUi || {}), ...(extendedFeature.legacyUi || {}), ...(uiPatch.legacyUi || {}), ...(demoPatch.legacyUi || {}), ...(i18nFix.legacyUi || {}) },
 });
 
-const args = (lang: keyof typeof tooltipTranslations) => [
-  lang === 'ru' ? ru : lang === 'en' ? en : lang === 'kk' ? kk : az,
-  coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang],
-] as const;
+const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang]);
 
-const ruTranslation = mergeLocale(...args('ru'));
-const enTranslation = mergeLocale(...args('en'));
-const kkTranslation = mergeLocale(...args('kk'));
-const azTranslation = mergeLocale(...args('az'));
+const ruTranslation = buildLocale('ru', ru);
+const enTranslation = buildLocale('en', en);
+const kkTranslation = buildLocale('kk', kk);
+const azTranslation = buildLocale('az', az);
 
 const resources = { ru: { translation: ruTranslation }, en: { translation: enTranslation }, kk: { translation: kkTranslation }, kz: { translation: kkTranslation }, az: { translation: azTranslation } };
 
 i18n.use(LanguageDetector).use(initReactI18next).init({
-  resources,
-  supportedLngs: ["ru", "en", "kk", "kz", "az"],
-  fallbackLng: "ru",
-  nonExplicitSupportedLngs: true,
-  cleanCode: true,
-  load: "languageOnly",
-  defaultNS: "translation",
-  interpolation: { escapeValue: false },
-  detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
-  returnNull: false,
-  returnEmptyString: false,
-  saveMissing: false,
-  react: { useSuspense: false },
+  resources, supportedLngs: ["ru", "en", "kk", "kz", "az"], fallbackLng: "ru", nonExplicitSupportedLngs: true, cleanCode: true, load: "languageOnly", defaultNS: "translation",
+  interpolation: { escapeValue: false }, detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
+  returnNull: false, returnEmptyString: false, saveMissing: false, react: { useSuspense: false },
   missingKeyHandler: (lngs, namespace, key) => { if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs); },
   parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
 });
