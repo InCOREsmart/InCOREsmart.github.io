@@ -14,10 +14,11 @@ import { featureTranslationsUiPatch } from "./featureTranslationsUiPatch";
 import { featureTranslationsDemoPatch } from "./featureTranslationsDemoPatch";
 import { featureTranslationsI18nFix } from "./featureTranslationsI18nFix";
 import { tooltipTranslations } from "./tooltips";
+import { notificationTranslations } from "./notifications";
 
-const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any) => ({
+const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
-  tooltips,
+  tooltips, notifications,
   layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}), ...(feature.layout || {}), ...(extendedFeature.layout || {}), ...(uiPatch.layout || {}), ...(demoPatch.layout || {}) },
   accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}), ...(feature.accounting || {}), ...(extendedFeature.accounting || {}), ...(uiPatch.accounting || {}), ...(demoPatch.accounting || {}) },
   agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}), ...(supplement.agent || {}), ...(feature.agent || {}), ...(extendedFeature.agent || {}), ...(uiPatch.agent || {}), ...(demoPatch.agent || {}) },
@@ -33,7 +34,7 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
   legacyUi: { ...(feature.legacyUi || {}), ...(extendedFeature.legacyUi || {}), ...(uiPatch.legacyUi || {}), ...(demoPatch.legacyUi || {}), ...(i18nFix.legacyUi || {}) },
 });
 
-const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang]);
+const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang]);
 
 const ruTranslation = buildLocale('ru', ru);
 const enTranslation = buildLocale('en', en);
