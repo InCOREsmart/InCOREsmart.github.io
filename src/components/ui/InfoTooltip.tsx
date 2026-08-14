@@ -19,6 +19,7 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
       closeTimerRef.current = null;
     }
   };
+
   const updatePosition = () => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
@@ -26,6 +27,7 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
     const left = Math.max(12, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 12));
     setPosition({ top: rect.bottom + 8, left });
   };
+
   const show = () => { clearCloseTimer(); updatePosition(); setOpen(true); };
   const scheduleClose = () => { clearCloseTimer(); closeTimerRef.current = window.setTimeout(() => setOpen(false), 120); };
 
@@ -34,28 +36,80 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
     const handleViewportChange = () => updatePosition();
     window.addEventListener('resize', handleViewportChange);
     window.addEventListener('scroll', handleViewportChange, true);
-    return () => { window.removeEventListener('resize', handleViewportChange); window.removeEventListener('scroll', handleViewportChange, true); };
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
   }, [open]);
+
   useEffect(() => () => clearCloseTimer(), []);
 
   const language = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0] as keyof typeof financialTooltips;
+
   const translateLegacyTooltip = (content: ReactNode): ReactNode => {
     if (typeof content !== 'string') return content;
+
     const dictionary = financialTooltips[language] || financialTooltips.ru;
-    return dictionary[content] || content;
+    const exactTranslation = dictionary[content];
+    if (exactTranslation) return exactTranslation;
+
+    // Some older tooltip strings were partially translated before reaching this component.
+    // Normalize these mixed-language variants so no Russian fragment remains in English UI.
+    const normalized = content.replace(/\s+/g, ' ').trim();
+
+    if (
+      normalized.includes('LOCKED') &&
+      (normalized.includes('со статусом') || normalized.includes('payment streams')) &&
+      (normalized.includes('Эти средства ещё не доступны агенту') || normalized.includes('не доступны агенту'))
+    ) {
+      const translations: Record<string, string> = {
+        ru: 'Сумма потоков выплат со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.',
+        en: 'Amount of payment streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+        kk: 'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+        az: 'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+      };
+      return translations[language] || translations.ru;
+    }
+
+    return content;
   };
 
   return (
     <>
       <span className="inline-flex items-center align-middle ml-1">
-        <button ref={buttonRef} type="button" aria-label={t('tooltips.information')} aria-expanded={open} onMouseEnter={show} onMouseLeave={scheduleClose} onFocus={show} onBlur={scheduleClose} onClick={() => { if (open) { clearCloseTimer(); setOpen(false); } else show(); }} className="inline-flex items-center justify-center text-[#000052]/40 hover:text-[#B8860B] focus:outline-none focus:text-[#B8860B]">
+        <button
+          ref={buttonRef}
+          type="button"
+          aria-label={t('tooltips.information')}
+          aria-expanded={open}
+          onMouseEnter={show}
+          onMouseLeave={scheduleClose}
+          onFocus={show}
+          onBlur={scheduleClose}
+          onClick={() => {
+            if (open) {
+              clearCloseTimer();
+              setOpen(false);
+            } else {
+              show();
+            }
+          }}
+          className="inline-flex items-center justify-center text-[#000052]/40 hover:text-[#B8860B] focus:outline-none focus:text-[#B8860B]"
+        >
           <Info className="w-3.5 h-3.5" />
         </button>
       </span>
       {open && createPortal(
-        <span role="tooltip" onMouseEnter={clearCloseTimer} onMouseLeave={scheduleClose} className="fixed z-[99999] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-[#000052] px-3 py-2 text-left text-xs leading-relaxed text-white shadow-2xl" style={{ top: position.top, left: position.left }}>
+        <span
+          role="tooltip"
+          onMouseEnter={clearCloseTimer}
+          onMouseLeave={scheduleClose}
+          className="fixed z-[99999] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-[#000052] px-3 py-2 text-left text-xs leading-relaxed text-white shadow-2xl"
+          style={{ top: position.top, left: position.left }}
+        >
           {translateLegacyTooltip(children)}
-        </span>, document.body
+        </span>,
+        document.body
       )}
     </>
   );
