@@ -43,11 +43,16 @@ const azTranslation = buildLocale('az', az);
 
 const resources = { ru: { translation: ruTranslation }, en: { translation: enTranslation }, kk: { translation: kkTranslation }, kz: { translation: kkTranslation }, az: { translation: azTranslation } };
 
+const MISSING_TRANSLATION_LOG_PREFIX = '[i18n] Missing translation:';
+const i18nMissingKeyHandler = (lngs: readonly string[], namespace: string, key: string) => {
+  if (import.meta.env.DEV) console.warn(MISSING_TRANSLATION_LOG_PREFIX, namespace, key, lngs);
+};
+
 i18n.use(LanguageDetector).use(initReactI18next).init({
   resources, supportedLngs: ["ru", "en", "kk", "kz", "az"], fallbackLng: "ru", nonExplicitSupportedLngs: true, cleanCode: true, load: "languageOnly", defaultNS: "translation",
   interpolation: { escapeValue: false }, detection: { order: ["localStorage", "navigator"], caches: ["localStorage"], lookupLocalStorage: "i18nextLng" },
   returnNull: false, returnEmptyString: false, saveMissing: false, react: { useSuspense: false },
-  missingKeyHandler: (lngs, namespace, key) => { if (import.meta.env.DEV) console.warn(`[i18n] Missing translation: ${namespace}:${key}`, lngs); },
+  missingKeyHandler: i18nMissingKeyHandler,
   parseMissingKeyHandler: (_key, defaultValue) => defaultValue || "",
 });
 

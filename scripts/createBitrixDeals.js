@@ -109,31 +109,31 @@ async function createDeal(deal) {
     });
     const data = await response.json();
     if (data.result) {
-      console.log(`✅ Создана сделка #${data.result}: ${deal.title}`);
+      console.log('Создана сделка', data.result, deal.title);
       return data.result;
     } else {
-      console.error(`❌ Ошибка: ${deal.title}`, data.error_description);
+      console.error('Ошибка создания сделки', deal.title, data.error_description);
       return null;
     }
   } catch (err) {
-    console.error(`❌ Сетевая ошибка: ${deal.title}`, err.message);
+    console.error('Сетевая ошибка при создании сделки', deal.title, err.message);
     return null;
   }
 }
 
 async function main() {
   console.log('🚀 Запуск создания демо-сделок в Битрикс24...\n');
-  console.log(`Webhook: ${WEBHOOK_URL}\n`);
+  console.log('Webhook:', WEBHOOK_URL, '\n');
   
   let totalDeals = 0;
   let createdDeals = 0;
   
   for (const agent of AGENTS) {
-    console.log(`\n👤 Агент: ${agent.name} (подключен ${agent.start_date})`);
+    console.log('\n👤 Агент:', agent.name, '(подключен', agent.start_date, ')');
     const contracts = generateAllContracts(agent);
     
     for (const contract of contracts) {
-      console.log(`  📅 Контракт ${contract.month}: ${contract.deals.length} сделок`);
+      console.log('  📅 Контракт', contract.month, ':', contract.deals.length, 'сделок');
       totalDeals += contract.deals.length;
       
       for (const deal of contract.deals) {
@@ -144,7 +144,7 @@ async function main() {
     }
   }
   
-  console.log(`\n🎉 Готово! Создано сделок: ${createdDeals} из ${totalDeals}`);
+  console.log('\n🎉 Готово! Создано сделок:', createdDeals, 'из', totalDeals);
   console.log('👉 Откройте страницу "Интеграции" в кабинете CEO — сделки появятся в таблице.');
 }
 
