@@ -579,6 +579,142 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Создайте первый контракт':
       'Create your first contract',
+
+    // ============================================================
+    // LEGACY UI / FINANCIAL CORE / AGENT DASHBOARD
+    // ============================================================
+
+    'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
+      'Company profit: revenue from active contracts minus the calculated agent payout.',
+
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Payout amount for active contracts. The annual bonus is not included.',
+
+    'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+
+    'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
+      'Payout amount for active contracts. The annual bonus is not included.',
+
+    'Компания прибыль: выручка по активным контрактам минус рассчитанный payout агенту.':
+      'Company profit: revenue from active contracts minus the calculated agent payout.',
+
+    'Компания получает: выручка по активным контрактам минус рассчитанный payout агенту.':
+      'Company profit: revenue from active contracts minus the calculated agent payout.',
+
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
+
+    'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
+      'Payout amount for active contracts. The annual bonus is not included.',
+
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
+      'Amount of streams with PAID status. These are funds already paid to agents, not merely generated obligations.',
+
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
+      'Current obligations for active contracts: LOCKED + UNLOCKED + PAYABLE. PAID is not included.',
+
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
+      'Current-month payouts are compared with expected payouts. The percentage shows the share of already paid funds out of PAID + UNLOCKED/PAYABLE.',
+
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
+      'Total payout for active contracts calculated by the financial core.',
+
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
+      'Amount of streams with PAID status whose date belongs to the current month.',
+
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
+      'Amount of streams with UNLOCKED or PAYABLE status that do not yet have PAID status.',
+
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'Shows the monthly payout for each agent’s active contracts. This is the expected amount, not money already paid.',
+
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
+      'Accumulation of the bonus based on annual sales plan achievement. The bonus is displayed separately and is not included in escrow.',
+
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
+      'Percentage of annual sales plan achievement across the months accounted for. It is used to calculate the accumulated annual bonus.',
+
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
+      'Average agent KPI across their contracts. For real contracts, actual KPI values are used; when unavailable, the ratio of actual revenue to planned revenue is used.',
+
+    'Доля максимально возможного годового бонуса, которая уже накоплена.':
+      'Share of the maximum possible annual bonus that has already been accumulated.',
+
+    'Статус договора':
+      'Contract status',
+
+    'Договор находится в работе и может формировать текущий Escrow.':
+      'The contract is in progress and may generate the current Escrow.',
+
+    'Период:':
+      'Period:',
+
+    'Текущий Escrow.':
+      'Current Escrow.',
+
+    'Текущий Escrow':
+      'Current Escrow',
+
+    'договор в работе.':
+      'contract in progress.',
+
+    'Срок договора:':
+      'Contract period:',
+
+    'Начало':
+      'Start',
+
+    'Окончание':
+      'End',
+
+    'в работе.':
+      'in progress.',
+
+    'Моя панель':
+      'My Dashboard',
+
+    'Заработано':
+      'Earned',
+
+    'Доступно к выводу':
+      'Available for withdrawal',
+
+    'На проверке':
+      'Pending verification',
+
+    'Возврат средств':
+      'Refunds',
+
+    'Выплаты':
+      'Payouts',
+
+    'Средства проверены':
+      'Funds verified',
+
+    'Мои активные контракты':
+      'My active contracts',
+
+    'Показывает месячный payout по активному контракту каждого агента.':
+      'Shows the monthly payout for each agent’s active contracts.',
+
+    'Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'This is the expected amount, not money already paid.',
+
+    'Бонус отображается отдельно и не входит в escrow.':
+      'The bonus is displayed separately and is not included in escrow.',
+
+    'Потоки выплат':
+      'Payout streams',
+
+    'Итоговый расчёт':
+      'Final calculation',
+
+    'Комиссия InCORE':
+      'InCORE fee',
   },
 
   kk: {
@@ -1123,6 +1259,136 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Создайте первый контракт':
       'Алғашқы келісімшартты жасаңыз',
+
+    // ============================================================
+    // LEGACY UI / FINANCIAL CORE / AGENT DASHBOARD
+    // ============================================================
+
+    'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
+      'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген payout шегеріледі.',
+
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+
+    'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+
+    'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
+      'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
+
+    'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
+      'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
+      'PAID мәртебесіндегі ағындардың сомасы. Бұл агенттерге әлдеқашан төленген қаражат, жай ғана қалыптасқан міндеттемелер емес.',
+
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
+      'Белсенді келісімшарттар бойынша ағымдағы міндеттемелер: LOCKED + UNLOCKED + PAYABLE. PAID бұл есепке кірмейді.',
+
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
+      'Ағымдағы айдағы төлемдер мен күтілетін төлемдер салыстырылады. Пайыз PAID + UNLOCKED/PAYABLE сомасындағы әлдеқашан төленген қаражаттың үлесін көрсетеді.',
+
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
+      'Қаржылық ядро есептеген белсенді келісімшарттар бойынша жалпы payout сомасы.',
+
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
+      'Күні ағымдағы айға жататын PAID мәртебесіндегі ағындардың сомасы.',
+
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
+      'UNLOCKED немесе PAYABLE мәртебесіндегі, әлі PAID мәртебесіне өтпеген ағындардың сомасы.',
+
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'Әр агенттің белсенді келісімшарты бойынша айлық payout сомасын көрсетеді. Бұл күтілетін сома, әлдеқашан төленген ақша емес.',
+
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
+      'Жылдық сату жоспарын орындауға байланысты бонустың жинақталуы. Бонус бөлек көрсетіледі және escrow құрамына кірмейді.',
+
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
+      'Есепке алынған айлар бойынша жылдық сату жоспарының орындалу пайызы. Ол жинақталған жылдық бонусты есептеу үшін пайдаланылады.',
+
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
+      'Агенттің келісімшарттары бойынша орташа KPI. Нақты келісімшарттар үшін нақты KPI көрсеткіштері пайдаланылады, ал олар болмаған жағдайда нақты түсімнің жоспарланған түсімге қатынасы қолданылады.',
+
+    'Доля максимально возможного годового бонуса, которая уже накоплена.':
+      'Максималды мүмкін болатын жылдық бонустың жинақталған бөлігі.',
+
+    'Статус договора':
+      'Келісімшарт мәртебесі',
+
+    'Договор находится в работе и может формировать текущий Escrow.':
+      'Келісімшарт жұмыста және ағымдағы Escrow қалыптастыруы мүмкін.',
+
+    'Период:':
+      'Кезең:',
+
+    'Текущий Escrow.':
+      'Ағымдағы Escrow.',
+
+    'Текущий Escrow':
+      'Ағымдағы Escrow',
+
+    'договор в работе.':
+      'келісімшарт жұмыста.',
+
+    'Срок договора:':
+      'Келісімшарт мерзімі:',
+
+    'Начало':
+      'Басталуы',
+
+    'Окончание':
+      'Аяқталуы',
+
+    'в работе.':
+      'жұмыста.',
+
+    'Моя панель':
+      'Менің панелім',
+
+    'Заработано':
+      'Табылғаны',
+
+    'Доступно к выводу':
+      'Шығаруға қолжетімді',
+
+    'На проверке':
+      'Тексерілуде',
+
+    'Возврат средств':
+      'Қайтарылған қаражат',
+
+    'Выплаты':
+      'Төлемдер',
+
+    'Средства проверены':
+      'Қаражат тексерілді',
+
+    'Мои активные контракты':
+      'Менің белсенді келісімшарттарым',
+
+    'Показывает месячный payout по активному контракту каждого агента.':
+      'Әр агенттің белсенді келісімшарты бойынша айлық payout сомасын көрсетеді.',
+
+    'Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'Бұл күтілетін сома, әлдеқашан төленген ақша емес.',
+
+    'Бонус отображается отдельно и не входит в escrow.':
+      'Бонус бөлек көрсетіледі және escrow құрамына кірмейді.',
+
+    'Потоки выплат':
+      'Төлем ағындары',
+
+    'Итоговый расчёт':
+      'Қорытынды есеп',
+
+    'Комиссия InCORE':
+      'InCORE комиссиясы',
   },
 
   az: {
@@ -1673,572 +1939,135 @@ export const dynamicTranslations: Record<string, Record<string, string>> = {
 
     'Создайте первый контракт':
       'İlk müqaviləni yaradın',
+
+    // ============================================================
+    // LEGACY UI / FINANCIAL CORE / AGENT DASHBOARD
+    // ============================================================
+
+    'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
+      'Şirkətin mənfəəti: aktiv müqavilələr üzrə gəlirdən agentə hesablanmış payout çıxılır.',
+
+    'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+
+    'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
+      'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+
+    'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+
+    'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
+      'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+
+    'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
+      'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
+
+    'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
+      'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+
+    'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
+      'PAID statusunda olan axınların məbləği. Bunlar agentlərə artıq ödənilmiş vəsaitlərdir, sadəcə formalaşdırılmış öhdəliklər deyil.',
+
+    'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
+      'Aktiv müqavilələr üzrə cari öhdəliklər: LOCKED + UNLOCKED + PAYABLE. PAID bu məbləğə daxil edilmir.',
+
+    'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
+      'Cari ayın ödənişləri ilə gözlənilən ödənişlər müqayisə edilir. Faiz PAID + UNLOCKED/PAYABLE məbləğində artıq ödənilmiş vəsaitlərin payını göstərir.',
+
+    'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
+      'Maliyyə nüvəsi tərəfindən hesablanmış aktiv müqavilələr üzrə ümumi payout məbləği.',
+
+    'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
+      'Tarixi cari aya aid olan PAID statuslu axınların məbləği.',
+
+    'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
+      'UNLOCKED və ya PAYABLE statusunda olan və hələ PAID statusuna keçməyən axınların məbləği.',
+
+    'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'Hər agentin aktiv müqaviləsi üzrə aylıq payout məbləğini göstərir. Bu gözlənilən məbləğdir, artıq ödənilmiş pul deyil.',
+
+    'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
+      'İllik satış planının yerinə yetirilməsi üzrə bonusun toplanması. Bonus ayrıca göstərilir və escrow-a daxil deyil.',
+
+    'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
+      'Hesablanmış aylar üzrə illik satış planının yerinə yetirilmə faizi. Bu göstərici toplanmış illik bonusun hesablanması üçün istifadə olunur.',
+
+    'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
+      'Agentin müqavilələri üzrə orta KPI. Real müqavilələr üçün faktiki KPI göstəriciləri nəzərə alınır, onlar olmadıqda faktiki gəlirin planlaşdırılan gəlirə nisbətindən istifadə olunur.',
+
+    'Доля максимально возможного годового бонуса, которая уже накоплена.':
+      'Mümkün olan maksimum illik bonusun artıq toplanmış hissəsi.',
+
+    'Статус договора':
+      'Müqavilənin statusu',
+
+    'Договор находится в работе и может формировать текущий Escrow.':
+      'Müqavilə icradadır və cari Escrow yarada bilər.',
+
+    'Период:':
+      'Müddət:',
+
+    'Текущий Escrow.':
+      'Cari Escrow.',
+
+    'Текущий Escrow':
+      'Cari Escrow',
+
+    'договор в работе.':
+      'müqavilə icradadır.',
+
+    'Срок договора:':
+      'Müqavilə müddəti:',
+
+    'Начало':
+      'Başlanğıc',
+
+    'Окончание':
+      'Bitmə',
+
+    'в работе.':
+      'icradadır.',
+
+    'Моя панель':
+      'Mənim panelim',
+
+    'Заработано':
+      'Qazanılıb',
+
+    'Доступно к выводу':
+      'Çıxarış üçün əlçatandır',
+
+    'На проверке':
+      'Yoxlanılır',
+
+    'Возврат средств':
+      'Geri qaytarılmış vəsaitlər',
+
+    'Выплаты':
+      'Ödənişlər',
+
+    'Средства проверены':
+      'Vəsaitlər yoxlanılıb',
+
+    'Мои активные контракты':
+      'Mənim aktiv müqavilələrim',
+
+    'Показывает месячный payout по активному контракту каждого агента.':
+      'Hər agentin aktiv müqaviləsi üzrə aylıq payout məbləğini göstərir.',
+
+    'Это ожидаемая сумма, а не уже выплаченные деньги.':
+      'Bu gözlənilən məbləğdir, artıq ödənilmiş pul deyil.',
+
+    'Бонус отображается отдельно и не входит в escrow.':
+      'Bonus ayrıca göstərilir və escrow-a daxil deyil.',
+
+    'Потоки выплат':
+      'Ödəniş axınları',
+
+    'Итоговый расчёт':
+      'Yekun hesablanma',
+
+    'Комиссия InCORE':
+      'InCORE komissiyası',
   },
 };
-// ============================================================
-// LEGACY UI / FINANCIAL CORE / AGENT DASHBOARD
-// Дополнительные строки, которые могут приходить уже
-// частично переведёнными или непосредственно из JSX.
-// Добавляются через Object.assign, чтобы не создавать
-// дублирующиеся свойства внутри object literal.
-// ============================================================
-
-Object.assign(dynamicTranslations.en, {
-  // ---------- Financial Core: mixed strings ----------
-
-  'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
-    'Company profit: revenue from active contracts minus the calculated agent payout.',
-
-  'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
-
-  'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
-    'Payout amount for active contracts. The annual bonus is not included.',
-
-  'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
-
-  'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
-    'Payout amount for active contracts. The annual bonus is not included.',
-
-  // ---------- Financial Core: Russian source strings ----------
-
-  'Компания прибыль: выручка по активным контрактам минус рассчитанный payout агенту.':
-    'Company profit: revenue from active contracts minus the calculated agent payout.',
-
-  'Компания получает: выручка по активным контрактам минус рассчитанный payout агенту.':
-    'Company profit: revenue from active contracts minus the calculated agent payout.',
-
-  'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Amount of payout streams with LOCKED status for active contracts. These funds are not yet available to the agent.',
-
-  'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
-    'Payout amount for active contracts. The annual bonus is not included.',
-
-  'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
-    'Amount of streams with PAID status. These are funds already paid to agents, not merely generated obligations.',
-
-  'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
-    'Current obligations for active contracts: LOCKED + UNLOCKED + PAYABLE. PAID is not included.',
-
-  'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
-    'Current-month payouts are compared with expected payouts. The percentage shows the share of already paid funds out of PAID + UNLOCKED/PAYABLE.',
-
-  'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
-    'Total payout for active contracts calculated by the financial core.',
-
-  'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
-    'Payout amount for active contracts. The annual bonus is not included.',
-
-  'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
-    'Amount of streams with PAID status whose date belongs to the current month.',
-
-  'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
-    'Amount of streams with UNLOCKED or PAYABLE status that do not yet have PAID status.',
-
-  'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'Shows the monthly payout for each agent’s active contracts. This is the expected amount, not money already paid.',
-
-  'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
-    'Accumulation of the bonus based on annual sales plan achievement. The bonus is displayed separately and is not included in escrow.',
-
-  'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
-    'Percentage of annual sales plan achievement across the months accounted for. It is used to calculate the accumulated annual bonus.',
-
-  'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
-    'Average agent KPI across their contracts. For real contracts, actual KPI values are used; when unavailable, the ratio of actual revenue to planned revenue is used.',
-
-  'Доля максимально возможного годового бонуса, которая уже накоплена.':
-    'Share of the maximum possible annual bonus that has already been accumulated.',
-
-  // ---------- Contract status / detail ----------
-
-  'Статус договора':
-    'Contract status',
-
-  'Договор находится в работе и может формировать текущий Escrow.':
-    'The contract is in progress and may generate the current Escrow.',
-
-  'Период:':
-    'Period:',
-
-  'Текущий Escrow.':
-    'Current Escrow.',
-
-  'Текущий Escrow':
-    'Current Escrow',
-
-  'договор в работе.':
-    'contract in progress.',
-
-  'Срок договора:':
-    'Contract period:',
-
-  'Начало':
-    'Start',
-
-  'Окончание':
-    'End',
-
-  'в работе.':
-    'in progress.',
-
-  // ---------- Agent dashboard ----------
-
-  'Моя панель':
-    'My Dashboard',
-
-  'Заработано':
-    'Earned',
-
-  'Доступно к выводу':
-    'Available for withdrawal',
-
-  'На проверке':
-    'Pending verification',
-
-  'Возврат средств':
-    'Refunds',
-
-  'Активные контракты':
-    'Active contracts',
-
-  'Выплаты':
-    'Payouts',
-
-  'Годовой бонус':
-    'Annual bonus',
-
-  'Годовой прогресс':
-    'Annual progress',
-
-  'Годовой план':
-    'Annual sales plan',
-
-  'Средства проверены':
-    'Funds verified',
-
-  'Мои активные контракты':
-    'My active contracts',
-
-  'Показывает месячный payout по активному контракту каждого агента.':
-    'Shows the monthly payout for each agent’s active contracts.',
-
-  'Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'This is the expected amount, not money already paid.',
-
-  'Бонус отображается отдельно и не входит в escrow.':
-    'The bonus is displayed separately and is not included in escrow.',
-
-  // ---------- Common financial labels ----------
-
-  'Фактическая сумма договоров':
-    'Actual contract amount',
-
-  'Фактическая выручка':
-    'Actual revenue',
-
-  'Сумма договора':
-    'Contract amount',
-
-  'Сумма выплат':
-    'Payout amount',
-
-  'Прибыль компании':
-    'Company profit',
-
-  'Выплата агенту':
-    'Agent payout',
-
-  'Заморожено':
-    'Locked',
-
-  'Оплачено':
-    'Paid',
-
-  'Разблокировано':
-    'Unlocked',
-
-  'Доступно к выплате':
-    'Available for payout',
-
-  'Потоки выплат':
-    'Payout streams',
-
-  'Итоговый расчёт':
-    'Final calculation',
-
-  'Результат компании':
-    'Company result',
-
-  'Комиссия InCORE':
-    'InCORE fee',
-});
-
-
-Object.assign(dynamicTranslations.kk, {
-  // ---------- Financial Core: mixed strings ----------
-
-  'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
-    'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген payout шегеріледі.',
-
-  'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
-
-  'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
-    'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
-
-  'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
-
-  'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
-    'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
-
-  // ---------- Financial Core ----------
-
-  'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
-
-  'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
-    'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
-
-  'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
-    'PAID мәртебесіндегі ағындардың сомасы. Бұл агенттерге әлдеқашан төленген қаражат, жай ғана қалыптасқан міндеттемелер емес.',
-
-  'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
-    'Белсенді келісімшарттар бойынша ағымдағы міндеттемелер: LOCKED + UNLOCKED + PAYABLE. PAID бұл есепке кірмейді.',
-
-  'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
-    'Ағымдағы айдағы төлемдер мен күтілетін төлемдер салыстырылады. Пайыз PAID + UNLOCKED/PAYABLE сомасындағы әлдеқашан төленген қаражаттың үлесін көрсетеді.',
-
-  'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
-    'Қаржылық ядро есептеген белсенді келісімшарттар бойынша жалпы payout сомасы.',
-
-  'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
-    'Күні ағымдағы айға жататын PAID мәртебесіндегі ағындардың сомасы.',
-
-  'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
-    'UNLOCKED немесе PAYABLE мәртебесіндегі, әлі PAID мәртебесіне өтпеген ағындардың сомасы.',
-
-  'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'Әр агенттің белсенді келісімшарты бойынша айлық payout сомасын көрсетеді. Бұл күтілетін сома, әлдеқашан төленген ақша емес.',
-
-  'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
-    'Жылдық сату жоспарын орындауға байланысты бонустың жинақталуы. Бонус бөлек көрсетіледі және escrow құрамына кірмейді.',
-
-  'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
-    'Есепке алынған айлар бойынша жылдық сату жоспарының орындалу пайызы. Ол жинақталған жылдық бонусты есептеу үшін пайдаланылады.',
-
-  'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
-    'Агенттің келісімшарттары бойынша орташа KPI. Нақты келісімшарттар үшін нақты KPI көрсеткіштері пайдаланылады, ал олар болмаған жағдайда нақты түсімнің жоспарланған түсімге қатынасы қолданылады.',
-
-  'Доля максимально возможного годового бонуса, которая уже накоплена.':
-    'Максималды мүмкін болатын жылдық бонустың жинақталған бөлігі.',
-
-  // ---------- Contract ----------
-
-  'Статус договора':
-    'Келісімшарт мәртебесі',
-
-  'Договор находится в работе и может формировать текущий Escrow.':
-    'Келісімшарт жұмыста және ағымдағы Escrow қалыптастыруы мүмкін.',
-
-  'Период:':
-    'Кезең:',
-
-  'Текущий Escrow.':
-    'Ағымдағы Escrow.',
-
-  'Текущий Escrow':
-    'Ағымдағы Escrow',
-
-  'договор в работе.':
-    'келісімшарт жұмыста.',
-
-  'Срок договора:':
-    'Келісімшарт мерзімі:',
-
-  'Начало':
-    'Басталуы',
-
-  'Окончание':
-    'Аяқталуы',
-
-  'в работе.':
-    'жұмыста.',
-
-  // ---------- Agent dashboard ----------
-
-  'Моя панель':
-    'Менің панелім',
-
-  'Заработано':
-    'Табылғаны',
-
-  'Доступно к выводу':
-    'Шығаруға қолжетімді',
-
-  'На проверке':
-    'Тексерілуде',
-
-  'Возврат средств':
-    'Қайтарылған қаражат',
-
-  'Активные контракты':
-    'Белсенді келісімшарттар',
-
-  'Выплаты':
-    'Төлемдер',
-
-  'Годовой бонус':
-    'Жылдық бонус',
-
-  'Годовой прогресс':
-    'Жылдық прогресс',
-
-  'Годовой план':
-    'Жылдық сату жоспары',
-
-  'Средства проверены':
-    'Қаражат тексерілді',
-
-  'Мои активные контракты':
-    'Менің белсенді келісімшарттарым',
-
-  'Показывает месячный payout по активному контракту каждого агента.':
-    'Әр агенттің белсенді келісімшарты бойынша айлық payout сомасын көрсетеді.',
-
-  'Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'Бұл күтілетін сома, әлдеқашан төленген ақша емес.',
-
-  'Бонус отображается отдельно и не входит в escrow.':
-    'Бонус бөлек көрсетіледі және escrow құрамына кірмейді.',
-
-  // ---------- Common financial labels ----------
-
-  'Фактическая сумма договоров':
-    'Келісімшарттардың нақты сомасы',
-
-  'Фактическая выручка':
-    'Нақты түсім',
-
-  'Сумма договора':
-    'Келісімшарт сомасы',
-
-  'Сумма выплат':
-    'Төлем сомасы',
-
-  'Прибыль компании':
-    'Компания пайдасы',
-
-  'Выплата агенту':
-    'Агентке төлем',
-
-  'Заморожено':
-    'Бұғатталған',
-
-  'Оплачено':
-    'Төленді',
-
-  'Разблокировано':
-    'Бұғаттан шығарылды',
-
-  'Доступно к выплате':
-    'Төлеуге қолжетімді',
-
-  'Потоки выплат':
-    'Төлем ағындары',
-
-  'Итоговый расчёт':
-    'Қорытынды есеп',
-
-  'Результат компании':
-    'Компания нәтижесі',
-
-  'Комиссия InCORE':
-    'InCORE комиссиясы',
-});
-
-
-Object.assign(dynamicTranslations.az, {
-  // ---------- Financial Core: mixed strings ----------
-
-  'Компания пайдасы: белсенді келісімшарттар бойынша түсімнен агентке есептелген төлем шегеріледі.':
-    'Şirkətin mənfəəti: aktiv müqavilələr üzrə gəlirdən agentə hesablanmış payout çıxılır.',
-
-  'Məbləğ ödəniş axını со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
-
-  'Məbləğ payout по активным контрактам. İllik bonus в неё не включается.':
-    'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
-
-  'Сома төлем ағыны со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
-
-  'Сома payout по активным контрактам. Жылдық бонус в неё не включается.':
-    'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
-
-  // ---------- Financial Core ----------
-
-  'Сумма потоков со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.':
-    'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
-
-  'Сумма payout по активным контрактам. Годовой бонус в неё не включается.':
-    'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
-
-  'Сумма потоков со статусом PAID. Это уже выплаченные агентам средства, а не просто сформированные обязательства.':
-    'PAID statusunda olan axınların məbləği. Bunlar agentlərə artıq ödənilmiş vəsaitlərdir, sadəcə formalaşdırılmış öhdəliklər deyil.',
-
-  'Текущие обязательства по активным контрактам: LOCKED + UNLOCKED + PAYABLE. PAID сюда не входит.':
-    'Aktiv müqavilələr üzrə cari öhdəliklər: LOCKED + UNLOCKED + PAYABLE. PAID bu məbləğə daxil edilmir.',
-
-  'Сравниваются выплаты текущего месяца и ожидаемые выплаты. Процент показывает долю уже выплаченных средств от суммы PAID + UNLOCKED/PAYABLE.':
-    'Cari ayın ödənişləri ilə gözlənilən ödənişlər müqayisə edilir. Faiz PAID + UNLOCKED/PAYABLE məbləğində artıq ödənilmiş vəsaitlərin payını göstərir.',
-
-  'Общая сумма payout по активным контрактам, рассчитанная финансовым ядром.':
-    'Maliyyə nüvəsi tərəfindən hesablanmış aktiv müqavilələr üzrə ümumi payout məbləği.',
-
-  'Сумма потоков со статусом PAID, дата которых относится к текущему месяцу.':
-    'Tarixi cari aya aid olan PAID statuslu axınların məbləği.',
-
-  'Сумма потоков со статусом UNLOCKED или PAYABLE, которые ещё не имеют PAID.':
-    'UNLOCKED və ya PAYABLE statusunda olan və hələ PAID statusuna keçməyən axınların məbləği.',
-
-  'Показывает месячный payout по активному контракту каждого агента. Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'Hər agentin aktiv müqaviləsi üzrə aylıq payout məbləğini göstərir. Bu gözlənilən məbləğdir, artıq ödənilmiş pul deyil.',
-
-  'Накопление бонуса по выполнению годового плана продаж. Бонус отображается отдельно и не входит в escrow.':
-    'İllik satış planının yerinə yetirilməsi üzrə bonusun toplanması. Bonus ayrıca göstərilir və escrow-a daxil deyil.',
-
-  'Процент выполнения годового плана продаж по учтённым месяцам. Он используется для расчёта накопленного годового бонуса.':
-    'Hesablanmış aylar üzrə illik satış planının yerinə yetirilmə faizi. Bu göstərici toplanmış illik bonusun hesablanması üçün istifadə olunur.',
-
-  'Средний KPI агента по его контрактам. Для реальных контрактов учитываются фактические показатели KPI, а при их отсутствии используется отношение фактической выручки к плановой.':
-    'Agentin müqavilələri üzrə orta KPI. Real müqavilələr üçün faktiki KPI göstəriciləri nəzərə alınır, onlar olmadıqda faktiki gəlirin planlaşdırılan gəlirə nisbətindən istifadə olunur.',
-
-  'Доля максимально возможного годового бонуса, которая уже накоплена.':
-    'Mümkün olan maksimum illik bonusun artıq toplanmış hissəsi.',
-
-  // ---------- Contract ----------
-
-  'Статус договора':
-    'Müqavilənin statusu',
-
-  'Договор находится в работе и может формировать текущий Escrow.':
-    'Müqavilə icradadır və cari Escrow yarada bilər.',
-
-  'Период:':
-    'Müddət:',
-
-  'Текущий Escrow.':
-    'Cari Escrow.',
-
-  'Текущий Escrow':
-    'Cari Escrow',
-
-  'договор в работе.':
-    'müqavilə icradadır.',
-
-  'Срок договора:':
-    'Müqavilə müddəti:',
-
-  'Начало':
-    'Başlanğıc',
-
-  'Окончание':
-    'Bitmə',
-
-  'в работе.':
-    'icradadır.',
-
-  // ---------- Agent dashboard ----------
-
-  'Моя панель':
-    'Mənim panelim',
-
-  'Заработано':
-    'Qazanılıb',
-
-  'Доступно к выводу':
-    'Çıxarış üçün əlçatandır',
-
-  'На проверке':
-    'Yoxlanılır',
-
-  'Возврат средств':
-    'Geri qaytarılmış vəsaitlər',
-
-  'Активные контракты':
-    'Aktiv müqavilələr',
-
-  'Выплаты':
-    'Ödənişlər',
-
-  'Годовой бонус':
-    'İllik bonus',
-
-  'Годовой прогресс':
-    'İllik irəliləyiş',
-
-  'Годовой план':
-    'İllik satış planı',
-
-  'Средства проверены':
-    'Vəsaitlər yoxlanılıb',
-
-  'Мои активные контракты':
-    'Mənim aktiv müqavilələrim',
-
-  'Показывает месячный payout по активному контракту каждого агента.':
-    'Hər agentin aktiv müqaviləsi üzrə aylıq payout məbləğini göstərir.',
-
-  'Это ожидаемая сумма, а не уже выплаченные деньги.':
-    'Bu gözlənilən məbləğdir, artıq ödənilmiş pul deyil.',
-
-  'Бонус отображается отдельно и не входит в escrow.':
-    'Bonus ayrıca göstərilir və escrow-a daxil deyil.',
-
-  // ---------- Common financial labels ----------
-
-  'Фактическая сумма договоров':
-    'Müqavilələrin faktiki məbləği',
-
-  'Фактическая выручка':
-    'Faktiki gəlir',
-
-  'Сумма договора':
-    'Müqavilə məbləği',
-
-  'Сумма выплат':
-    'Ödəniş məbləği',
-
-  'Прибыль компании':
-    'Şirkətin mənfəəti',
-
-  'Выплата агенту':
-    'Agentə ödəniş',
-
-  'Заморожено':
-    'Bloklanıb',
-
-  'Оплачено':
-    'Ödənilib',
-
-  'Разблокировано':
-    'Blokdan çıxarılıb',
-
-  'Доступно к выплате':
-    'Ödəniş üçün əlçatandır',
-
-  'Потоки выплат':
-    'Ödəniş axınları',
-
-  'Итоговый расчёт':
-    'Yekun hesablanma',
-
-  'Результат компании':
-    'Şirkətin nəticəsi',
-
-  'Комиссия InCORE':
-    'InCORE komissiyası',
-});
