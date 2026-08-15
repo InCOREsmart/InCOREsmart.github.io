@@ -2,15 +2,15 @@ import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { 
-  LogOut, 
-  User, 
-  Settings, 
-  FileText, 
-  Users, 
-  BarChart3, 
-  ShieldCheck, 
-  Menu, 
+import {
+  LogOut,
+  User,
+  Settings,
+  FileText,
+  Users,
+  BarChart3,
+  ShieldCheck,
+  Menu,
   X,
   DollarSign,
   Scale,
@@ -56,16 +56,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const filteredMenu = menuItems.filter(item => item.role === userRole);
 
   return (
-    <div className="flex h-screen bg-[#F4F5F7]">
+    <div className="flex h-screen min-h-0 bg-[#F4F5F7] overflow-hidden">
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="flex flex-col h-full">
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-[min(18rem,calc(100vw-2rem))] bg-white border-r border-gray-100 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="flex flex-col h-full min-h-0">
           <div className="px-3 pt-6 pb-4 border-b border-gray-100 flex items-start gap-2">
             <div className="flex-1 min-w-0">
               <div className="w-full h-12 bg-white rounded-xl flex items-center justify-center overflow-hidden">
@@ -73,15 +73,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <p className="text-xs text-gray-400 mt-2 px-1">{t('layout.platformSubtitle')}</p>
             </div>
-            <button 
+            <button
               onClick={() => setSidebarOpen(false)}
               className="md:hidden p-1 text-[#000052] hover:bg-[#000052]/5 rounded-lg"
+              aria-label="Close menu"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+          <nav className="flex-1 min-h-0 px-3 py-4 space-y-1.5 overflow-y-auto">
             {filteredMenu.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -92,14 +93,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     navigate(item.path);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 text-left ${
                     active
                       ? 'bg-[#000052] text-white shadow-[0_4px_16px_rgba(0,0,82,0.25)]'
                       : 'text-gray-500 hover:bg-[#000052]/5 hover:text-[#000052]'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="min-w-0 break-words">{item.label}</span>
                 </button>
               );
             })}
@@ -130,15 +131,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-          <img src="/logo.png" alt="InCORE" className="h-8 w-auto" />
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        <header className="md:hidden flex items-center gap-2 px-3 py-2.5 bg-white border-b border-gray-100 min-w-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 text-[#000052] hover:bg-[#000052]/5 rounded-lg"
+            className="p-2 flex-shrink-0 text-[#000052] hover:bg-[#000052]/5 rounded-lg"
+            aria-label="Open menu"
           >
             <Menu className="w-6 h-6" />
           </button>
+          <img src="/logo.png" alt="InCORE" className="h-8 w-auto max-w-[120px] object-contain" />
+          <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+            <LanguageSwitcher />
+            <NotificationBell />
+          </div>
         </header>
 
         <header className="hidden md:flex items-center justify-end px-6 py-3 bg-white border-b border-gray-100 gap-4">
@@ -146,7 +152,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <NotificationBell />
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {children}
         </div>
       </main>
