@@ -28,21 +28,9 @@ export function CEODisputesPage() {
       if (!user) { setLoading(false); return; }
       try {
         const { data: companyData } = await supabase.from('companies').select('id').eq('user_id', user.id).maybeSingle();
-        if (!companyData) {
-          setDisputes(DEMO_DISPUTES);
-          return;
-        }
-
+        if (!companyData) { setDisputes(DEMO_DISPUTES); return; }
         const { data } = await supabase.from('disputes').select('*').eq('company_id', companyData.id).order('created_at', { ascending: false });
-
-        // В демо-проекте арбитраж всегда должен содержать ровно три
-        // предзаполненных спора. Реальные данные используются только если
-        // компания уже содержит ровно три полноценных записи.
-        if (!data || data.length !== 3) {
-          setDisputes(DEMO_DISPUTES);
-          return;
-        }
-
+        if (!data || data.length !== 3) { setDisputes(DEMO_DISPUTES); return; }
         const detailed = await Promise.all(data.map(async d => {
           let agent_name = '—';
           let contract_title = '—';
@@ -60,22 +48,15 @@ export function CEODisputesPage() {
       } catch (error) {
         console.error(error);
         setDisputes(DEMO_DISPUTES);
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
-
     fetchDisputes();
   }, [user]);
 
   const filtered = disputes.filter(dispute => {
     const typeKey = dispute.type === 'oracle_failure' ? 'typeOracle' : dispute.type === 'kpi_dispute' ? 'typeKpi' : dispute.type === 'payment_issue' ? 'typePayment' : 'typeRetention';
     const search = searchQuery.toLowerCase();
-    return (
-      ((dispute.title || t(`disputes.${typeKey}`)).toLowerCase().includes(search) ||
-        dispute.agent_name?.toLowerCase().includes(search)) &&
-      (statusFilter === 'all' || dispute.status === statusFilter)
-    );
+    return (((dispute.title || t(`disputes.${typeKey}`)).toLowerCase().includes(search) || dispute.agent_name?.toLowerCase().includes(search)) && (statusFilter === 'all' || dispute.status === statusFilter));
   });
 
   const openCount = disputes.filter(d => d.status === 'OPEN').length;
@@ -98,9 +79,7 @@ export function CEODisputesPage() {
       setResolutionText('');
       setSelectedDispute(null);
       alert(t('disputes.success'));
-    } catch (error: any) {
-      alert(`${t('common.error')}: ${error.message}`);
-    }
+    } catch (error: any) { alert(`${t('common.error')}: ${error.message}`); }
   };
 
   if (loading) return <div className="p-8 text-center text-[#000052]"><div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#B8860B]" /><p className="mt-2">{t('ui.loading')}</p></div>;
@@ -112,29 +91,37 @@ export function CEODisputesPage() {
     { label: t('disputes.disputedAmount'), value: `$${totalDisputedAmount.toLocaleString()}`, sub: t('disputes.activeDisputes'), icon: DollarSign, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#B8860B]' },
   ];
 
-  return <div className="p-4 md:p-8 space-y-6">
+  return <div className="p-3 sm:p-4 md:p-8 space-y-5 md:space-y-6 min-w-0">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div><h1 className="text-[26px] md:text-3xl font-bold text-[#000052] tracking-tight">{t('nav.disputes')}</h1><p className="text-sm text-gray-400 mt-1">{t('disputes.subtitle')}</p></div>
-      <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 px-5 py-3 bg-[#000052] text-white rounded-[14px] text-sm font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"><Plus className="w-4 h-4" />{t('disputes.create')}</button>
+      <div className="min-w-0"><h1 className="text-[24px] sm:text-[26px] md:text-3xl font-bold text-[#000052] tracking-tight break-words">{t('nav.disputes')}</h1><p className="text-sm text-gray-400 mt-1 break-words">{t('disputes.subtitle')}</p></div>
+      <button onClick={() => setIsCreateModalOpen(true)} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-[#000052] text-white rounded-[14px] text-sm font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"><Plus className="w-4 h-4" />{t('disputes.create')}</button>
     </div>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">{kpis.map((kpi, i) => { const Icon = kpi.icon; return <div key={i} className="bg-white p-5 rounded-2xl shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(0,0,82,0.12)]"><div className="flex items-start justify-between mb-4"><h3 className="text-sm font-medium text-gray-500 leading-tight">{kpi.label}</h3><div className={`w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 ${kpi.box}`}><Icon className="w-5 h-5" /></div></div><p className={`text-[26px] font-bold tracking-tight ${kpi.valueColor}`}>{kpi.value}</p><p className="text-xs text-gray-400 mt-1">{kpi.sub}</p></div>; })}</div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">{kpis.map((kpi, i) => { const Icon = kpi.icon; return <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm min-w-0"><div className="flex items-start justify-between gap-2 mb-3 md:mb-4"><h3 className="text-xs sm:text-sm font-medium text-gray-500 leading-tight break-words min-w-0">{kpi.label}</h3><div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 ${kpi.box}`}><Icon className="w-4 h-4 sm:w-5 sm:h-5" /></div></div><p className={`text-[22px] sm:text-[26px] font-bold tracking-tight truncate ${kpi.valueColor}`}>{kpi.value}</p><p className="text-[11px] sm:text-xs text-gray-400 mt-1 break-words">{kpi.sub}</p></div>; })}</div>
 
-    <div className="bg-white p-4 rounded-2xl shadow-sm"><div className="flex flex-col md:flex-row gap-3"><div className="flex-1 relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input placeholder={t('disputes.search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-[12px] text-sm text-[#000052] placeholder-gray-400 focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition" /></div><div className="relative"><Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="pl-11 pr-8 py-2.5 bg-white border border-gray-200 rounded-[12px] text-sm text-[#000052] appearance-none focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition"><option value="all">{t('disputes.allStatuses')}</option><option value="OPEN">{t('disputes.statusOpen')}</option><option value="IN_REVIEW">{t('disputes.statusReview')}</option><option value="RESOLVED">{t('disputes.statusResolved')}</option></select></div></div></div>
+    <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm"><div className="flex flex-col md:flex-row gap-3"><div className="flex-1 relative min-w-0"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input placeholder={t('disputes.search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full min-w-0 pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-[12px] text-sm text-[#000052] placeholder-gray-400 focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition" /></div><div className="relative w-full md:w-auto"><Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full md:w-auto pl-11 pr-8 py-2.5 bg-white border border-gray-200 rounded-[12px] text-sm text-[#000052] appearance-none focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition"><option value="all">{t('disputes.allStatuses')}</option><option value="OPEN">{t('disputes.statusOpen')}</option><option value="IN_REVIEW">{t('disputes.statusReview')}</option><option value="RESOLVED">{t('disputes.statusResolved')}</option></select></div></div></div>
 
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">{filtered.length === 0 ? <div className="text-center py-12"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#000052]/5 flex items-center justify-center"><Scale className="w-8 h-8 text-[#000052]/30" /></div><p className="text-lg font-semibold text-[#000052] mb-2">{t('disputes.noDisputes')}</p></div> : <div className="overflow-x-auto"><table className="w-full min-w-[900px]"><thead><tr className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{['type', 'description', 'agent', 'amount', 'status', 'actions'].map(key => <th key={key} className="py-3.5 px-5">{key === 'amount' ? t('ui.amount') : key === 'status' ? t('ui.status') : t(`disputes.${key}`)}</th>)}</tr></thead><tbody>
-      {filtered.map(dispute => <tr key={dispute.id} className="border-b border-gray-50 hover:bg-[#000052]/[0.02] transition-colors">
-        <td className="py-4 px-5 text-sm font-semibold text-[#000052]">{typeLabel(dispute.type)}</td>
-        <td className="py-4 px-5"><div className="font-semibold text-sm text-[#000052]">{dispute.title || typeLabel(dispute.type)}</div><div className="text-xs text-gray-400 mt-1">{dispute.description || typeLabel(dispute.type)}</div>{dispute.resolution && <div className="mt-2 p-2.5 bg-[#B8860B]/5 rounded-xl text-xs text-[#000052]/70">{t('disputes.resolution')}: {dispute.resolution}</div>}</td>
-        <td className="py-4 px-5"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-[#000052]/5 flex items-center justify-center flex-shrink-0"><Users className="w-4 h-4 text-[#000052]" /></div><div><div className="text-sm font-medium text-[#000052]">{dispute.agent_name || '—'}</div><div className="text-xs text-gray-400">{dispute.contract_title || '—'}</div></div></div></td>
-        <td className="py-4 px-5 font-bold text-[#B8860B]">${(dispute.amount || 0).toLocaleString()}</td>
-        <td className="py-4 px-5"><span className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap ${statusColor(dispute.status)}`}>{dispute.status === 'OPEN' ? <AlertCircle className="w-3 h-3" /> : dispute.status === 'IN_REVIEW' ? <Clock className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}{statusLabel(dispute.status)}</span></td>
-        <td className="py-4 px-5">{(dispute.status === 'OPEN' || dispute.status === 'IN_REVIEW') && <button onClick={() => { setSelectedDispute(dispute); setResolutionText(''); }} className="px-3.5 py-2 bg-[#000052] text-white rounded-xl text-xs font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">{t('disputes.resolve')}</button>}</td>
-      </tr>)}
-    </tbody></table></div>}</div>
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      {filtered.length === 0 ? <div className="text-center py-12 px-4"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#000052]/5 flex items-center justify-center"><Scale className="w-8 h-8 text-[#000052]/30" /></div><p className="text-lg font-semibold text-[#000052] mb-2">{t('disputes.noDisputes')}</p></div> : <>
+        <div className="hidden md:block overflow-x-auto"><table className="w-full min-w-[900px]"><thead><tr className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{['type', 'description', 'agent', 'amount', 'status', 'actions'].map(key => <th key={key} className="py-3.5 px-5">{key === 'amount' ? t('ui.amount') : key === 'status' ? t('ui.status') : t(`disputes.${key}`)}</th>)}</tr></thead><tbody>
+          {filtered.map(dispute => <tr key={dispute.id} className="border-b border-gray-50 hover:bg-[#000052]/[0.02] transition-colors"><td className="py-4 px-5 text-sm font-semibold text-[#000052]">{typeLabel(dispute.type)}</td><td className="py-4 px-5"><div className="font-semibold text-sm text-[#000052]">{dispute.title || typeLabel(dispute.type)}</div><div className="text-xs text-gray-400 mt-1">{dispute.description || typeLabel(dispute.type)}</div>{dispute.resolution && <div className="mt-2 p-2.5 bg-[#B8860B]/5 rounded-xl text-xs text-[#000052]/70 break-words">{t('disputes.resolution')}: {dispute.resolution}</div>}</td><td className="py-4 px-5"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-[#000052]/5 flex items-center justify-center flex-shrink-0"><Users className="w-4 h-4 text-[#000052]" /></div><div><div className="text-sm font-medium text-[#000052]">{dispute.agent_name || '—'}</div><div className="text-xs text-gray-400">{dispute.contract_title || '—'}</div></div></div></td><td className="py-4 px-5 font-bold text-[#B8860B]">${(dispute.amount || 0).toLocaleString()}</td><td className="py-4 px-5"><span className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap ${statusColor(dispute.status)}`}>{dispute.status === 'OPEN' ? <AlertCircle className="w-3 h-3" /> : dispute.status === 'IN_REVIEW' ? <Clock className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}{statusLabel(dispute.status)}</span></td><td className="py-4 px-5">{(dispute.status === 'OPEN' || dispute.status === 'IN_REVIEW') && <button onClick={() => { setSelectedDispute(dispute); setResolutionText(''); }} className="px-3.5 py-2 bg-[#000052] text-white rounded-xl text-xs font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">{t('disputes.resolve')}</button>}</td></tr>)}
+        </tbody></table></div>
 
-    {selectedDispute && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl p-6"><div className="flex justify-between items-center mb-5"><h2 className="text-2xl font-bold text-[#000052]">{t('disputes.resolveTitle')}</h2><button onClick={() => setSelectedDispute(null)} className="text-gray-400 hover:text-[#000052] transition-colors"><XCircle className="w-5 h-5" /></button></div><p className="text-sm text-gray-500 mb-4">{selectedDispute.title || typeLabel(selectedDispute.type)}</p><label className="block text-sm font-semibold text-[#000052] mb-2">{t('disputes.yourResolution')}</label><textarea value={resolutionText} onChange={e => setResolutionText(e.target.value)} rows={5} placeholder={t('disputes.resolutionPlaceholder')} className="w-full px-4 py-3 border border-gray-200 rounded-[12px] text-[#000052] placeholder-gray-400 focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition" /><div className="flex gap-3 mt-5"><button onClick={() => setSelectedDispute(null)} className="flex-1 py-3 bg-white border border-gray-200 text-[#000052] rounded-[14px] font-semibold hover:border-[#000052] hover:bg-[#000052]/5 transition-all duration-200">{t('common.cancel')}</button><button onClick={handleResolve} disabled={!resolutionText.trim()} className="flex-1 py-3 bg-[#000052] text-white rounded-[14px] font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">{t('disputes.confirm')}</button></div></div></div>}
+        <div className="md:hidden divide-y divide-gray-100">{filtered.map(dispute => <div key={dispute.id} className="p-4 space-y-3 min-w-0">
+          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{typeLabel(dispute.type)}</p><h3 className="mt-1 text-sm font-bold text-[#000052] break-words">{dispute.title || typeLabel(dispute.type)}</h3></div><span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 flex-shrink-0 ${statusColor(dispute.status)}`}>{dispute.status === 'OPEN' ? <AlertCircle className="w-3 h-3" /> : dispute.status === 'IN_REVIEW' ? <Clock className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}{statusLabel(dispute.status)}</span></div>
+          <p className="text-xs text-gray-500 leading-relaxed break-words">{dispute.description || typeLabel(dispute.type)}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-gray-50 p-3 min-w-0"><p className="text-[11px] text-gray-400">{t('disputes.agent')}</p><div className="flex items-center gap-2 mt-1 min-w-0"><div className="w-7 h-7 rounded-full bg-[#000052]/5 flex items-center justify-center flex-shrink-0"><Users className="w-3.5 h-3.5 text-[#000052]" /></div><div className="min-w-0"><p className="text-xs font-semibold text-[#000052] break-words">{dispute.agent_name || '—'}</p><p className="text-[10px] text-gray-400 break-words">{dispute.contract_title || '—'}</p></div></div></div>
+            <div className="rounded-xl bg-gray-50 p-3"><p className="text-[11px] text-gray-400">{t('ui.amount')}</p><p className="text-sm font-bold text-[#B8860B] mt-1">${(dispute.amount || 0).toLocaleString()}</p></div>
+          </div>
+          {dispute.resolution && <div className="p-3 bg-[#B8860B]/5 rounded-xl text-xs text-[#000052]/70 break-words"><span className="font-semibold">{t('disputes.resolution')}:</span> {dispute.resolution}</div>}
+          {(dispute.status === 'OPEN' || dispute.status === 'IN_REVIEW') && <button onClick={() => { setSelectedDispute(dispute); setResolutionText(''); }} className="w-full py-2.5 bg-[#000052] text-white rounded-xl text-xs font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)]">{t('disputes.resolve')}</button>}
+        </div>)}</div>
+      </>}
+    </div>
 
-    {isCreateModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><div className="bg-white rounded-[24px] shadow-2xl w-full max-w-xl p-6 text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#B8860B]/10 flex items-center justify-center"><ShieldCheck className="w-8 h-8 text-[#B8860B]" /></div><h2 className="text-2xl font-bold text-[#000052] mb-3">{t('disputes.create')}</h2><p className="text-[#000052] mb-2">{t('disputes.createDisabled')}</p><p className="text-sm text-gray-400">{t('disputes.demoHint')}</p><button onClick={() => setIsCreateModalOpen(false)} className="mt-5 px-6 py-2.5 bg-[#000052] text-white rounded-xl shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200">{t('common.cancel')}</button></div></div>}
+    {selectedDispute && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"><div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl max-h-[calc(100vh-24px)] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6"><div className="flex justify-between items-start gap-3 mb-5"><h2 className="text-xl sm:text-2xl font-bold text-[#000052] break-words">{t('disputes.resolveTitle')}</h2><button onClick={() => setSelectedDispute(null)} className="text-gray-400 hover:text-[#000052] transition-colors flex-shrink-0"><XCircle className="w-5 h-5" /></button></div><p className="text-sm text-gray-500 mb-4 break-words">{selectedDispute.title || typeLabel(selectedDispute.type)}</p><label className="block text-sm font-semibold text-[#000052] mb-2">{t('disputes.yourResolution')}</label><textarea value={resolutionText} onChange={e => setResolutionText(e.target.value)} rows={5} placeholder={t('disputes.resolutionPlaceholder')} className="w-full px-4 py-3 border border-gray-200 rounded-[12px] text-[#000052] placeholder-gray-400 focus:ring-4 focus:ring-[#000052]/10 focus:border-[#000052] outline-none transition resize-y" /><div className="flex flex-col-reverse sm:flex-row gap-3 mt-5"><button onClick={() => setSelectedDispute(null)} className="flex-1 py-3 bg-white border border-gray-200 text-[#000052] rounded-[14px] font-semibold hover:border-[#000052] hover:bg-[#000052]/5 transition-all duration-200">{t('common.cancel')}</button><button onClick={handleResolve} disabled={!resolutionText.trim()} className="flex-1 py-3 bg-[#000052] text-white rounded-[14px] font-semibold shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">{t('disputes.confirm')}</button></div></div></div>}
+
+    {isCreateModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"><div className="bg-white rounded-[24px] shadow-2xl w-full max-w-xl max-h-[calc(100vh-24px)] overflow-y-auto p-5 sm:p-6 text-center"><div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#B8860B]/10 flex items-center justify-center"><ShieldCheck className="w-8 h-8 text-[#B8860B]" /></div><h2 className="text-xl sm:text-2xl font-bold text-[#000052] mb-3">{t('disputes.create')}</h2><p className="text-[#000052] mb-2 break-words">{t('disputes.createDisabled')}</p><p className="text-sm text-gray-400 break-words">{t('disputes.demoHint')}</p><button onClick={() => setIsCreateModalOpen(false)} className="mt-5 w-full sm:w-auto px-6 py-2.5 bg-[#000052] text-white rounded-xl shadow-[0_4px_16px_rgba(0,0,82,0.25)] hover:bg-[#14147a] transition-all duration-200">{t('common.cancel')}</button></div></div>}
   </div>;
 }
