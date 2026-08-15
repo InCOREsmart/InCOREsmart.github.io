@@ -81,15 +81,23 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .kpi-value { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
 .kpi-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-/* Responsive foundations: components keep their desktop structure unless a mobile rule is explicitly added. */
+/* Responsive foundations */
 .min-w-0 { min-width: 0; }
 .break-words { overflow-wrap: anywhere; word-break: normal; }
+
+/* The old relation block in RoleDecompositionPage is now rendered by RoleMarketAnalysis. */
+.role-market-analysis + div.bg-white.rounded-2xl.shadow-sm.p-5 { display: none; }
 
 @media (max-width: 767px) {
   .card { padding: 18px; border-radius: 20px; }
   .kpi-value { font-size: 28px; }
   table { max-width: 100%; }
   th, td { white-space: normal; overflow-wrap: anywhere; }
+  [class*="grid-cols-[1fr_1fr_40px]"] { grid-template-columns: minmax(0, 1fr) !important; }
+  [class*="grid-cols-[1fr_1fr_40px]"] > div:first-child,
+  [class*="grid-cols-[1fr_1fr_40px]"] > div:nth-child(2) { width: 100%; text-align: center; }
+  [class*="grid-cols-[1fr_1fr_40px]"] input { min-width: 0; }
+  [class*="min-w-[1050px]"] { min-width: 0 !important; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
