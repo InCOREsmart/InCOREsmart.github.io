@@ -53,10 +53,23 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
     const exactTranslation = dictionary[content];
     if (exactTranslation) return exactTranslation;
 
-    // Some older tooltip strings were partially translated before reaching this component.
-    // Normalize these mixed-language variants so no Russian fragment remains in English UI.
     const normalized = content.replace(/\s+/g, ' ').trim();
 
+    // Correct key for the annual-bonus tooltip used by CEODashboard.
+    // The dictionary contains an older typo ("Иллный бонус"), so keep
+    // backward compatibility here instead of changing financial logic.
+    if (normalized === 'Сумма payout по активным контрактам. Годовой бонус в неё не включается.') {
+      const translations: Record<string, string> = {
+        ru: 'Сумма payout по активным контрактам. Годовой бонус в неё не включается.',
+        en: 'Payout amount for active contracts. The annual bonus is not included.',
+        kk: 'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
+        az: 'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
+      };
+      return translations[language] || translations.ru;
+    }
+
+    // Some older tooltip strings were partially translated before reaching this component.
+    // Normalize these mixed-language variants so no Russian fragment remains in English UI.
     if (
       normalized.includes('LOCKED') &&
       (normalized.includes('со статусом') || normalized.includes('payment streams')) &&
