@@ -62,18 +62,18 @@ export function NotificationBell() {
       <Bell className="w-5 h-5 text-[#000052]" />
       {unreadCount > 0 && <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{unreadCount}</span>}
     </button>
-    {isOpen && <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+    {isOpen && <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[min(24rem,70vh)] overflow-y-auto">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-3">
         <h3 className="font-semibold text-[#000052]">{t('notifications.title', { defaultValue: 'Уведомления' })}</h3>
-        {unreadCount > 0 && <button onClick={markAllAsRead} className="text-xs text-[#B8860B] hover:underline">{t('notifications.markAllRead', { defaultValue: 'Отметить все как прочитанные' })}</button>}
+        {unreadCount > 0 && <button onClick={markAllAsRead} className="text-xs text-[#B8860B] hover:underline text-right">{t('notifications.markAllRead', { defaultValue: 'Отметить все как прочитанные' })}</button>}
       </div>
       {notifications.length === 0 ? <div className="p-8 text-center text-gray-500"><Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" /><p>{t('notifications.empty', { defaultValue: 'Нет уведомлений' })}</p></div> : <div className="divide-y divide-gray-100">
         {notifications.map(notification => <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors ${!notification.is_read ? 'bg-blue-50/50' : ''}`}>
-          <div className="flex items-start justify-between gap-2"><div className="flex-1">
-            <p className="font-medium text-[#000052] text-sm">{getNotificationText(notification, 'title')}</p>
-            <p className="text-xs text-gray-600 mt-1">{getNotificationText(notification, 'message')}</p>
+          <div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0">
+            <p className="font-medium text-[#000052] text-sm break-words">{getNotificationText(notification, 'title')}</p>
+            <p className="text-xs text-gray-600 mt-1 break-words">{getNotificationText(notification, 'message')}</p>
             <p className="text-xs text-gray-400 mt-2">{formatDate(notification.created_at)}</p>
-          </div><div className="flex gap-1">
+          </div><div className="flex gap-1 flex-shrink-0">
             {!notification.is_read && <button onClick={() => markAsRead(notification.id)} className="p-1 hover:bg-gray-200 rounded transition-colors" aria-label={t('notifications.markRead', { defaultValue: 'Mark as read' })}><Check className="w-4 h-4 text-green-600" /></button>}
             <button onClick={() => deleteNotification(notification.id)} className="p-1 hover:bg-gray-200 rounded transition-colors" aria-label={t('notifications.delete', { defaultValue: 'Delete' })}><Trash2 className="w-4 h-4 text-red-600" /></button>
           </div></div>
