@@ -79,7 +79,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
         display: ['Manrope', 'Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
