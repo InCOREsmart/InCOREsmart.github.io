@@ -4,74 +4,668 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAnnualBonusForAgent } from '../../lib/annualBonus';
-import { DollarSign, Shield, Clock, CheckCircle, AlertTriangle, TrendingUp, Lock, Award } from 'lucide-react';
+import {
+  DollarSign,
+  Shield,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  TrendingUp,
+  Lock,
+  Award,
+} from 'lucide-react';
 
-const getStreamAmount = (stream: any) => stream.stream_key === 'annual' ? 0 : Number(stream.amount || 0);
+const getStreamAmount = (stream: any) =>
+  stream.stream_key === 'annual' ? 0 : Number(stream.amount || 0);
 
-function Tooltip({ content, children }: { content: React.ReactNode; children: React.ReactNode }) {
-  return <div className="group relative inline-flex w-full">{children}<div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl bg-[#000052] px-4 py-3 text-left text-xs leading-relaxed text-white shadow-xl group-hover:block">{content}</div></div>;
+function Tooltip({
+  content,
+  children,
+}: {
+  content: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative inline-flex w-full min-w-0">
+      {children}
+
+      <div
+        className="
+          pointer-events-none
+          absolute left-1/2 top-full z-50 mt-2
+          hidden
+          w-[min(18rem,calc(100vw-2rem))]
+          -translate-x-1/2
+          rounded-xl
+          bg-[#000052]
+          px-4 py-3
+          text-left text-xs leading-relaxed text-white
+          shadow-xl
+          group-hover:block
+        "
+      >
+        {content}
+      </div>
+    </div>
+  );
 }
 
 export function AgentDashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [agent, setAgent] = useState<any>(null);
   const [contracts, setContracts] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
-        const { data: agentData } = await supabase.from('agents').select('*').eq('user_id', user.id).maybeSingle();
-        if (!agentData) { setLoading(false); return; }
-        setAgent(agentData);
-        const { data: contractsData } = await supabase.from('contracts').select('*').eq('agent_id', agentData.id).order('created_at', { ascending: false });
-        setContracts(contractsData || []);
-        if (contractsData?.length) {
-          const { data: streamsData } = await supabase.from('contract_payout_streams').select('*').in('contract_id', contractsData.map(c => c.id)).neq('stream_key', 'annual');
-          setStreams(streamsData || []);
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!agentData) {
+          setLoading(false);
+          return;
         }
-      } catch (err) { console.error('Ошибка:', err); } finally { setLoading(false); }
+
+        setAgent(agentData);
+
+        const { data: contractsData } = await supabase
+          .from('contracts')
+          .select('*')
+          .eq('agent_id', agentData.id)
+          .order('created_at', { ascending: false });
+
+        const loadedContracts = contractsData || [];
+        setContracts(loadedContracts);
+
+        if (loadedContracts.length) {
+          const { data: streamsData } = await supabase
+            .from('contract_payout_streams')
+            .select('*')
+            .in(
+              'contract_id',
+              loadedContracts.map((contract) => contract.id)
+            )
+            .neq('stream_key', 'annual');
+
+          setStreams(streamsData || []);
+        } else {
+          setStreams([]);
+        }
+      } catch (err) {
+        console.error('Ошибка:', err);
+      } finally {
+        setLoading(false);
+      }
     };
+
     fetchData();
   }, [user]);
 
-  if (loading) return <div className="p-6 md:p-8 text-center"><div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]" /><p className="mt-4 text-[#000052]">{t('common.loading')}</p></div>;
-  if (!agent) return <div className="p-6 md:p-8 text-center"><p className="text-lg text-[#000052]">{t('agent.agentNotFound')}</p></div>;
+  if (loading) {
+    return (
+      <div className="p-6 md:p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#B8860B]" />
+        <p className="mt-4 text-[#000052]">
+          {t('common.loading')}
+        </p>
+      </div>
+    );
+  }
 
-  let totalEarned = 0, availableForWithdrawal = 0, pendingVerification = 0, escrowBalance = 0, retentionLocked = 0, clawedBack = 0;
-  contracts.forEach(contract => streams.filter(stream => stream.contract_id === contract.id).forEach(stream => {
-    const amount = getStreamAmount(stream);
-    if (stream.status === 'PAID') totalEarned += amount;
-    if (stream.status === 'UNLOCKED' || stream.status === 'PAYABLE') availableForWithdrawal += amount;
-    if (stream.status === 'PENDING_VERIFICATION') pendingVerification += amount;
-    if (stream.status === 'LOCKED') escrowBalance += amount;
-    if (stream.stream_key === 'retention' && stream.status === 'LOCKED') retentionLocked += amount;
-    if (stream.status === 'CLAWED_BACK') clawedBack += amount;
-  }));
+  if (!agent) {
+    return (
+      <div className="p-6 md:p-8 text-center">
+        <p className="text-lg text-[#000052]">
+          {t('agent.agentNotFound')}
+        </p>
+      </div>
+    );
+  }
 
-  const annualBonus = getAnnualBonusForAgent({ ...agent, contracts }, 2026);
-  const activeContractsCount = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'IN_PROGRESS').length;
-  const completedContractsCount = contracts.filter(c => c.status === 'COMPLETED').length;
+  let totalEarned = 0;
+  let availableForWithdrawal = 0;
+  let pendingVerification = 0;
+  let escrowBalance = 0;
+  let retentionLocked = 0;
+  let clawedBack = 0;
+
+  contracts.forEach((contract) => {
+    streams
+      .filter((stream) => stream.contract_id === contract.id)
+      .forEach((stream) => {
+        const amount = getStreamAmount(stream);
+
+        if (stream.status === 'PAID') {
+          totalEarned += amount;
+        }
+
+        if (
+          stream.status === 'UNLOCKED' ||
+          stream.status === 'PAYABLE'
+        ) {
+          availableForWithdrawal += amount;
+        }
+
+        if (stream.status === 'PENDING_VERIFICATION') {
+          pendingVerification += amount;
+        }
+
+        if (stream.status === 'LOCKED') {
+          escrowBalance += amount;
+        }
+
+        if (
+          stream.stream_key === 'retention' &&
+          stream.status === 'LOCKED'
+        ) {
+          retentionLocked += amount;
+        }
+
+        if (stream.status === 'CLAWED_BACK') {
+          clawedBack += amount;
+        }
+      });
+  });
+
+  const annualBonus = getAnnualBonusForAgent(
+    { ...agent, contracts },
+    2026
+  );
+
+  const activeContractsCount = contracts.filter(
+    (contract) =>
+      contract.status === 'ACTIVE' ||
+      contract.status === 'IN_PROGRESS'
+  ).length;
+
+  const completedContractsCount = contracts.filter(
+    (contract) => contract.status === 'COMPLETED'
+  ).length;
+
   const kpis = [
-    { label: t('agent.totalEarned'), value: totalEarned, icon: DollarSign, color: 'bg-[#000052]', textColor: 'text-white', detail: <><div className="font-semibold mb-1">{t('tooltips.agentEarned')}</div><div>{t('tooltips.agentEarned')}</div></> },
-    { label: t('agent.availableForWithdrawal'), value: availableForWithdrawal, icon: CheckCircle, color: 'bg-[#1E3A5F]', textColor: 'text-white', detail: <><div className="font-semibold mb-1">{t('agent.availableForWithdrawal')}</div><div>{t('tooltips.availableForWithdrawal')}</div></> },
-    { label: t('agent.pendingVerification'), value: pendingVerification, icon: Clock, color: 'bg-[#B8860B]', textColor: 'text-white', detail: <><div className="font-semibold mb-1">{t('agent.pendingVerification')}</div><div>{t('tooltips.pendingVerification')}</div></> },
-    { label: t('agent.escrowBalance'), value: escrowBalance, icon: Lock, color: 'bg-white', textColor: 'text-[#000052]', detail: <><div className="font-semibold mb-1">Escrow</div><div>{t('tooltips.escrow')}</div></> },
-    { label: t('payouts.retention'), value: retentionLocked, icon: Shield, color: 'bg-white', textColor: 'text-[#000052]', detail: <><div className="font-semibold mb-1">{t('payouts.retention')}</div><div>{t('tooltips.retention')}</div></> },
-    { label: t('agent.clawedBack'), value: clawedBack, icon: AlertTriangle, color: 'bg-[#46618C]', textColor: 'text-white', detail: <><div className="font-semibold mb-1">{t('agent.clawedBack')}</div><div>{t('tooltips.clawedBack')}</div></> },
+    {
+      label: t('agent.totalEarned'),
+      value: totalEarned,
+      icon: DollarSign,
+      color: 'bg-[#000052]',
+      textColor: 'text-white',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            {t('tooltips.agentEarned')}
+          </div>
+          <div>{t('tooltips.agentEarned')}</div>
+        </>
+      ),
+    },
+    {
+      label: t('agent.availableForWithdrawal'),
+      value: availableForWithdrawal,
+      icon: CheckCircle,
+      color: 'bg-[#1E3A5F]',
+      textColor: 'text-white',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            {t('agent.availableForWithdrawal')}
+          </div>
+          <div>
+            {t('tooltips.availableForWithdrawal')}
+          </div>
+        </>
+      ),
+    },
+    {
+      label: t('agent.pendingVerification'),
+      value: pendingVerification,
+      icon: Clock,
+      color: 'bg-[#B8860B]',
+      textColor: 'text-white',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            {t('agent.pendingVerification')}
+          </div>
+          <div>
+            {t('tooltips.pendingVerification')}
+          </div>
+        </>
+      ),
+    },
+    {
+      label: t('agent.escrowBalance'),
+      value: escrowBalance,
+      icon: Lock,
+      color: 'bg-white',
+      textColor: 'text-[#000052]',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            Escrow
+          </div>
+          <div>{t('tooltips.escrow')}</div>
+        </>
+      ),
+    },
+    {
+      label: t('payouts.retention'),
+      value: retentionLocked,
+      icon: Shield,
+      color: 'bg-white',
+      textColor: 'text-[#000052]',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            {t('payouts.retention')}
+          </div>
+          <div>{t('tooltips.retention')}</div>
+        </>
+      ),
+    },
+    {
+      label: t('agent.clawedBack'),
+      value: clawedBack,
+      icon: AlertTriangle,
+      color: 'bg-[#46618C]',
+      textColor: 'text-white',
+      detail: (
+        <>
+          <div className="font-semibold mb-1">
+            {t('agent.clawedBack')}
+          </div>
+          <div>{t('tooltips.clawedBack')}</div>
+        </>
+      ),
+    },
   ];
 
-  return <div className="w-full min-w-0 p-3 sm:p-4 md:p-6 space-y-5 md:space-y-6 overflow-x-hidden">
-    <div className="min-w-0"><h1 className="text-2xl sm:text-3xl font-bold text-[#000052] break-words">{t('agent.dashboardTitle')}</h1><p className="text-sm text-[#000052]/70 mt-1 break-words">{agent.full_name}</p></div>
-    <div className="bg-gradient-to-r from-[#000052] to-[#B8860B] text-white p-4 sm:p-5 rounded-xl overflow-hidden"><div className="flex items-start gap-3"><Shield className="w-6 h-6 flex-shrink-0 mt-0.5" /><div className="min-w-0"><h3 className="font-bold mb-1 break-words">{t('agent.fundsVerified')}</h3><p className="text-sm opacity-90 leading-relaxed break-words">{t('agent.clawbackWarning')}</p></div></div></div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">{kpis.map((kpi, i) => { const Icon = kpi.icon; return <Tooltip key={i} content={kpi.detail}><div className={`${kpi.color} ${kpi.textColor} min-w-0 p-4 sm:p-5 rounded-xl border border-[#000052]/10 cursor-help`}><div className="flex items-start justify-between gap-3 mb-3"><h3 className="text-sm font-medium opacity-80 leading-tight break-words">{kpi.label}</h3><Icon className="w-5 h-5 opacity-80 flex-shrink-0" /></div><p className="text-2xl font-bold tabular-nums break-all">${kpi.value.toLocaleString()}</p></div></Tooltip>; })}</div>
-    <Tooltip content={<><div className="font-semibold mb-1">{t('agent.annualBonus')}</div><div>{t('tooltips.annualBonusAgent')}</div><div className="mt-1">{t('tooltips.annualBonusDescription')}</div><div className="mt-1">{t('agent.accumulated')}: <b>${annualBonus.accruedBonus.toLocaleString()}</b> {t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}.</div></>}>
-      <div className="bg-white p-4 sm:p-6 rounded-xl border border-[#000052]/10 cursor-help min-w-0"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3"><div className="min-w-0"><h2 className="text-lg font-bold text-[#000052] flex items-center gap-2 break-words"><Award className="w-5 h-5 text-[#B8860B] flex-shrink-0" />{t('agent.annualBonus')} · {annualBonus.year}</h2><p className="text-sm text-[#000052]/60 mt-1 leading-relaxed">{t('tooltips.annualBonusDescription')}</p></div><div className="text-left sm:text-right flex-shrink-0"><div className="text-xl font-bold text-[#000052] tabular-nums">${annualBonus.accruedBonus.toLocaleString()}</div><div className="text-xs text-[#000052]/60">{t('agent.maxBonus')} ${annualBonus.maxBonus.toLocaleString()}</div></div></div><div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${Math.min(annualBonus.progressPercent, 100)}%` }} /></div><div className="flex flex-col xs:flex-row sm:flex-row justify-between gap-1 mt-2 text-xs text-[#000052]/60"><span>{t('agent.planAchievement')}: {annualBonus.planAchievementPercent}%</span><span>{t('agent.accumulated')}: {annualBonus.progressPercent}%</span></div></div>
-    </Tooltip>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"><Tooltip content={<><div className="font-semibold mb-1">{t('agent.myActiveContracts')}</div><div>{t('tooltips.activeContractsAgent', { count: activeContractsCount, completed: completedContractsCount })}</div></>}><button onClick={() => navigate('/agent/contracts')} className="min-w-0 bg-white p-4 sm:p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left cursor-help"><div className="flex items-center gap-3 mb-2"><TrendingUp className="w-6 h-6 text-[#B8860B] flex-shrink-0" /><h3 className="font-bold text-[#000052] break-words">{t('agent.myActiveContracts')}</h3></div><p className="text-sm text-[#000052]/70 mt-1 break-words">{activeContractsCount} {t('agent.activeContracts')}</p></button></Tooltip><Tooltip content={<><div className="font-semibold mb-1">{t('payouts.title')}</div><div>{t('tooltips.payoutsAgent')}</div></>}><button onClick={() => navigate('/agent/payouts')} className="min-w-0 bg-white p-4 sm:p-5 rounded-xl border border-[#000052]/10 hover:shadow-md transition text-left cursor-help"><div className="flex items-center gap-3 mb-2"><DollarSign className="w-6 h-6 text-[#B8860B] flex-shrink-0" /><h3 className="font-bold text-[#000052] break-words">{t('payouts.title')}</h3></div><p className="text-sm text-[#000052]/70 break-words">{t('payouts.subtitle')}</p></button></Tooltip></div>
-  </div>;
+  return (
+    <div
+      className="
+        w-full min-w-0 max-w-full
+        overflow-x-hidden
+        p-3 sm:p-4 md:p-6
+        space-y-5 md:space-y-6
+      "
+    >
+      {/* HEADER */}
+      <div className="min-w-0">
+        <h1
+          className="
+            text-2xl sm:text-3xl
+            font-bold
+            text-[#000052]
+            break-words
+          "
+        >
+          {t('agent.dashboardTitle')}
+        </h1>
+
+        <p className="mt-1 text-sm text-[#000052]/70 break-words">
+          {agent.full_name}
+        </p>
+      </div>
+
+      {/* VERIFIED FUNDS */}
+      <div
+        className="
+          bg-gradient-to-r
+          from-[#000052] to-[#B8860B]
+          text-white
+          p-4 sm:p-5
+          rounded-xl
+          overflow-hidden
+        "
+      >
+        <div className="flex items-start gap-3">
+          <Shield className="h-6 w-6 shrink-0 mt-0.5" />
+
+          <div className="min-w-0">
+            <h3 className="font-bold mb-1 break-words">
+              {t('agent.fundsVerified')}
+            </h3>
+
+            <p className="text-sm opacity-90 leading-relaxed break-words">
+              {t('agent.clawbackWarning')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI */}
+      <div
+        className="
+          grid
+          grid-cols-1
+          sm:grid-cols-2
+          xl:grid-cols-3
+          gap-3 sm:gap-4
+        "
+      >
+        {kpis.map((kpi, index) => {
+          const Icon = kpi.icon;
+
+          return (
+            <Tooltip
+              key={index}
+              content={kpi.detail}
+            >
+              <div
+                className={`
+                  ${kpi.color}
+                  ${kpi.textColor}
+                  min-w-0
+                  w-full
+                  p-4 sm:p-5
+                  rounded-xl
+                  border border-[#000052]/10
+                  cursor-help
+                `}
+              >
+                <div
+                  className="
+                    flex
+                    items-start
+                    justify-between
+                    gap-3
+                    mb-3
+                  "
+                >
+                  <h3
+                    className="
+                      min-w-0
+                      text-sm
+                      font-medium
+                      opacity-80
+                      leading-tight
+                      break-words
+                    "
+                  >
+                    {kpi.label}
+                  </h3>
+
+                  <Icon className="h-5 w-5 shrink-0 opacity-80" />
+                </div>
+
+                <p
+                  className="
+                    text-2xl
+                    sm:text-[26px]
+                    font-bold
+                    tabular-nums
+                    break-all
+                  "
+                >
+                  ${kpi.value.toLocaleString()}
+                </p>
+              </div>
+            </Tooltip>
+          );
+        })}
+      </div>
+
+      {/* ANNUAL BONUS */}
+      <Tooltip
+        content={
+          <>
+            <div className="font-semibold mb-1">
+              {t('agent.annualBonus')}
+            </div>
+
+            <div>
+              {t('tooltips.annualBonusAgent')}
+            </div>
+
+            <div className="mt-1">
+              {t('tooltips.annualBonusDescription')}
+            </div>
+
+            <div className="mt-1">
+              {t('agent.accumulated')}:{' '}
+              <b>
+                ${annualBonus.accruedBonus.toLocaleString()}
+              </b>{' '}
+              {t('agent.maxBonus')}{' '}
+              ${annualBonus.maxBonus.toLocaleString()}.
+            </div>
+          </>
+        }
+      >
+        <div
+          className="
+            w-full min-w-0
+            bg-white
+            p-4 sm:p-6
+            rounded-xl
+            border border-[#000052]/10
+            cursor-help
+          "
+        >
+          <div
+            className="
+              flex
+              flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-3
+              mb-3
+            "
+          >
+            <div className="min-w-0">
+              <h2
+                className="
+                  text-lg
+                  font-bold
+                  text-[#000052]
+                  flex
+                  items-center
+                  gap-2
+                  break-words
+                "
+              >
+                <Award className="h-5 w-5 shrink-0 text-[#B8860B]" />
+
+                <span className="min-w-0 break-words">
+                  {t('agent.annualBonus')} · {annualBonus.year}
+                </span>
+              </h2>
+
+              <p
+                className="
+                  text-sm
+                  text-[#000052]/60
+                  mt-1
+                  leading-relaxed
+                  break-words
+                "
+              >
+                {t('tooltips.annualBonusDescription')}
+              </p>
+            </div>
+
+            <div
+              className="
+                shrink-0
+                text-left
+                sm:text-right
+              "
+            >
+              <div
+                className="
+                  text-xl
+                  font-bold
+                  text-[#000052]
+                  tabular-nums
+                  break-all
+                "
+              >
+                ${annualBonus.accruedBonus.toLocaleString()}
+              </div>
+
+              <div className="text-xs text-[#000052]/60">
+                {t('agent.maxBonus')}{' '}
+                ${annualBonus.maxBonus.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-3 bg-[#000052]/10 rounded-full overflow-hidden">
+            <div
+              className="
+                h-full
+                bg-[#B8860B]
+                rounded-full
+                transition-all
+                duration-500
+              "
+              style={{
+                width: `${Math.min(
+                  annualBonus.progressPercent,
+                  100
+                )}%`,
+              }}
+            />
+          </div>
+
+          <div
+            className="
+              flex
+              flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-1
+              mt-2
+              text-xs
+              text-[#000052]/60
+            "
+          >
+            <span>
+              {t('agent.planAchievement')}:{' '}
+              {annualBonus.planAchievementPercent}%
+            </span>
+
+            <span>
+              {t('agent.accumulated')}:{' '}
+              {annualBonus.progressPercent}%
+            </span>
+          </div>
+        </div>
+      </Tooltip>
+
+      {/* ACTION CARDS */}
+      <div
+        className="
+          grid
+          grid-cols-1
+          md:grid-cols-2
+          gap-3 sm:gap-4
+        "
+      >
+        <Tooltip
+          content={
+            <>
+              <div className="font-semibold mb-1">
+                {t('agent.myActiveContracts')}
+              </div>
+
+              <div>
+                {t('tooltips.activeContractsAgent', {
+                  count: activeContractsCount,
+                  completed: completedContractsCount,
+                })}
+              </div>
+            </>
+          }
+        >
+          <button
+            type="button"
+            onClick={() => navigate('/agent/contracts')}
+            className="
+              w-full
+              min-w-0
+              bg-white
+              p-4 sm:p-5
+              rounded-xl
+              border border-[#000052]/10
+              hover:shadow-md
+              transition
+              text-left
+              cursor-help
+            "
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="h-6 w-6 shrink-0 text-[#B8860B]" />
+
+              <h3 className="min-w-0 font-bold text-[#000052] break-words">
+                {t('agent.myActiveContracts')}
+              </h3>
+            </div>
+
+            <p className="text-sm text-[#000052]/70 break-words">
+              {activeContractsCount}{' '}
+              {t('agent.activeContracts')}
+            </p>
+          </button>
+        </Tooltip>
+
+        <Tooltip
+          content={
+            <>
+              <div className="font-semibold mb-1">
+                {t('payouts.title')}
+              </div>
+
+              <div>
+                {t('tooltips.payoutsAgent')}
+              </div>
+            </>
+          }
+        >
+          <button
+            type="button"
+            onClick={() => navigate('/agent/payouts')}
+            className="
+              w-full
+              min-w-0
+              bg-white
+              p-4 sm:p-5
+              rounded-xl
+              border border-[#000052]/10
+              hover:shadow-md
+              transition
+              text-left
+              cursor-help
+            "
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <DollarSign className="h-6 w-6 shrink-0 text-[#B8860B]" />
+
+              <h3 className="min-w-0 font-bold text-[#000052] break-words">
+                {t('payouts.title')}
+              </h3>
+            </div>
+
+            <p className="text-sm text-[#000052]/70 break-words">
+              {t('payouts.subtitle')}
+            </p>
+          </button>
+        </Tooltip>
+      </div>
+    </div>
+  );
 }
