@@ -34,8 +34,10 @@
   --shadow-button: 0 4px 16px rgba(0, 0, 82, 0.25);
 }
 
-* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-body { background-color: var(--surface); color: var(--ink); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; box-sizing: border-box; }
+html, body, #root { min-width: 0; }
+body { background-color: var(--surface); color: var(--ink); font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow-x: clip; }
+img, svg, video, canvas { max-width: 100%; }
 button, a, input, select, textarea { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
 button svg { flex-shrink: 0; }
 td, th, .tabular-nums { font-variant-numeric: tabular-nums; }
@@ -78,58 +80,18 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
 .card-hover:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
 .kpi-value { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
 .kpi-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
-.icon-box { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.icon-box-navy { background: var(--navy-soft); color: var(--navy); }
-.icon-box-gold { background: var(--gold-soft); color: var(--bronze-from); }
-.icon-box-green { background: var(--navy-soft); color: var(--navy); }
-.icon-box-red { background: var(--gold-soft); color: var(--bronze-from); }
-.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--navy); color: #ffffff; font-weight: 600; font-size: 15px; padding: 14px 24px; border-radius: var(--radius-button); box-shadow: var(--shadow-button); cursor: pointer; border: none; }
-.btn-primary:hover { background: var(--navy-light); transform: translateY(-1px); }
-.btn-primary:active { transform: translateY(0); }
-.btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #ffffff; color: var(--navy); font-weight: 600; font-size: 15px; padding: 14px 24px; border-radius: var(--radius-button); border: 1px solid var(--line); cursor: pointer; }
-.btn-secondary:hover { border-color: var(--navy); background: var(--navy-soft); }
-.input { width: 100%; border-radius: var(--radius-input); border: 1px solid var(--line); background: #ffffff; padding: 12px 16px; color: var(--ink); font-size: 15px; }
-.input::placeholder { color: var(--muted); }
-.badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
-.badge-green { background: var(--navy-soft); color: var(--navy); }
-.badge-navy { background: var(--navy-soft); color: var(--navy); }
-.badge-gold { background: var(--gold-soft); color: var(--bronze-from); }
-.badge-red { background: var(--gold-soft); color: var(--bronze-from); }
-.badge-amber { background: var(--gold-soft); color: var(--bronze-from); }
-.badge-gray { background: #eef2f6; color: #475569; }
-.table-clean { width: 100%; border-collapse: collapse; }
-.table-clean thead th { text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); padding: 14px 24px; }
-.table-clean tbody td { padding: 16px 24px; border-top: 1px solid var(--hairline); font-size: 14px; }
-.table-clean tbody tr { cursor: pointer; }
-.table-clean tbody tr:hover { background: rgba(0, 0, 82, 0.03); }
-.progress-track { height: 6px; border-radius: 999px; background: #EEF2F6; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--steel-from), var(--steel-to)); }
-.progress-fill-gold { background: linear-gradient(90deg, var(--bronze-from), var(--bronze-to)); }
 
-/* ============================================================
-   STATUS PALETTE OVERRIDE
-   Старые semantic Tailwind-классы больше не должны показывать
-   зелёный/красный/оранжевый. Статусы используют только InCORE:
-   Navy/Steel = активное/положительное состояние,
-   Gold/Bronze = внимание/ожидание/ошибка.
-   ============================================================ */
-.bg-green-50, .bg-green-100, .bg-emerald-50, .bg-emerald-100 { background-color: var(--navy-soft) !important; }
-.text-green-600, .text-green-700, .text-emerald-600, .text-emerald-700 { color: var(--navy) !important; }
-.bg-red-50, .bg-red-100, .bg-rose-50, .bg-rose-100 { background-color: var(--gold-soft) !important; }
-.text-red-500, .text-red-600, .text-red-700, .text-rose-500, .text-rose-600, .text-rose-700 { color: var(--bronze-from) !important; }
-.border-green-200, .border-emerald-200 { border-color: rgba(0, 0, 82, 0.15) !important; }
-.border-red-200, .border-rose-200 { border-color: rgba(184, 134, 11, 0.25) !important; }
-.bg-amber-50, .bg-yellow-50, .bg-orange-50 { background-color: var(--gold-soft) !important; }
-.text-amber-600, .text-amber-700, .text-yellow-600, .text-yellow-700, .text-orange-600, .text-orange-700 { color: var(--bronze-from) !important; }
-.border-amber-200, .border-yellow-200, .border-orange-200 { border-color: rgba(184, 134, 11, 0.25) !important; }
-.bg-green-500, .bg-emerald-500 { background-color: var(--steel-to) !important; }
-.text-green-500, .text-emerald-500 { color: var(--steel-to) !important; }
-.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600 { background-color: var(--bronze-to) !important; color: #ffffff !important; }
-.bg-success, .text-success { background-color: var(--navy) !important; color: var(--navy) !important; }
-.bg-error, .text-error { background-color: var(--bronze-from) !important; color: var(--bronze-from) !important; }
+/* Responsive foundations: components keep their desktop structure unless a mobile rule is explicitly added. */
+.min-w-0 { min-width: 0; }
+.break-words { overflow-wrap: anywhere; word-break: normal; }
 
-/* HH Market inline styles: the market-gap chart uses React inline #dc2626,
-   which cannot be overridden by the Tailwind utility remapping above. */
-[style*="#dc2626"], [style*="rgb(220, 38, 38)"], [style*="rgb(220,38,38)"] { color: var(--navy-light) !important; }
-[style*="background: rgb(220, 38, 38)"], [style*="background: rgb(220,38,38)"], [style*="background:#dc2626"], [style*="background: #dc2626"] { background: var(--navy-light) !important; }
+@media (max-width: 767px) {
+  .card { padding: 18px; border-radius: 20px; }
+  .kpi-value { font-size: 28px; }
+  table { max-width: 100%; }
+  th, td { white-space: normal; overflow-wrap: anywhere; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .card { padding: 20px; }
+}
