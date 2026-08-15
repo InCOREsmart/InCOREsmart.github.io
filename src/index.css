@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 /* ============================================================
-   InCORE Design System — v5
+   InCORE Design System — v6
+   Responsive-first
    ============================================================ */
 
 :root {
@@ -11,51 +12,85 @@
   --navy-dark: #000038;
   --navy-light: #14147a;
   --navy-soft: #f0f0fa;
-  --gold: #B8860B;
-  --gold-light: #D4A017;
+
+  --gold: #b8860b;
+  --gold-light: #d4a017;
   --gold-soft: #faf3e0;
-  --bronze-from: #8A6508;
-  --bronze-to: #B8860B;
-  --steel-from: #1E3A5F;
-  --steel-to: #46618C;
-  --surface: #F4F5F7;
-  --ink: #0F172A;
-  --muted: #64748B;
-  --line: #E2E8F0;
-  --hairline: #F1F5F9;
+
+  --bronze-from: #8a6508;
+  --bronze-to: #b8860b;
+
+  --steel-from: #1e3a5f;
+  --steel-to: #46618c;
+
+  --surface: #f4f5f7;
+  --ink: #0f172a;
+  --muted: #64748b;
+
+  --line: #e2e8f0;
+  --hairline: #f1f5f9;
+
   --radius-card: 24px;
   --radius-button: 14px;
   --radius-input: 12px;
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.07);
-  --shadow-card-hover: 0 16px 48px rgba(15, 23, 42, 0.12);
-  --shadow-button: 0 4px 16px rgba(0, 0, 82, 0.25);
+
+  --shadow-card:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.07);
+
+  --shadow-card-hover:
+    0 16px 48px rgba(15, 23, 42, 0.12);
+
+  --shadow-button:
+    0 4px 16px rgba(0, 0, 82, 0.25);
 }
 
 /* ============================================================
    BASE
    ============================================================ */
 
-* {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+html {
   width: 100%;
   max-width: 100%;
   min-height: 100%;
-  margin: 0;
-  padding: 0;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+
   background-color: var(--surface);
   color: var(--ink);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 img,
@@ -65,15 +100,22 @@ canvas {
   max-width: 100%;
 }
 
+img {
+  height: auto;
+}
+
 button,
 a,
 input,
 select,
 textarea {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 100%;
+  transition:
+    all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button {
+  min-width: 0;
   border-radius: var(--radius-button);
 }
 
@@ -81,11 +123,10 @@ button svg {
   flex-shrink: 0;
 }
 
-button,
 input,
 select,
 textarea {
-  max-width: 100%;
+  min-width: 0;
 }
 
 td,
@@ -101,6 +142,28 @@ textarea:focus {
   border-color: var(--navy);
   box-shadow: 0 0 0 4px rgba(0, 0, 82, 0.1);
 }
+
+a {
+  max-width: 100%;
+}
+
+p,
+span,
+label,
+td,
+th,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -158,25 +221,30 @@ div.animate-spin.rounded-full {
   animation: shimmer 1.4s linear infinite !important;
   border: none !important;
   border-radius: 10px !important;
+
   width: 140px !important;
   height: 12px !important;
+
   background: linear-gradient(
     90deg,
-    #EEF2F6 25%,
-    #DDE3EA 50%,
-    #EEF2F6 75%
+    #eef2f6 25%,
+    #dde3ea 50%,
+    #eef2f6 75%
   );
+
   background-size: 200% 100%;
 }
 
 .skeleton {
   border-radius: 10px;
+
   background: linear-gradient(
     90deg,
-    #EEF2F6 25%,
-    #DDE3EA 50%,
-    #EEF2F6 75%
+    #eef2f6 25%,
+    #dde3ea 50%,
+    #eef2f6 75%
   );
+
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -190,6 +258,37 @@ div.animate-spin.rounded-full {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================================
+   LAYOUT SAFETY
+   ============================================================ */
+
+.flex,
+.grid {
+  min-width: 0;
+}
+
+.flex > *,
+.grid > * {
+  min-width: 0;
+}
+
+.overflow-x-auto,
+.overflow-x-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  max-width: 100%;
+}
+
+pre,
+code {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* ============================================================
@@ -214,7 +313,7 @@ div.animate-spin.rounded-full {
   box-shadow: var(--shadow-card);
 }
 
-[class*="border-[#000052]"] {
+[class*='border-[#000052]'] {
   border-color: var(--hairline) !important;
 }
 
@@ -226,18 +325,18 @@ div.animate-spin.rounded-full {
   border-color: var(--line) !important;
 }
 
-button[class*="bg-[#B8860B]"] {
+button[class*='bg-[#B8860B]'] {
   background-color: var(--navy) !important;
   color: #ffffff !important;
   box-shadow: var(--shadow-button);
 }
 
-button[class*="bg-[#B8860B]"]:hover {
+button[class*='bg-[#B8860B]']:hover {
   background-color: var(--navy-light) !important;
   transform: translateY(-1px);
 }
 
-button[class*="bg-[#B8860B]"]:active {
+button[class*='bg-[#B8860B]']:active {
   transform: translateY(0);
 }
 
@@ -274,18 +373,16 @@ tbody tr:hover {
 }
 
 /*
- * IMPORTANT:
- * Tailwind's h-2.5 selector requires one CSS escape.
- * The old h-2\\.5 produced a malformed selector after Vite
- * minification and caused:
+ * НЕ добавляем .h-2.5 здесь.
+ *
+ * Tailwind сам генерирует корректный utility-класс.
+ * Предыдущий ручной override вызывал warning:
  * Unexpected ".5" [css-syntax-error]
+ *
+ * Меньше магии. Меньше боли.
  */
-.h-2,
-.h-2\.5 {
-  height: 6px !important;
-}
 
-[class*="from-[#000052]"] {
+[class*='from-[#000052]'] {
   background-image: linear-gradient(
     90deg,
     var(--steel-from),
@@ -293,7 +390,7 @@ tbody tr:hover {
   ) !important;
 }
 
-[class*="from-[#B8860B]"] {
+[class*='from-[#B8860B]'] {
   background-image: linear-gradient(
     90deg,
     var(--bronze-from),
@@ -306,11 +403,18 @@ tbody tr:hover {
    ============================================================ */
 
 .card {
+  width: 100%;
+  min-width: 0;
+
   background: #ffffff;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+
   padding: 24px;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .card-hover:hover {
@@ -327,19 +431,21 @@ tbody tr:hover {
 }
 
 .kpi-label {
-  font-size: 13px;
-  color: var(--muted);
   margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .icon-box {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+
+  border-radius: 14px;
 }
 
 .icon-box-navy {
@@ -363,23 +469,34 @@ tbody tr:hover {
 }
 
 /* ============================================================
-   BUTTONS / INPUTS
+   BUTTONS
    ============================================================ */
 
-.btn-primary {
+.btn-primary,
+.btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+
+  min-width: 0;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.btn-primary {
   background: var(--navy);
   color: #ffffff;
-  font-weight: 600;
-  font-size: 15px;
+
   padding: 14px 24px;
-  border-radius: var(--radius-button);
-  box-shadow: var(--shadow-button);
-  cursor: pointer;
+
   border: none;
+  border-radius: var(--radius-button);
+
+  box-shadow: var(--shadow-button);
 }
 
 .btn-primary:hover {
@@ -392,18 +509,13 @@ tbody tr:hover {
 }
 
 .btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
   background: #ffffff;
   color: var(--navy);
-  font-weight: 600;
-  font-size: 15px;
+
   padding: 14px 24px;
-  border-radius: var(--radius-button);
+
   border: 1px solid var(--line);
-  cursor: pointer;
+  border-radius: var(--radius-button);
 }
 
 .btn-secondary:hover {
@@ -411,14 +523,22 @@ tbody tr:hover {
   background: var(--navy-soft);
 }
 
+/* ============================================================
+   INPUTS
+   ============================================================ */
+
 .input {
   width: 100%;
   min-width: 0;
+
   border-radius: var(--radius-input);
   border: 1px solid var(--line);
+
   background: #ffffff;
-  padding: 12px 16px;
   color: var(--ink);
+
+  padding: 12px 16px;
+
   font-size: 15px;
 }
 
@@ -434,18 +554,29 @@ tbody tr:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+
+  max-width: 100%;
+
   border-radius: 999px;
+
   padding: 6px 12px;
+
   font-size: 12px;
   font-weight: 600;
+
   white-space: nowrap;
 }
 
 .badge::before {
   content: '';
+
   width: 6px;
   height: 6px;
+
+  flex-shrink: 0;
+
   border-radius: 999px;
+
   background: currentColor;
 }
 
@@ -477,18 +608,23 @@ tbody tr:hover {
 }
 
 .table-clean thead th {
+  padding: 14px 24px;
+
   text-align: left;
+
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.07em;
+
   color: var(--muted);
-  padding: 14px 24px;
 }
 
 .table-clean tbody td {
   padding: 16px 24px;
+
   border-top: 1px solid var(--hairline);
+
   font-size: 14px;
 }
 
@@ -501,15 +637,21 @@ tbody tr:hover {
 }
 
 .progress-track {
+  width: 100%;
   height: 6px;
+
   border-radius: 999px;
-  background: #EEF2F6;
+
+  background: #eef2f6;
+
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
+
   border-radius: 999px;
+
   background: linear-gradient(
     90deg,
     var(--steel-from),
@@ -518,6 +660,10 @@ tbody tr:hover {
 }
 
 .progress-fill-gold {
+  height: 100%;
+
+  border-radius: 999px;
+
   background: linear-gradient(
     90deg,
     var(--bronze-from),
@@ -608,15 +754,19 @@ tbody tr:hover {
   color: #ffffff !important;
 }
 
-.bg-success,
-.text-success {
+.bg-success {
   background-color: var(--navy) !important;
+}
+
+.text-success {
   color: var(--navy) !important;
 }
 
-.bg-error,
-.text-error {
+.bg-error {
   background-color: var(--bronze-from) !important;
+}
+
+.text-error {
   color: var(--bronze-from) !important;
 }
 
@@ -624,47 +774,37 @@ tbody tr:hover {
    HH MARKET INLINE COLORS
    ============================================================ */
 
-[style*="#dc2626"],
-[style*="rgb(220, 38, 38)"],
-[style*="rgb(220,38,38)"] {
+[style*='#dc2626'],
+[style*='rgb(220, 38, 38)'],
+[style*='rgb(220,38,38)'] {
   color: var(--navy-light) !important;
 }
 
-[style*="background: rgb(220, 38, 38)"],
-[style*="background: rgb(220,38,38)"],
-[style*="background:#dc2626"],
-[style*="background: #dc2626"] {
+[style*='background: rgb(220, 38, 38)'],
+[style*='background: rgb(220,38,38)'],
+[style*='background:#dc2626'],
+[style*='background: #dc2626'] {
   background: var(--navy-light) !important;
 }
 
 /* ============================================================
-   RESPONSIVE SAFETY
+   RESPONSIVE CONTAINERS
    ============================================================ */
 
-.overflow-x-auto {
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.overflow-x-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-table {
-  max-width: 100%;
-}
-
-.flex,
-.grid {
+main,
+main > *,
+main > div {
   min-width: 0;
+  max-width: 100%;
 }
 
-.flex > *,
-.grid > * {
+section,
+article,
+aside,
+header,
+footer {
   min-width: 0;
+  max-width: 100%;
 }
 
 /* ============================================================
@@ -672,6 +812,14 @@ table {
    ============================================================ */
 
 @media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     font-size: 14px;
   }
@@ -692,6 +840,7 @@ table {
   .btn-primary,
   .btn-secondary {
     width: 100%;
+    min-height: 44px;
     padding: 12px 16px;
   }
 
@@ -711,15 +860,19 @@ table {
   select,
   textarea {
     min-width: 0;
+    max-width: 100%;
   }
 
   button {
     min-width: 0;
+    max-width: 100%;
   }
 
   /*
-   * Prevent long words, emails and IDs from expanding cards.
+   * Длинные email, ID, названия ролей и названия компаний
+   * больше не растягивают страницу.
    */
+
   p,
   span,
   div,
@@ -736,26 +889,49 @@ table {
   }
 
   /*
-   * Keep horizontal scrolling inside its container rather than
-   * allowing the entire page to become wider than the screen.
+   * Таблица скроллится внутри своего контейнера.
    */
-  .overflow-x-auto table {
+
+  .overflow-x-auto table,
+  .overflow-x-scroll table {
     max-width: none;
   }
 
   /*
-   * Form grids become single-column on narrow screens.
+   * Динамические формы.
    */
+
   .grid-cols-\[1fr_1fr_40px\] {
     grid-template-columns: 1fr !important;
   }
 
   /*
-   * Wide fixed-width elements should never force viewport overflow.
+   * Desktop chart width must not force mobile viewport.
    */
+
   .min-w-\[1050px\] {
     min-width: 0 !important;
     width: 100%;
+  }
+
+  /*
+   * Слишком широкие inline/grid элементы.
+   */
+
+  [class*='min-w-['] {
+    max-width: 100%;
+  }
+
+  /*
+   * Навигационные группы и кнопки.
+   */
+
+  nav {
+    max-width: 100%;
+  }
+
+  nav > * {
+    min-width: 0;
   }
 }
 
@@ -786,8 +962,45 @@ table {
 
   .btn-primary,
   .btn-secondary {
+    min-height: 42px;
     font-size: 14px;
     padding: 11px 14px;
+  }
+
+  .table-clean {
+    min-width: 620px;
+  }
+}
+
+/* ============================================================
+   VERY SMALL DEVICES
+   ============================================================ */
+
+@media (max-width: 360px) {
+  .card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .kpi-value {
+    font-size: 23px;
+  }
+
+  .icon-box {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .badge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    font-size: 13px;
+    padding: 10px 12px;
   }
 }
 
@@ -798,5 +1011,54 @@ table {
 @media (min-width: 768px) and (max-width: 1023px) {
   .card {
     padding: 20px;
+  }
+
+  .kpi-value {
+    font-size: 30px;
+  }
+
+  .table-clean thead th {
+    padding: 12px 18px;
+  }
+
+  .table-clean tbody td {
+    padding: 14px 18px;
+  }
+}
+
+/* ============================================================
+   DESKTOP
+   ============================================================ */
+
+@media (min-width: 1024px) {
+  .card {
+    padding: 24px;
+  }
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+
+@media print {
+  html,
+  body,
+  #root {
+    width: 100%;
+    overflow: visible !important;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid var(--line);
+  }
+
+  button {
+    box-shadow: none !important;
+    transform: none !important;
   }
 }
