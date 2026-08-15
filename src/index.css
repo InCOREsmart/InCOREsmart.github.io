@@ -72,7 +72,6 @@ thead th { color: var(--muted) !important; font-size: 11px !important; font-weig
 tbody tr { border-bottom: 1px solid var(--hairline); transition: background 0.15s ease; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
-/* Tailwind h-2.5 must be escaped as h-2\\.5 in the source CSS. */
 .h-2, .h-2\\.5 { height: 6px !important; }
 [class*="from-[#000052]"] { background-image: linear-gradient(90deg, var(--steel-from), var(--steel-to)) !important; }
 [class*="from-[#B8860B]"] { background-image: linear-gradient(90deg, var(--bronze-from), var(--bronze-to)) !important; }
@@ -98,6 +97,23 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
   [class*="grid-cols-[1fr_1fr_40px]"] > div:nth-child(2) { width: 100%; text-align: center; }
   [class*="grid-cols-[1fr_1fr_40px]"] input { min-width: 0; }
   [class*="min-w-[1050px]"] { min-width: 0 !important; }
+
+  /* CEO Dashboard: keep financial cards readable without horizontal scrolling. */
+  main .p-4.md\\:p-6.space-y-6 { min-width: 0; }
+  main .p-4.md\\:p-6.space-y-6 > div { min-width: 0; }
+  main .p-4.md\\:p-6.space-y-6 h1,
+  main .p-4.md\\:p-6.space-y-6 h2,
+  main .p-4.md\\:p-6.space-y-6 h3,
+  main .p-4.md\\:p-6.space-y-6 p { overflow-wrap: anywhere; }
+  main .p-4.md\\:p-6.space-y-6 > .grid.grid-cols-2 { grid-template-columns: minmax(0, 1fr) !important; }
+  main .p-4.md\\:p-6.space-y-6 > .grid > div { min-width: 0; }
+  main .p-4.md\\:p-6.space-y-6 .text-2xl { font-size: 1.5rem; line-height: 1.15; }
+  main .p-4.md\\:p-6.space-y-6 .text-right { text-align: left; }
+  main .p-4.md\\:p-6.space-y-6 [class*="overflow-x-auto"] { overflow-x: visible !important; }
+  main .p-4.md\\:p-6.space-y-6 [class*="min-w-"] { min-width: 0 !important; }
+  main .p-4.md\\:p-6.space-y-6 table { width: 100%; table-layout: fixed; }
+  main .p-4.md\\:p-6.space-y-6 td,
+  main .p-4.md\\:p-6.space-y-6 th { overflow-wrap: anywhere; word-break: break-word; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
