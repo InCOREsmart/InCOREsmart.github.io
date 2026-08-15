@@ -114,6 +114,18 @@ tbody tr:hover { background: rgba(0, 0, 82, 0.02); }
   main .p-4.md\\:p-6.space-y-6 table { width: 100%; table-layout: fixed; }
   main .p-4.md\\:p-6.space-y-6 td,
   main .p-4.md\\:p-6.space-y-6 th { overflow-wrap: anywhere; word-break: break-word; }
+
+  /* CEO: agents, performance and arbitration must fit the viewport. */
+  main .p-4.md\\:p-6.space-y-6 > * { max-width: 100%; overflow-wrap: anywhere; }
+  main .p-4.md\\:p-6.space-y-6 .grid { min-width: 0; }
+  main .p-4.md\\:p-6.space-y-6 .grid > * { min-width: 0; max-width: 100%; }
+  main .p-4.md\\:p-6.space-y-6 .flex { min-width: 0; }
+  main .p-4.md\\:p-6.space-y-6 .flex > * { min-width: 0; max-width: 100%; }
+  main .p-4.md\\:p-6.space-y-6 .overflow-x-auto { overflow-x: hidden !important; }
+  main .p-4.md\\:p-6.space-y-6 [class*="whitespace-nowrap"] { white-space: normal !important; }
+  main .p-4.md\\:p-6.space-y-6 [class*="truncate"] { overflow: visible !important; text-overflow: clip !important; white-space: normal !important; }
+  main .p-4.md\\:p-6.space-y-6 .flex.items-center.justify-between { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  main .p-4.md\\:p-6.space-y-6 .flex.items-center.justify-between > * { flex: 1 1 auto; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
