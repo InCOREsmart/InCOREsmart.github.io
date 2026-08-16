@@ -12,7 +12,7 @@ import { RoleSkillsProgressPanel } from '../../components/role/RoleSkillsProgres
 import { SmartContractExecutionPanel } from '../../components/contract/SmartContractExecutionPanel';
 import { supabase } from '../../lib/supabase';
 import { getCompletedDemoContractById } from '../../lib/demoCompletedContracts';
-import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials, getContractAccountingSnapshot } from '../../lib/contractFinance';
+import { getActualContractRevenue, getContractAccountingSnapshot } from '../../lib/contractFinance';
 
 export function CEOContractDetailPage() {
   const { t, i18n } = useTranslation();
@@ -37,24 +37,12 @@ export function CEOContractDetailPage() {
           const { DEMO_AGENTS } = await import('../../lib/demoData');
           const agent = DEMO_AGENTS.find(item => item.contracts.some(contract => contract.id === id)) || DEMO_AGENTS.find(item => id.includes(item.id));
           const actualRevenue = getActualContractRevenue(demo);
-          const breakdown = getActualContractRevenueBreakdown(demo);
-          const finance = calculateContractFinancials(breakdown);
           const accounting = getContractAccountingSnapshot(demo);
-          const amounts: Record<string, number> = {
-            new_sales_property: finance.bonusProperty,
-            new_sales_casco: finance.bonusCasco,
-            new_sales_dms: finance.bonusDms,
-            renewal: finance.bonusRenewal,
-            cross_sell: finance.bonusCrossSell,
-            plan_bonus: finance.bonusPlan,
-            retention: finance.bonusRetention,
-            annual: finance.bonusAnnual,
-          };
-          const streams = (demo.payout_streams || []).map(stream => ({ ...stream, amount: amounts[stream.stream_key] ?? stream.amount }));
+          const streams = demo.payout_streams || [];
           const escrowStreams = getEscrowStreams(streams);
-          const escrowAmount = escrowStreams.reduce((sum, stream) => sum + Number(stream.amount || 0), 0);
-          const totalPaid = getPaidAmount(escrowStreams);
-          const totalLocked = getLockedAmount(escrowStreams);
+          const escrowAmount = accounting.escrow;
+          const totalPaid = accounting.paid;
+          const totalLocked = accounting.locked;
           const escrowEvents = (demo.escrow_events || []).map(event => ({
             ...event,
             amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount,
