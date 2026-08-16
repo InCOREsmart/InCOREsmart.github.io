@@ -12,7 +12,7 @@ import { RoleSkillsProgressPanel } from '../../components/role/RoleSkillsProgres
 import { SmartContractExecutionPanel } from '../../components/contract/SmartContractExecutionPanel';
 import { supabase } from '../../lib/supabase';
 import { getCompletedDemoContractById } from '../../lib/demoCompletedContracts';
-import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials } from '../../lib/contractFinance';
+import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials, getContractAccountingSnapshot } from '../../lib/contractFinance';
 
 export function CEOContractDetailPage() {
   const { t, i18n } = useTranslation();
@@ -39,6 +39,7 @@ export function CEOContractDetailPage() {
           const actualRevenue = getActualContractRevenue(demo);
           const breakdown = getActualContractRevenueBreakdown(demo);
           const finance = calculateContractFinancials(breakdown);
+          const accounting = getContractAccountingSnapshot(demo);
           const amounts: Record<string, number> = {
             new_sales_property: finance.bonusProperty,
             new_sales_casco: finance.bonusCasco,
@@ -59,12 +60,15 @@ export function CEOContractDetailPage() {
             amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount,
             metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount, actual_contract_revenue: actualRevenue } : event.metadata,
           }));
-          setData({ contract: demo, streams, transactions: [], escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee }, isDemo: true });
+          setData({ contract: demo, streams, transactions: [], escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue: accounting.revenue, totalEscrow: accounting.escrow, totalLocked: accounting.locked, totalUnlocked: accounting.paid, companyProfit: accounting.companyProfit, platformFee: accounting.commission }, isDemo: true });
           return;
         }
         if (!user) return;
         const real = await getContractFullData(id);
-        if (real) setData({ ...real, isDemo: false });
+        if (real) {
+          const accounting = getContractAccountingSnapshot(real.contract || real);
+          setData({ ...real, financials: { ...(real.financials || {}), actualRevenue: accounting.revenue, totalEscrow: accounting.escrow, totalLocked: accounting.locked, totalUnlocked: accounting.paid, companyProfit: accounting.companyProfit, platformFee: accounting.commission }, isDemo: false });
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -77,7 +81,10 @@ export function CEOContractDetailPage() {
   const refreshReal = async () => {
     if (!id || !user) return;
     const real = await getContractFullData(id);
-    if (real) setData({ ...real, isDemo: false });
+    if (real) {
+      const accounting = getContractAccountingSnapshot(real.contract || real);
+      setData({ ...real, financials: { ...(real.financials || {}), actualRevenue: accounting.revenue, totalEscrow: accounting.escrow, totalLocked: accounting.locked, totalUnlocked: accounting.paid, companyProfit: accounting.companyProfit, platformFee: accounting.commission }, isDemo: false });
+    }
   };
 
   const handleFundEscrow = async () => {
@@ -144,8 +151,8 @@ export function CEOContractDetailPage() {
   const totalEscrow = Number(financials?.totalEscrow ?? getEscrowAmount(contract, streamList));
   const totalPaid = Number(financials?.totalUnlocked ?? getPaidAmount(streamList));
   const totalLocked = Number(financials?.totalLocked ?? getLockedAmount(streamList));
-  const companyProfit = Number(financials?.companyProfit ?? actualRevenue - totalEscrow);
   const platformFee = Number(financials?.platformFee ?? Math.round(totalEscrow * 0.12));
+  const companyProfit = Number(financials?.companyProfit ?? (actualRevenue - totalEscrow - platformFee));
   const escrowFunded = contract.escrow_status === 'FUNDED';
   const kpiValues = [contract.kpi_calls ? Number(contract.actual_calls || 0) / Number(contract.kpi_calls) : 0, contract.kpi_meetings ? Number(contract.actual_meetings || 0) / Number(contract.kpi_meetings) : 0, contract.kpi_proposals ? Number(contract.actual_proposals || 0) / Number(contract.kpi_proposals) : 0, contract.target_clients ? Number(contract.actual_clients || 0) / Number(contract.target_clients) : 0];
   const kpi = Math.round(kpiValues.reduce((a: number, b: number) => a + b, 0) / kpiValues.length * 100);
