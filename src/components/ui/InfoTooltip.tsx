@@ -24,18 +24,35 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     const tooltipWidth = Math.min(288, window.innerWidth - 24);
-    const left = Math.max(12, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 12));
+    const left = Math.max(
+      12,
+      Math.min(
+        rect.left + rect.width / 2 - tooltipWidth / 2,
+        window.innerWidth - tooltipWidth - 12,
+      ),
+    );
     setPosition({ top: rect.bottom + 8, left });
   };
 
-  const show = () => { clearCloseTimer(); updatePosition(); setOpen(true); };
-  const scheduleClose = () => { clearCloseTimer(); closeTimerRef.current = window.setTimeout(() => setOpen(false), 120); };
+  const show = () => {
+    clearCloseTimer();
+    updatePosition();
+    setOpen(true);
+  };
+
+  const scheduleClose = () => {
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => setOpen(false), 120);
+  };
 
   useEffect(() => {
     if (!open) return;
+
     const handleViewportChange = () => updatePosition();
+
     window.addEventListener('resize', handleViewportChange);
     window.addEventListener('scroll', handleViewportChange, true);
+
     return () => {
       window.removeEventListener('resize', handleViewportChange);
       window.removeEventListener('scroll', handleViewportChange, true);
@@ -44,28 +61,45 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
 
   useEffect(() => () => clearCloseTimer(), []);
 
-  const language = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0] as keyof typeof financialTooltips;
+  const language = (i18n.resolvedLanguage || i18n.language || 'ru')
+    .split('-')[0]
+    .toLowerCase() as keyof typeof financialTooltips;
 
   const translateLegacyTooltip = (content: ReactNode): ReactNode => {
     if (typeof content !== 'string') return content;
 
-    const dictionary = financialTooltips[language] || financialTooltips.ru;
-    const exactTranslation = dictionary[content];
-    if (exactTranslation) return exactTranslation;
-
     const normalized = content.replace(/\s+/g, ' ').trim();
+
+    // Never assume that every locale has a dictionary. The Russian locale is
+    // intentionally allowed to fall back to the original text, while unknown
+    // locales fall back to English and then Russian. This prevents the tooltip
+    // itself from crashing the entire Financial Core page.
+    const dictionary =
+      financialTooltips[language] ??
+      financialTooltips.en ??
+      financialTooltips.ru ??
+      {};
+
+    const exactTranslation =
+      dictionary[content] ??
+      dictionary[normalized];
+
+    if (exactTranslation) return exactTranslation;
 
     // Correct key for the annual-bonus tooltip used by CEODashboard.
     // The dictionary contains an older typo ("Иллный бонус"), so keep
     // backward compatibility here instead of changing financial logic.
-    if (normalized === 'Сумма payout по активным контрактам. Годовой бонус в неё не включается.') {
+    if (
+      normalized ===
+      'Сумма payout по активным контрактам. Годовой бонус в неё не включается.'
+    ) {
       const translations: Record<string, string> = {
         ru: 'Сумма payout по активным контрактам. Годовой бонус в неё не включается.',
         en: 'Payout amount for active contracts. The annual bonus is not included.',
         kk: 'Белсенді келісімшарттар бойынша payout сомасы. Жылдық бонус бұл сомаға кірмейді.',
         az: 'Aktiv müqavilələr üzrə payout məbləği. İllik bonus bu məbləğə daxil edilmir.',
       };
-      return translations[language] || translations.ru;
+      return translations[language] ?? translations.en ?? translations.ru;
     }
 
     // Some older tooltip strings were partially translated before reaching this component.
@@ -73,7 +107,8 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
     if (
       normalized.includes('LOCKED') &&
       (normalized.includes('со статусом') || normalized.includes('payment streams')) &&
-      (normalized.includes('Эти средства ещё не доступны агенту') || normalized.includes('не доступны агенту'))
+      (normalized.includes('Эти средства ещё не доступны агенту') ||
+        normalized.includes('не доступны агенту'))
     ) {
       const translations: Record<string, string> = {
         ru: 'Сумма потоков выплат со статусом LOCKED по активным контрактам. Эти средства ещё не доступны агенту.',
@@ -81,9 +116,11 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
         kk: 'Белсенді келісімшарттар бойынша LOCKED мәртебесіндегі төлем ағындарының сомасы. Бұл қаражат әлі агентке қолжетімді емес.',
         az: 'Aktiv müqavilələr üzrə LOCKED statusunda olan ödəniş axınlarının məbləği. Bu vəsaitlər hələ agent üçün əlçatan deyil.',
       };
-      return translations[language] || translations.ru;
+      return translations[language] ?? translations.en ?? translations.ru;
     }
 
+    // If a new tooltip is not yet present in the locale dictionaries,
+    // display the source text instead of throwing an exception.
     return content;
   };
 
@@ -112,18 +149,20 @@ export function InfoTooltip({ children }: InfoTooltipProps) {
           <Info className="w-3.5 h-3.5" />
         </button>
       </span>
-      {open && createPortal(
-        <span
-          role="tooltip"
-          onMouseEnter={clearCloseTimer}
-          onMouseLeave={scheduleClose}
-          className="fixed z-[99999] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-[#000052] px-3 py-2 text-left text-xs leading-relaxed text-white shadow-2xl"
-          style={{ top: position.top, left: position.left }}
-        >
-          {translateLegacyTooltip(children)}
-        </span>,
-        document.body
-      )}
+
+      {open &&
+        createPortal(
+          <span
+            role="tooltip"
+            onMouseEnter={clearCloseTimer}
+            onMouseLeave={scheduleClose}
+            className="fixed z-[99999] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-[#000052] px-3 py-2 text-left text-xs leading-relaxed text-white shadow-2xl"
+            style={{ top: position.top, left: position.left }}
+          >
+            {translateLegacyTooltip(children)}
+          </span>,
+          document.body,
+        )}
     </>
   );
 }
