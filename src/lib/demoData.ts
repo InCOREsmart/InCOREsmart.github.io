@@ -1,3 +1,5 @@
+import { calculateContractFinancialsFromPayoutStreams } from './contractFinance';
+
 export interface DemoAgent {
   id: string;
   name: string;
@@ -88,7 +90,6 @@ export interface DemoContract {
 }
 
 const AS_OF_DATE = new Date('2026-08-10T23:59:59Z');
-const PLATFORM_FEE_PERCENT = 12;
 const SALES_PLAN = { clients: 10, averageCheck: 375, revenue: 18750, calls: 100, meetings: 50, proposals: 40 };
 
 const STREAM_CONFIG = [
@@ -101,10 +102,6 @@ const STREAM_CONFIG = [
   { key: 'retention' as const, title: 'Удержание 90 дней', percent: 0, amount: 200, condition: 'Клиент активен более 90 дней' },
   { key: 'annual' as const, title: 'Годовой бонус', percent: 0, amount: 7000, condition: 'Годовой KPI подтверждён в CRM' },
 ];
-
-const ESCROW_PER_CONTRACT = 4701;
-const PLATFORM_FEE_PER_CONTRACT = 564;
-const COMPANY_PROFIT_PER_CONTRACT = 14049;
 
 function roundMoney(value: number): number {
   return Math.round(value);
@@ -220,6 +217,7 @@ function generateContract(agentId: string, startDate: string, performance: numbe
   const payoutStreams = buildPayoutStreams(id, startDate, performance);
   const totalPaid = payoutStreams.filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
   const totalLocked = payoutStreams.filter(stream => stream.status === 'LOCKED' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
+  const finance = calculateContractFinancialsFromPayoutStreams(SALES_PLAN.revenue, payoutStreams);
 
   const contract: DemoContract = {
     id,
@@ -227,12 +225,12 @@ function generateContract(agentId: string, startDate: string, performance: numbe
     description: `Выполнить план продаж: ${SALES_PLAN.clients} клиентов, средний чек $${SALES_PLAN.averageCheck}, ${SALES_PLAN.calls} звонков, ${SALES_PLAN.meetings} встреч, ${SALES_PLAN.proposals} КП.`,
     revenue: SALES_PLAN.revenue,
     planned_revenue: SALES_PLAN.revenue,
-    escrow_amount: ESCROW_PER_CONTRACT,
+    escrow_amount: finance.totalEscrow,
     escrow_status: 'FUNDED',
-    agent_payouts_total: ESCROW_PER_CONTRACT,
-    company_profit: COMPANY_PROFIT_PER_CONTRACT,
-    platform_fee: PLATFORM_FEE_PER_CONTRACT,
-    roi_percentage: 75,
+    agent_payouts_total: finance.agentPayout,
+    company_profit: finance.companyProfit,
+    platform_fee: finance.platformFee,
+    roi_percentage: finance.roi,
     total_paid: totalPaid,
     total_locked: totalLocked,
     status: 'ACTIVE',
