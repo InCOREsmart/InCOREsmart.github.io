@@ -118,6 +118,36 @@ export function calculateContractFinancials(
   };
 }
 
+/**
+ * Calculates financials from persisted payout streams.
+ * This is used for legacy/demo contracts whose payout streams are already
+ * the canonical source for escrow. The annual stream is deliberately
+ * excluded from current escrow and payout.
+ */
+export function calculateContractFinancialsFromPayoutStreams(
+  revenue: number,
+  streams: any[] = [],
+): Pick<ContractFinancials, 'totalContractRevenue' | 'totalEscrow' | 'platformFee' | 'agentPayout' | 'companyProfit' | 'roi'> {
+  const totalContractRevenue = money(revenue);
+  const currentStreams = streams.filter(stream => stream?.stream_key !== 'annual');
+  const agentPayout = currentStreams.reduce((sum, stream) => sum + money(stream?.amount), 0);
+  const totalEscrow = agentPayout;
+  const platformFee = money(agentPayout * PLATFORM_FEE_PERCENT / 100);
+  const companyProfit = totalContractRevenue - agentPayout - platformFee;
+  const roi = totalContractRevenue > 0
+    ? Math.round(companyProfit / totalContractRevenue * 100)
+    : 0;
+
+  return {
+    totalContractRevenue,
+    totalEscrow,
+    platformFee,
+    agentPayout,
+    companyProfit,
+    roi,
+  };
+}
+
 export function getActualContractRevenue(contract: any): number {
   const explicit = [
     contract?.actual_contract_revenue,
