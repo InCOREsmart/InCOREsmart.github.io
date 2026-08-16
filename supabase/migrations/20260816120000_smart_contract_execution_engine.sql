@@ -29,6 +29,18 @@ DROP POLICY IF EXISTS "transactions_no_delete" ON transactions;
 CREATE POLICY "transactions_no_update" ON transactions FOR UPDATE TO authenticated USING (false) WITH CHECK (false);
 CREATE POLICY "transactions_no_delete" ON transactions FOR DELETE TO authenticated USING (false);
 
+-- Database-level guard: even if a broader legacy RLS policy exists, existing ledger rows cannot be mutated.
+CREATE OR REPLACE FUNCTION public.prevent_transaction_mutation()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RAISE EXCEPTION 'Financial ledger is append-only; create a corrective transaction instead.' USING ERRCODE = 'P0001';
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_transactions_append_only ON transactions;
+CREATE TRIGGER trg_transactions_append_only
+BEFORE UPDATE OR DELETE ON transactions
+FOR EACH ROW EXECUTE FUNCTION public.prevent_transaction_mutation();
+
 -- Read access follows the same contract ownership model used by contracts.
 DROP POLICY IF EXISTS "select_contract_transactions" ON transactions;
 CREATE POLICY "select_contract_transactions" ON transactions FOR SELECT TO authenticated USING (
@@ -48,8 +60,7 @@ CREATE POLICY "select_contract_transactions" ON transactions FOR SELECT TO authe
 DROP POLICY IF EXISTS "transactions_no_direct_insert" ON transactions;
 CREATE POLICY "transactions_no_direct_insert" ON transactions FOR INSERT TO authenticated WITH CHECK (false);
 
--- Contract rules are versioned. A new business rule creates a new version;
--- existing contract history is never rewritten.
+-- Contract rules are versioned. A new business rule creates a new version; existing history is never rewritten.
 CREATE TABLE IF NOT EXISTS contract_rules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   contract_id uuid REFERENCES contracts(id) ON DELETE CASCADE,
@@ -90,9 +101,8 @@ WHERE NOT EXISTS (
   SELECT 1 FROM contract_rules WHERE contract_id IS NULL AND rule_key = 'RETENTION_90_DAYS' AND version = 1
 );
 
--- Canonical ledger writer for escrow events. The event remains the audit record;
--- transactions becomes the accounting ledger used by the UI and exports.
--- We deliberately reuse the existing transaction_type enum to avoid a destructive enum migration.
+-- Canonical ledger writer for escrow events. The event remains the audit record; transactions is the accounting ledger.
+-- We reuse the existing transaction_type enum. reference identifies the exact execution event.
 CREATE OR REPLACE FUNCTION public.record_transaction_from_escrow_event()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
