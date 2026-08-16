@@ -1,4 +1,4 @@
-import { CheckCircle, Clock3, Database, Link2, Lock, ShieldCheck, Zap } from 'lucide-react';
+import { Clock3, Database, Link2, Lock, ShieldCheck, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface SmartContractExecutionPanelProps {
@@ -7,34 +7,30 @@ interface SmartContractExecutionPanelProps {
   oracleEvents?: any[];
 }
 
-const PRIMARY_STREAM_KEYS = new Set([
+const STREAM_KEYS = [
   'new_sales_property',
   'new_sales_casco',
   'new_sales_dms',
   'renewal',
   'cross_sell',
+  'plan_bonus',
   'retention',
-]);
+] as const;
 
 export function SmartContractExecutionPanel({ streams, transactions = [], oracleEvents = [] }: SmartContractExecutionPanelProps) {
   const { t } = useTranslation();
-  const primaryStreams = streams.filter((stream) => PRIMARY_STREAM_KEYS.has(stream.stream_key)).slice(0, 6);
-  const ledgerEvents = transactions;
-  const retention = streams.find((stream) => stream.stream_key === 'retention');
-  const clawbackApplied = retention?.status === 'CLAWED_BACK';
+  const configuredStreams = STREAM_KEYS
+    .map((key) => streams.find((stream) => stream.stream_key === key))
+    .filter(Boolean);
+  const clawbackApplied = streams.find((stream) => stream.stream_key === 'retention')?.status === 'CLAWED_BACK';
 
   const formatAmount = (value: unknown) => `$${Number(value || 0).toLocaleString()}`;
-  const statusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      LOCKED: t('contractDetail.statusLocked'),
-      UNLOCKED: t('contractDetail.statusUnlocked'),
-      PAYABLE: t('contractDetail.statusPayable'),
-      PAID: t('contractDetail.statusPaid'),
-      CLAWED_BACK: t('contractDetail.statusClawedBack'),
-      CANCELLED: t('contractDetail.statusCancelled'),
-    };
-    return labels[status] || status;
-  };
+
+  const statusLabel = (status: string) =>
+    t(`smartContract.statusLabels.${status}`, { defaultValue: status });
+
+  const eventLabel = (eventType: string) =>
+    t(`smartContract.eventTypes.${eventType}`, { defaultValue: eventType });
 
   return (
     <section className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 md:p-6 space-y-5 min-w-0">
@@ -52,14 +48,14 @@ export function SmartContractExecutionPanel({ streams, transactions = [], oracle
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-xl border border-gray-100 bg-[#F4F5F7] p-3 sm:p-4 min-w-0">
           <div className="flex items-center gap-2 text-xs font-medium text-gray-500"><Lock className="w-4 h-4 text-[#000052]" />{t('smartContract.streams')}</div>
-          <div className="mt-2 text-xl font-bold text-[#000052] tabular-nums">{primaryStreams.length}</div>
+          <div className="mt-2 text-xl font-bold text-[#000052] tabular-nums">{configuredStreams.length}</div>
         </div>
         <div className="rounded-xl border border-gray-100 bg-[#F4F5F7] p-3 sm:p-4 min-w-0">
           <div className="flex items-center gap-2 text-xs font-medium text-gray-500"><Database className="w-4 h-4 text-[#000052]" />{t('smartContract.ledger')}</div>
-          <div className="mt-2 text-xl font-bold text-[#000052] tabular-nums">{ledgerEvents.length}</div>
+          <div className="mt-2 text-xl font-bold text-[#000052] tabular-nums">{transactions.length}</div>
           <div className="text-xs text-gray-400 mt-0.5">{t('smartContract.events')}</div>
         </div>
         <div className="rounded-xl border border-gray-100 bg-[#F4F5F7] p-3 sm:p-4 min-w-0">
@@ -69,34 +65,15 @@ export function SmartContractExecutionPanel({ streams, transactions = [], oracle
         </div>
       </div>
 
-      <div className="min-w-0">
-        <h3 className="text-sm font-bold text-[#000052] mb-3">{t('smartContract.streams')}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {primaryStreams.map((stream) => (
-            <div key={stream.id || stream.stream_key} className="rounded-xl border border-gray-100 p-3 sm:p-4 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-[#000052] text-sm leading-5 break-words min-w-0">{stream.title || stream.stream_key}</span>
-                <CheckCircle className={`w-4 h-4 shrink-0 ${stream.status === 'PAID' ? 'text-[#000052]' : 'text-gray-300'}`} />
-              </div>
-              <div className="mt-3 flex items-end justify-between gap-2">
-                <span className="text-base font-bold text-[#000052] tabular-nums break-words">{formatAmount(stream.amount)}</span>
-                <span className="text-[11px] text-gray-400 shrink-0">{statusLabel(stream.status)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        {!primaryStreams.length && <p className="text-sm text-gray-400">{t('ui.noStreams')}</p>}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <div className="rounded-xl border border-gray-100 p-3 sm:p-4 min-w-0">
           <div className="flex items-center gap-2 mb-3"><Database className="w-4 h-4 text-[#000052]" /><h3 className="text-sm font-bold text-[#000052]">{t('smartContract.ledger')}</h3></div>
-          {ledgerEvents.length ? (
+          {transactions.length ? (
             <div className="space-y-2">
-              {ledgerEvents.slice(0, 5).map((event: any, index: number) => (
+              {transactions.slice(0, 5).map((event: any, index: number) => (
                 <div key={event.id || index} className="flex items-start justify-between gap-3 rounded-lg bg-[#F4F5F7] p-3 min-w-0">
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-[#000052] break-words">{event.transaction_type || event.type || event.event_type || t('smartContract.automatic')}</div>
+                    <div className="text-xs font-semibold text-[#000052] break-words">{eventLabel(event.transaction_type || event.type || event.event_type || '')}</div>
                     <div className="text-[11px] text-gray-400 mt-0.5 break-words">{event.created_at ? new Date(event.created_at).toLocaleString() : t('smartContract.automatic')}</div>
                   </div>
                   <span className="text-xs font-bold text-[#000052] tabular-nums shrink-0">{formatAmount(event.amount)}</span>
@@ -115,7 +92,7 @@ export function SmartContractExecutionPanel({ streams, transactions = [], oracle
               {oracleEvents.slice(0, 5).map((event: any, index: number) => (
                 <div key={event.id || index} className="rounded-lg bg-[#F4F5F7] p-3 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-semibold text-[#000052] break-words min-w-0">{event.event_type || event.type || t('smartContract.verified')}</span>
+                    <span className="text-xs font-semibold text-[#000052] break-words min-w-0">{eventLabel(event.event_type || event.type || '')}</span>
                     <span className="text-[11px] font-semibold text-[#B8860B] shrink-0">{t('smartContract.verified')}</span>
                   </div>
                   <div className="text-[11px] text-gray-400 mt-0.5 break-words">{event.created_at ? new Date(event.created_at).toLocaleString() : '—'}</div>
