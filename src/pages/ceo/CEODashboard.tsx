@@ -17,7 +17,7 @@ const realKPI = (contract: any) => {
     [contract.actual_meetings, contract.kpi_meetings],
     [contract.actual_proposals, contract.kpi_proposals],
     [contract.actual_clients, contract.target_clients],
-  ].filter(([, target]) => n(target) > 0);
+  ].filter((pair): pair is [any, any] => n(pair[1]) > 0);
 
   if (pairs.length) {
     return Math.round(
