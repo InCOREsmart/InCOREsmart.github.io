@@ -1,11 +1,4 @@
-export const CONTRACT_BONUS_RATES = {
-  property: 0.20,
-  casco: 0.15,
-  dms: 0.10,
-  renewal: 0.15,
-  crossSell: 0.10,
-} as const;
-
+export const CONTRACT_BONUS_RATES = { property: 0.20, casco: 0.15, dms: 0.10, renewal: 0.15, crossSell: 0.10 } as const;
 export const RETENTION_BONUS = 200;
 export const ANNUAL_BONUS = 7000;
 export const PLATFORM_FEE_PERCENT = 12;
@@ -34,20 +27,29 @@ export function calculateContractFinancialsFromPayoutStreams(revenue: number, st
   return { totalContractRevenue, totalEscrow, platformFee, agentPayout, companyProfit, roi };
 }
 
-/** Realized sales only. Contract value is never a fallback for real contracts. */
+/** Contract value used by the financial core. It intentionally retains revenue/planned_revenue. */
 export function getActualContractRevenue(contract: any): number {
-  if (!contract) return 0;
-  const explicit = [contract?.actual_contract_revenue, contract?.actual_revenue, contract?.client_contract_amount, contract?.realized_sales_revenue, contract?.actual_sales_revenue]
+  const explicit = [contract?.actual_contract_revenue, contract?.actual_revenue, contract?.client_contract_amount]
     .map(Number).find(value => Number.isFinite(value) && value > 0);
   if (explicit !== undefined) return money(explicit);
-
   const deals = Array.isArray(contract?.bitrix_deals) ? contract.bitrix_deals : [];
   const dealTotal = deals.reduce((sum: number, deal: any) => sum + money(deal?.amount), 0);
   if (dealTotal > 0) return dealTotal;
+  return money(contract?.revenue ?? contract?.planned_revenue);
+}
 
+/** Realized sales only. Never falls back to contract value. */
+export function getRealizedSalesRevenue(contract: any): number {
+  if (!contract) return 0;
+  const explicit = [contract?.realized_sales_revenue, contract?.actual_sales_revenue]
+    .map(Number).find(value => Number.isFinite(value) && value > 0);
+  if (explicit !== undefined) return money(explicit);
+  const deals = Array.isArray(contract?.bitrix_deals) ? contract.bitrix_deals : [];
+  const dealTotal = deals.reduce((sum: number, deal: any) => sum + money(deal?.amount), 0);
+  if (dealTotal > 0) return dealTotal;
   if (contract?.is_demo === true) {
-    const actualFields = [contract?.actual_property_revenue, contract?.actual_casco_revenue, contract?.actual_dms_revenue, contract?.actual_renewal_revenue, contract?.actual_cross_sell_revenue].map(Number);
-    if (actualFields.some(value => Number.isFinite(value) && value > 0)) return money(actualFields.reduce((sum, value) => sum + (Number.isFinite(value) && value > 0 ? value : 0), 0));
+    const fields = [contract?.actual_property_revenue, contract?.actual_casco_revenue, contract?.actual_dms_revenue, contract?.actual_renewal_revenue, contract?.actual_cross_sell_revenue].map(Number);
+    if (fields.some(value => Number.isFinite(value) && value > 0)) return money(fields.reduce((sum, value) => sum + (Number.isFinite(value) && value > 0 ? value : 0), 0));
   }
   return 0;
 }
@@ -55,7 +57,7 @@ export function getActualContractRevenue(contract: any): number {
 export function getSalesPlanAchievement(contract: any): number {
   if (!contract) return 0;
   const plan = money(contract?.planned_revenue ?? contract?.sales_plan_revenue ?? contract?.revenue);
-  return plan > 0 ? Math.round(Math.min(1, getActualContractRevenue(contract) / plan) * 100) : 0;
+  return plan > 0 ? Math.round(Math.min(1, getRealizedSalesRevenue(contract) / plan) * 100) : 0;
 }
 
 export function getActualContractRevenueBreakdown(contract: any): ContractRevenueBreakdown {
@@ -82,7 +84,7 @@ export function getActualContractRevenueBreakdown(contract: any): ContractRevenu
 export function getStoredPayoutAmounts(streams: any[] = []) { const byKey = new Map(streams.map(stream => [stream.stream_key, money(stream.amount)])); return { property: byKey.get('new_sales_property') || 0, casco: byKey.get('new_sales_casco') || 0, dms: byKey.get('new_sales_dms') || 0, renewal: byKey.get('renewal') || 0, crossSell: byKey.get('cross_sell') || 0, planBonus: byKey.get('plan_bonus') || 0, retention: byKey.get('retention') || 0, annual: byKey.get('annual') || ANNUAL_BONUS }; }
 
 export function getContractAccountingSnapshot(contract: any): ContractAccountingSnapshot {
-  const revenue = money(contract?.revenue ?? contract?.planned_revenue), streams = Array.isArray(contract?.payout_streams) ? contract.payout_streams : [];
+  const revenue = getActualContractRevenue(contract), streams = Array.isArray(contract?.payout_streams) ? contract.payout_streams : [];
   const persistedEscrow = money(contract?.escrow_amount), persistedPaid = money(contract?.total_paid), persistedLocked = money(contract?.total_locked);
   const streamPaid = streams.filter((s: any) => s?.status === 'PAID' && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
   const streamLocked = streams.filter((s: any) => s?.status === 'LOCKED' && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
