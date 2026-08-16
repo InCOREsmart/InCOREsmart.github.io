@@ -85,7 +85,11 @@ export function calculateContractFinancials(
 
   const platformFee = money(totalEscrow * PLATFORM_FEE_PERCENT / 100);
   const agentPayout = totalEscrow;
-  const companyProfit = totalContractRevenue - agentPayout;
+
+  // Company result is revenue less the agent payout and platform commission.
+  // The annual bonus remains outside escrow and therefore does not reduce
+  // the current company result here.
+  const companyProfit = totalContractRevenue - agentPayout - platformFee;
   const roi = totalContractRevenue > 0
     ? Math.round(companyProfit / totalContractRevenue * 100)
     : 0;
@@ -269,7 +273,7 @@ export function getContractAccountingSnapshot(contract: any): ContractAccounting
     : persistedLocked || streamLocked || Math.max(0, persistedEscrow - paid);
   const payout = paid;
   const commission = money(persistedEscrow * PLATFORM_FEE_PERCENT / 100);
-  const companyProfit = money(revenue - persistedEscrow);
+  const companyProfit = money(revenue - persistedEscrow - commission);
 
   return {
     revenue,
