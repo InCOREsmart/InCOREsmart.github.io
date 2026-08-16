@@ -15,6 +15,7 @@ import { featureTranslationsDemoPatch } from "./featureTranslationsDemoPatch";
 import { featureTranslationsI18nFix } from "./featureTranslationsI18nFix";
 import { tooltipTranslations } from "./tooltips";
 import { notificationTranslations } from "./notifications";
+import { smartContractTranslations } from "./smartContractTranslations";
 
 const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
@@ -24,17 +25,20 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
   agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}), ...(supplement.agent || {}), ...(feature.agent || {}), ...(extendedFeature.agent || {}), ...(uiPatch.agent || {}), ...(demoPatch.agent || {}) },
   payouts: { ...(base.payouts || {}), ...(extra.payouts || {}), ...(ui.payouts || {}), ...(supplement.payouts || {}), ...(feature.payouts || {}), ...(extendedFeature.payouts || {}), ...(uiPatch.payouts || {}), ...(demoPatch.payouts || {}) },
   ceo: { ...(base.ceo || {}), ...(extra.ceo || {}), ...(ui.ceo || {}), ...(supplement.ceo || {}), ...(feature.ceo || {}), ...(extendedFeature.ceo || {}), ...(uiPatch.ceo || {}), ...(demoPatch.ceo || {}) },
-  ui: { ...(base.ui || {}), ...(extra.ui || {}), ...(ui.ui || {}), ...(supplement.ui || {}), ...(feature.ui || {}), ...(extendedFeature.ui || {}), ...(uiPatch.ui || {}), ...(demoPatch.ui || {}) },
+  ui: { ...(base.ui || {}), ...(extra.ui || {}), ...(uiSupplement?.ui || {}), ...(ui.ui || {}), ...(supplement.ui || {}), ...(feature.ui || {}), ...(extendedFeature.ui || {}), ...(uiPatch.ui || {}), ...(demoPatch.ui || {}) },
   contractDetail: { ...(base.contractDetail || {}), ...(extra.contractDetail || {}), ...(ui.contractDetail || {}), ...(supplement.contractDetail || {}), ...(feature.contractDetail || {}), ...(extendedFeature.contractDetail || {}), ...(uiPatch.contractDetail || {}), ...(demoPatch.contractDetail || {}) },
   agentContractDetail: { ...(base.agentContractDetail || {}), ...(extra.agentContractDetail || {}), ...(ui.agentContractDetail || {}), ...(supplement.agentContractDetail || {}), ...(feature.agentContractDetail || {}), ...(extendedFeature.agentContractDetail || {}), ...(uiPatch.agentContractDetail || {}), ...(demoPatch.agentContractDetail || {}) },
-  agentProfile: { ...(base.agentProfile || {}), ...(extra.agentProfile || {}), ...(ui.agentProfile || {}), ...(supplement.agentProfile || {}), ...(feature.agentProfile || {}), ...(extendedFeature.agentProfile || {}), ...(uiPatch.agentProfile || {}), ...(demoPatch.agentProfile || {}) },
+  agentProfile: { ...(base.agentProfile || {}), ...(extra.agentProfile || {}), ...(ui.agentProfile || {}), ...(supplement.agentProfile || {}), ...(feature.agentProfile || {}), ...(extendedFeature.agentProfile || {}), ...(uiPatch.agentProfile || {}), ...(demoPatch.agentPatch || {}) },
   company: { ...(base.company || {}), ...(extra.company || {}), ...(ui.company || {}), ...(supplement.company || {}), ...(feature.company || {}), ...(extendedFeature.company || {}), ...(uiPatch.company || {}), ...(demoPatch.company || {}) },
   disputes: { ...(base.disputes || {}), ...(extra.disputes || {}), ...(ui.disputes || {}), ...(supplement.disputes || {}), ...(feature.disputes || {}), ...(extendedFeature.disputes || {}), ...(uiPatch.disputes || {}), ...(demoPatch.disputes || {}) },
   actions: { ...(base.actions || {}), ...(extra.actions || {}), ...(ui.actions || {}), ...(supplement.actions || {}), ...(feature.actions || {}), ...(extendedFeature.actions || {}), ...(uiPatch.actions || {}), ...(demoPatch.actions || {}) },
   legacyUi: { ...(feature.legacyUi || {}), ...(extendedFeature.legacyUi || {}), ...(uiPatch.legacyUi || {}), ...(demoPatch.legacyUi || {}), ...(i18nFix.legacyUi || {}) },
 });
 
-const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang]);
+const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => ({
+  ...mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang]),
+  smartContract: smartContractTranslations[lang],
+});
 
 const ruTranslation = buildLocale('ru', ru);
 const enTranslation = buildLocale('en', en);
