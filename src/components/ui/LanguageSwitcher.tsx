@@ -1,3 +1,4 @@
+import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher = () => {
@@ -13,9 +14,8 @@ const LanguageSwitcher = () => {
   const currentLanguage = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0];
   const currentLang = currentLanguage === 'kz' ? 'kk' : currentLanguage;
 
-  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const code = event.target.value;
-    void i18n.changeLanguage(code);
+  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    void i18n.changeLanguage(event.target.value);
   };
 
   return (
