@@ -17,8 +17,34 @@ const STREAM_KEYS = [
   'retention',
 ] as const;
 
+const RU_EVENT_LABELS: Record<string, string> = {
+  CLIENT_PAYMENT_CONFIRMED: 'Оплата клиента подтверждена',
+  CROSS_SELL_CONFIRMED: 'Кросс-продажа подтверждена',
+  CONTRACT_CREATED: 'Договор создан',
+  CONTRACT_ACTIVATED: 'Договор активирован',
+  ESCROW_CREATED: 'Эскроу создан',
+  ESCROW_FUNDED: 'Эскроу пополнен',
+  PAYMENT_RELEASED: 'Выплата разблокирована',
+  PAYMENT_PAID: 'Выплата произведена',
+  PAYMENT_LOCKED: 'Выплата заблокирована',
+  RETENTION_CONFIRMED: 'Удержание 90 дней подтверждено',
+};
+
+const EN_EVENT_LABELS: Record<string, string> = {
+  CLIENT_PAYMENT_CONFIRMED: 'Client payment confirmed',
+  CROSS_SELL_CONFIRMED: 'Cross-sale confirmed',
+  CONTRACT_CREATED: 'Contract created',
+  CONTRACT_ACTIVATED: 'Contract activated',
+  ESCROW_CREATED: 'Escrow created',
+  ESCROW_FUNDED: 'Escrow funded',
+  PAYMENT_RELEASED: 'Payment released',
+  PAYMENT_PAID: 'Payment paid',
+  PAYMENT_LOCKED: 'Payment locked',
+  RETENTION_CONFIRMED: '90-day retention confirmed',
+};
+
 export function SmartContractExecutionPanel({ streams, transactions = [], oracleEvents = [] }: SmartContractExecutionPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const configuredStreams = STREAM_KEYS
     .map((key) => streams.find((stream) => stream.stream_key === key))
     .filter(Boolean);
@@ -26,11 +52,16 @@ export function SmartContractExecutionPanel({ streams, transactions = [], oracle
 
   const formatAmount = (value: unknown) => `$${Number(value || 0).toLocaleString()}`;
 
-  const statusLabel = (status: string) =>
-    t(`smartContract.statusLabels.${status}`, { defaultValue: status });
+  const translateSmartContractKey = (namespace: string, key: string, fallback: string) => {
+    const translated = t(`${namespace}.${key}`, { defaultValue: '' });
+    if (translated) return translated;
+    if (i18n.resolvedLanguage === 'ru' || i18n.language === 'ru') return RU_EVENT_LABELS[key] || fallback;
+    if (i18n.resolvedLanguage === 'en' || i18n.language === 'en') return EN_EVENT_LABELS[key] || fallback;
+    return fallback;
+  };
 
   const eventLabel = (eventType: string) =>
-    t(`smartContract.eventTypes.${eventType}`, { defaultValue: eventType });
+    translateSmartContractKey('smartContract.eventTypes', eventType, eventType);
 
   return (
     <section className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 md:p-6 space-y-5 min-w-0">
