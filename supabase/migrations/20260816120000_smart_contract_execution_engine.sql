@@ -2,13 +2,6 @@
 -- Additive migration. Existing financial formulas and payout streams are preserved.
 -- Annual bonus remains outside escrow.
 
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'ESCROW_LOCK';
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'ESCROW_RELEASE';
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'AGENT_PAYOUT';
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'REFUND';
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'ADJUSTMENT';
-ALTER TYPE transaction_type ADD VALUE IF NOT EXISTS 'ORACLE_VERIFICATION';
-
 ALTER TABLE contracts
   ADD COLUMN IF NOT EXISTS client_left_date date,
   ADD COLUMN IF NOT EXISTS retention_clawback_at timestamptz,
@@ -105,7 +98,6 @@ CREATE POLICY "select_contract_rules" ON contract_rules FOR SELECT
     )
   );
 
--- Seed the retention rule for existing and future contracts.
 INSERT INTO contract_rules (contract_id, rule_key, version, conditions, actions)
 SELECT NULL, 'RETENTION_90_DAYS', 1,
   jsonb_build_object('retention_days', 90),
@@ -119,6 +111,8 @@ WHERE NOT EXISTS (
 
 -- Canonical ledger writer for escrow events. The event remains the audit record;
 -- transactions becomes the accounting ledger used by the UI and exports.
+-- We deliberately reuse the existing transaction_type enum to avoid a destructive
+-- enum migration. reference identifies the precise execution event.
 CREATE OR REPLACE FUNCTION public.record_transaction_from_escrow_event()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -131,11 +125,11 @@ DECLARE
   stream_uuid uuid;
 BEGIN
   mapped_type := CASE NEW.event_type
-    WHEN 'ESCROW_CREATED' THEN 'ESCROW_LOCK'::transaction_type
+    WHEN 'ESCROW_CREATED' THEN 'ESCROW_FUND'::transaction_type
     WHEN 'ESCROW_FUNDED' THEN 'ESCROW_FUND'::transaction_type
-    WHEN 'PARTIAL_RELEASE' THEN 'ESCROW_RELEASE'::transaction_type
-    WHEN 'PAYOUT_TO_AGENT' THEN 'AGENT_PAYOUT'::transaction_type
-    WHEN 'REFUND_TO_CEO' THEN 'REFUND'::transaction_type
+    WHEN 'PARTIAL_RELEASE' THEN 'BONUS_PAYOUT'::transaction_type
+    WHEN 'PAYOUT_TO_AGENT' THEN 'SALARY_PAYOUT'::transaction_type
+    WHEN 'REFUND_TO_CEO' THEN 'COMMISSION'::transaction_type
     WHEN 'CLAWBACK' THEN 'CLAWBACK'::transaction_type
     ELSE NULL
   END;
@@ -250,6 +244,5 @@ BEGIN
 END;
 $$;
 
--- Keep the execution layer explicit and inspectable.
 COMMENT ON TABLE transactions IS 'Append-only financial ledger for smart-contract execution. Corrective actions create new rows.';
 COMMENT ON TABLE contract_rules IS 'Versioned smart-contract business rules. Historical versions are immutable.';
