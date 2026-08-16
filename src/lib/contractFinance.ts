@@ -201,39 +201,22 @@ export function getActualContractRevenueBreakdown(contract: any): ContractRevenu
 
   if (categorizedDeals > 0) return breakdown;
 
-  // Demo contracts created from the same CreateContractModal use five
-  // independent revenue directions with the same $375 average check.
-  // When the demo CRM deals contain only the total client amount and no
-  // category, reproduce that creation-form model instead of treating the
-  // whole revenue as one property stream. This keeps escrow and company
-  // result tied to the same financial model as contract creation.
+  // The CreateContractModal builds revenue from five independent directions:
+  // property, casco, DMS, renewal and cross-sell. Demo CRM deals contain only
+  // the client total, so distribute an unclassified actual total equally
+  // across those five directions rather than inventing a property-only sale.
   const actualRevenue = getActualContractRevenue(contract);
   if (actualRevenue > 0) {
-    const categories: (keyof ContractRevenueBreakdown)[] = [
-      'property',
-      'casco',
-      'dms',
-      'renewal',
-      'crossSell',
-    ];
-    const targetClients = money(contract?.target_clients || contract?.target_clients_new) || 0;
-    const actualClients = money(contract?.actual_clients) || 0;
-
-    if (targetClients > 0 && actualClients > 0) {
-      const targetRevenue = 375 * targetClients;
-      const scale = targetRevenue > 0 ? actualRevenue / (targetRevenue * categories.length) : 0;
-      const perCategory = money(375 * actualClients * scale);
-      const values = categories.map(() => perCategory);
-      const remainder = actualRevenue - values.reduce((sum, value) => sum + value, 0);
-      values[0] += remainder;
-      return {
-        property: values[0],
-        casco: values[1],
-        dms: values[2],
-        renewal: values[3],
-        crossSell: values[4],
-      };
-    }
+    const categoryCount = 5;
+    const base = Math.floor(actualRevenue / categoryCount);
+    const remainder = actualRevenue - base * categoryCount;
+    return {
+      property: base + remainder,
+      casco: base,
+      dms: base,
+      renewal: base,
+      crossSell: base,
+    };
   }
 
   return { property: 0, casco: 0, dms: 0, renewal: 0, crossSell: 0 };
