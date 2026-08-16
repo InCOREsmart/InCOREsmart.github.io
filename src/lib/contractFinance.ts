@@ -83,11 +83,12 @@ export function calculateContractFinancials(
     bonusPlan +
     bonusRetention;
 
+  // Agent payout is the full contract payout reserved in escrow.
   // InCORE commission is charged on the agent payout, not on contract revenue.
   const agentPayout = totalEscrow;
   const platformFee = money(agentPayout * PLATFORM_FEE_PERCENT / 100);
 
-  // Company result = contract revenue - agent payout - InCORE commission.
+  // Company result = contract revenue - full agent payout - InCORE commission.
   // The annual bonus remains outside the current escrow/payout calculation.
   const companyProfit = totalContractRevenue - agentPayout - platformFee;
   const roi = totalContractRevenue > 0
@@ -258,15 +259,17 @@ export function getContractAccountingSnapshot(contract: any): ContractAccounting
     const locked = isCompleted
       ? 0
       : money(contract?.total_locked) || Math.max(0, financials.totalEscrow - paid);
+    const payout = financials.agentPayout;
+    const commission = financials.platformFee;
 
     return {
       revenue,
       escrow: financials.totalEscrow,
       paid,
       locked,
-      payout: paid,
-      commission: money(paid * PLATFORM_FEE_PERCENT / 100),
-      companyProfit: revenue - paid - money(paid * PLATFORM_FEE_PERCENT / 100),
+      payout,
+      commission,
+      companyProfit: financials.companyProfit,
       annualBonus: financials.bonusAnnual,
     };
   }
@@ -280,13 +283,13 @@ export function getContractAccountingSnapshot(contract: any): ContractAccounting
   const streamLocked = streams
     .filter((stream: any) => stream?.status === 'LOCKED' && stream?.stream_key !== 'annual')
     .reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
+  const payout = persistedEscrow || (persistedPaid + persistedLocked) || (streamPaid + streamLocked);
   const paid = contract?.status === 'COMPLETED'
-    ? persistedEscrow
+    ? payout
     : persistedPaid || streamPaid;
   const locked = contract?.status === 'COMPLETED'
     ? 0
-    : persistedLocked || streamLocked || Math.max(0, persistedEscrow - paid);
-  const payout = paid;
+    : persistedLocked || streamLocked || Math.max(0, payout - paid);
   const commission = money(payout * PLATFORM_FEE_PERCENT / 100);
   const companyProfit = money(revenue - payout - commission);
 
