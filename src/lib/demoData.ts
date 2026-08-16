@@ -111,10 +111,6 @@ function toDate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
-function monthKey(value: Date): string {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}`;
-}
-
 function monthLabel(value: Date): string {
   return value.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 }
@@ -122,14 +118,21 @@ function monthLabel(value: Date): string {
 function generateBitrixDeals(contract: DemoContract): BitrixDeal[] {
   const start = new Date(`${contract.start_date}T00:00:00Z`);
   const label = monthLabel(start);
-  const dealValue = contract.target_clients > 0 ? contract.revenue / contract.target_clients : 0;
-  return Array.from({ length: contract.actual_clients }, (_, index) => ({
-    id: `${contract.id}-client-${index + 1}`,
-    title: `Корпоративный клиент ${index + 1} (${label})`,
-    stage: 'Успешно реализовано',
-    amount: roundMoney(dealValue),
-    created_at: new Date(start.getTime() + Math.min(index + 7, 25) * 86400000).toISOString(),
-  }));
+  const realizedRevenue = roundMoney(contract.revenue * (contract.actual_clients / Math.max(contract.target_clients, 1)));
+  const clientCount = contract.actual_clients;
+  if (clientCount <= 0 || realizedRevenue <= 0) return [];
+
+  return Array.from({ length: clientCount }, (_, index) => {
+    const base = Math.floor(realizedRevenue / clientCount);
+    const remainder = realizedRevenue - base * clientCount;
+    return {
+      id: `${contract.id}-client-${index + 1}`,
+      title: `Корпоративный клиент ${index + 1} (${label})`,
+      stage: 'Успешно реализовано',
+      amount: base + (index === clientCount - 1 ? remainder : 0),
+      created_at: new Date(start.getTime() + Math.min(index + 7, 25) * 86400000).toISOString(),
+    };
+  });
 }
 
 function buildPayoutStreams(contractId: string, startDate: string, performance: number): DemoPayoutStream[] {
@@ -218,6 +221,7 @@ function generateContract(agentId: string, startDate: string, performance: numbe
   const totalPaid = payoutStreams.filter(stream => stream.status === 'PAID' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
   const totalLocked = payoutStreams.filter(stream => stream.status === 'LOCKED' && stream.stream_key !== 'annual').reduce((sum, stream) => sum + stream.amount, 0);
   const finance = calculateContractFinancialsFromPayoutStreams(SALES_PLAN.revenue, payoutStreams);
+  const realizedRevenue = roundMoney(SALES_PLAN.revenue * performance);
 
   const contract: DemoContract = {
     id,
@@ -225,6 +229,11 @@ function generateContract(agentId: string, startDate: string, performance: numbe
     description: `Выполнить план продаж: ${SALES_PLAN.clients} клиентов, средний чек $${SALES_PLAN.averageCheck}, ${SALES_PLAN.calls} звонков, ${SALES_PLAN.meetings} встреч, ${SALES_PLAN.proposals} КП.`,
     revenue: SALES_PLAN.revenue,
     planned_revenue: SALES_PLAN.revenue,
+    actual_property_revenue: realizedRevenue,
+    actual_casco_revenue: 0,
+    actual_dms_revenue: 0,
+    actual_renewal_revenue: 0,
+    actual_cross_sell_revenue: 0,
     escrow_amount: finance.totalEscrow,
     escrow_status: 'FUNDED',
     agent_payouts_total: finance.agentPayout,
