@@ -9,6 +9,7 @@ import { getContractFullData, releasePayment } from '../../lib/smartContractLogi
 import { fundContractEscrow } from '../../lib/escrowFunding';
 import { EditDraftContractModal } from '../../components/ui/EditDraftContractModal';
 import { RoleSkillsProgressPanel } from '../../components/role/RoleSkillsProgressPanel';
+import { SmartContractExecutionPanel } from '../../components/contract/SmartContractExecutionPanel';
 import { supabase } from '../../lib/supabase';
 import { getCompletedDemoContractById } from '../../lib/demoCompletedContracts';
 import { getActualContractRevenue, getActualContractRevenueBreakdown, calculateContractFinancials } from '../../lib/contractFinance';
@@ -58,7 +59,7 @@ export function CEOContractDetailPage() {
             amount: event.event_type === 'ESCROW_CREATED' || event.event_type === 'ESCROW_FUNDED' ? escrowAmount : event.amount,
             metadata: event.metadata ? { ...event.metadata, streams_count: escrowStreams.length, total_escrow: escrowAmount, actual_contract_revenue: actualRevenue } : event.metadata,
           }));
-          setData({ contract: demo, streams, escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee }, isDemo: true });
+          setData({ contract: demo, streams, transactions: [], escrowEvents, oracleEvents: demo.oracle_events, disputes: [], agent, financials: { actualRevenue, totalEscrow: escrowAmount, totalLocked, totalUnlocked: totalPaid, companyProfit: actualRevenue - escrowAmount, platformFee: finance.platformFee }, isDemo: true });
           return;
         }
         if (!user) return;
@@ -133,11 +134,12 @@ export function CEOContractDetailPage() {
   if (loading) return <div className="p-8 text-center text-[#000052]">{t('ui.loading')}</div>;
   if (!data) return <div className="p-8 text-center"><div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 flex items-center justify-center mb-4"><XCircle className="w-8 h-8 text-red-500" /></div><p className="text-lg text-[#000052]">{t('contract.noContracts')}</p><button onClick={() => navigate('/ceo/contracts')} className="mt-4 px-6 py-2.5 bg-[#000052] text-white rounded-xl">{t('contractDetail.back')}</button></div>;
 
-  const { contract, streams, escrowEvents, oracleEvents, disputes, agent, financials } = data;
+  const { contract, streams, transactions, escrowEvents, oracleEvents, disputes, agent, financials } = data;
   const streamList = getEscrowStreams(streams || []);
   const escrowList = escrowEvents || [];
   const oracleList = oracleEvents || [];
   const disputeList = disputes || [];
+  const transactionList = transactions || [];
   const actualRevenue = Number(financials?.actualRevenue ?? getActualContractRevenue(contract));
   const totalEscrow = Number(financials?.totalEscrow ?? getEscrowAmount(contract, streamList));
   const totalPaid = Number(financials?.totalUnlocked ?? getPaidAmount(streamList));
@@ -149,7 +151,7 @@ export function CEOContractDetailPage() {
   const kpi = Math.round(kpiValues.reduce((a: number, b: number) => a + b, 0) / kpiValues.length * 100);
   const tabs = [['streams', `${t('contractDetail.payoutStreams')} (${streamList.length})`], ['escrow', `${t('contractDetail.escrowJournal')} (${escrowList.length})`], ['oracle', `${t('contractDetail.oracleEvents')} (${oracleList.length})`], ['disputes', `${t('contractDetail.disputes')} (${disputeList.length})`]] as const;
   const kpiCards = [
-    { icon: DollarSign, label: 'Фактическая сумма договоров', value: `$${actualRevenue.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]' },
+    { icon: DollarSign, label: t('ui.actualContractAmount', { defaultValue: 'Фактическая сумма договоров' }), value: `$${actualRevenue.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#000052]' },
     { icon: Shield, label: t('ui.escrow'), value: `$${totalEscrow.toLocaleString()}`, box: 'bg-[#B8860B]/10 text-[#B8860B]', valueColor: 'text-[#B8860B]' },
     { icon: CheckCircle, label: t('contractDetail.paid'), value: `$${totalPaid.toLocaleString()}`, box: 'bg-emerald-50 text-emerald-600', valueColor: 'text-emerald-600' },
     { icon: Lock, label: t('contractDetail.locked'), value: `$${totalLocked.toLocaleString()}`, box: 'bg-[#000052]/5 text-[#000052]', valueColor: 'text-[#000052]' },
@@ -170,15 +172,18 @@ export function CEOContractDetailPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 mt-3 w-full">
           {contract.status === 'DRAFT' && !data.isDemo && <button onClick={() => setEditOpen(true)} className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-[#000052] text-white rounded-xl text-sm font-semibold w-full sm:w-auto"><Pencil className="w-4 h-4" />{t('actions.editDraft')}</button>}
-          {!data.isDemo && !escrowFunded && totalEscrow > 0 && <button onClick={handleFundEscrow} disabled={escrowFunding} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-xl text-sm font-semibold w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"><CreditCard className="w-4 h-4" />{escrowFunding ? 'Оплата...' : 'Оплатить escrow'}</button>}
-          {escrowFunded && <span className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-semibold w-full sm:w-auto"><CheckCircle className="w-4 h-4" />Escrow оплачен</span>}
+          {!data.isDemo && !escrowFunded && totalEscrow > 0 && <button onClick={handleFundEscrow} disabled={escrowFunding} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#B8860B] text-white rounded-xl text-sm font-semibold w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"><CreditCard className="w-4 h-4" />{escrowFunding ? t('smartContract.pending') : t('actions.payEscrow', { defaultValue: 'Оплатить escrow' })}</button>}
+          {escrowFunded && <span className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-semibold w-full sm:w-auto"><CheckCircle className="w-4 h-4" />{t('smartContract.paid')}</span>}
         </div>
       </div>
     </div>
 
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">{kpiCards.map((card, i) => { const Icon = card.icon; return <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm min-w-0"><div className="flex items-start justify-between gap-3 mb-3 sm:mb-4"><span className="text-sm font-medium text-gray-500 leading-snug break-words">{card.label}</span><div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] flex items-center justify-center shrink-0 ${card.box}`}><Icon className="w-5 h-5" /></div></div><p className={`text-[22px] sm:text-2xl font-bold tabular-nums break-words ${card.valueColor}`}>{card.value}</p>{card.sub && <p className="text-xs text-gray-400 mt-1 break-words">{card.sub}</p>}</div>; })}</div>
-    <div className="bg-[#B8860B]/5 border border-[#B8860B]/20 p-3 sm:p-4 rounded-2xl text-sm text-[#000052]/70 flex items-start gap-3"><Shield className="w-5 h-5 text-[#B8860B] shrink-0 mt-0.5" /><span>Годовой бонус отображается отдельно и не входит в escrow.</span></div>
+    <div className="bg-[#B8860B]/5 border border-[#B8860B]/20 p-3 sm:p-4 rounded-2xl text-sm text-[#000052]/70 flex items-start gap-3"><Shield className="w-5 h-5 text-[#B8860B] shrink-0 mt-0.5" /><span>{t('contractDetail.annualBonusEscrowNote', { defaultValue: 'Годовой бонус отображается отдельно и не входит в escrow.' })}</span></div>
     <RoleSkillsProgressPanel />
+
+    <SmartContractExecutionPanel streams={streamList} transactions={transactionList} oracleEvents={oracleList} />
+
     <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm"><div className="flex items-center justify-between gap-3 mb-4"><h2 className="font-bold text-[#000052]">{t('contractDetail.kpi')}</h2><span className="font-bold text-[#B8860B] text-lg shrink-0">{kpi}%</span></div><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">{[[t('contractDetail.calls'), contract.actual_calls, contract.kpi_calls], [t('contractDetail.meetings'), contract.actual_meetings, contract.kpi_meetings], [t('contractDetail.proposals'), contract.actual_proposals, contract.kpi_proposals], [t('contractDetail.clients'), contract.actual_clients, contract.target_clients]].map(([label, actual, target]) => { const progress = Number(target) > 0 ? Math.min(Number(actual || 0) / Number(target) * 100, 100) : 0; return <div key={String(label)} className="min-w-0"><div className="flex justify-between gap-2 text-xs mb-1.5"><span className="text-gray-500 break-words">{label}</span><b className="text-[#000052] shrink-0">{actual || 0}/{target || 0}</b></div><div className="h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-[#B8860B] rounded-full" style={{ width: `${progress}%` }} /></div></div>; })}</div></div>
 
     <div className="border-b border-gray-100 overflow-hidden"><div className="flex gap-2 sm:gap-5 overflow-x-auto pb-px scrollbar-thin">{tabs.map(([key, label]) => <button key={key} onClick={() => setTab(key)} className={`pb-3 px-2 text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 ${tab === key ? 'text-[#000052] border-b-2 border-[#000052]' : 'text-gray-400'}`}>{label}</button>)}</div></div>
