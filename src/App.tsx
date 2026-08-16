@@ -24,6 +24,7 @@ import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
 import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
 
 import { RoleSkillsProgressPanel } from './components/role/RoleSkillsProgressPanel';
+import { SmartContractExecutionPanel } from './components/contract/SmartContractExecutionPanel';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { LegacyUiTranslator } from './components/common/LegacyUiTranslator';
 
@@ -50,6 +51,7 @@ function CEOContractWithRoleProgress() {
   return (
     <>
       <CEOContractDetailPage />
+      <SmartContractExecutionPanel />
       <RoleSkillsProgressPanel />
     </>
   );
@@ -59,6 +61,7 @@ function AgentContractWithRoleProgress() {
   return (
     <>
       <AgentContractDetailPage />
+      <SmartContractExecutionPanel />
       <RoleSkillsProgressPanel />
     </>
   );
@@ -173,8 +176,6 @@ function App() {
               }
             />
 
-            {/* Декомпозиция роли */}
-
             <Route
               path="/ceo/roles/decompose"
               element={
@@ -185,8 +186,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
-            {/* Рынок навыков / HH Market */}
 
             <Route
               path="/ceo/roles/market"
