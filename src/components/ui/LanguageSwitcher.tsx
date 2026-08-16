@@ -4,34 +4,38 @@ const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
 
   const languages = [
-    { code: 'ru', label: 'RU' },
-    { code: 'en', label: 'EN' },
-    { code: 'kk', label: 'KZ' },
-    { code: 'az', label: 'AZ' },
+    { code: 'ru', label: 'Русский' },
+    { code: 'en', label: 'English' },
+    { code: 'kk', label: 'Қазақша' },
+    { code: 'az', label: 'Azərbaycan' },
   ];
 
-  const currentLang = i18n.language?.substring(0, 2) || 'ru';
+  const currentLanguage = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0];
+  const currentLang = currentLanguage === 'kz' ? 'kk' : currentLanguage;
 
-  const handleChange = (code: string) => {
-    i18n.changeLanguage(code);
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = event.target.value;
+    void i18n.changeLanguage(code);
   };
 
   return (
-    <div className="flex items-center gap-1 bg-[#000052]/5 rounded-lg p-1">
-      {languages.map((lang) => (
-        <button
-          key={lang.code}
-          onClick={() => handleChange(lang.code)}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-            currentLang === lang.code
-              ? 'bg-[#B8860B] text-white'
-              : 'text-[#000052]/70 hover:bg-[#000052]/10 hover:text-[#000052]'
-          }`}
-        >
-          {lang.label}
-        </button>
-      ))}
-    </div>
+    <label className="flex min-w-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-[#000052] shadow-sm">
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        Язык
+      </span>
+      <select
+        value={languages.some(language => language.code === currentLang) ? currentLang : 'ru'}
+        onChange={handleChange}
+        aria-label="Выбор языка"
+        className="min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 pr-5 text-sm font-semibold text-[#000052] outline-none focus:ring-0"
+      >
+        {languages.map(language => (
+          <option key={language.code} value={language.code}>
+            {language.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 };
 
