@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { SkillDefinition } from '../../types/decomposition';
 
-type MarketProfile = {
-  source_type: 'vacancy' | 'resume';
-  text: string;
-  salary: number | null;
-  skills: string[] | null;
+type MarketRow = {
+  canonical_skill: string;
+  demand_count: number;
+  demand_share: number;
+  supply_count: number;
+  supply_share: number;
+  skill_gap: number;
 };
 
 type Stat = {
@@ -21,33 +23,29 @@ type Stat = {
   salary: number | null;
 };
 
-const MATCHES: Record<string, { names: string[]; patterns: string[] }> = {
-  'Продажи корпоративного страхования': { names: ['Корпоративные продажи', 'Страхование', 'Продажи'], patterns: ['корпоративн', 'b2b', 'страхован', 'страховой', 'продаж'] },
-  'Удержание клиентов': { names: ['Работа с клиентами', 'Развитие клиентской базы', 'Продление договоров'], patterns: ['удержан', 'продлен', 'пролонгац', 'клиентск'] },
-  'Кросс-продажи': { names: ['Кросс-продажи'], patterns: ['кросс-продаж', 'cross-sell', 'cross sell', 'допродаж'] },
-  'Выполнение плана продаж': { names: ['План продаж', 'Продажи'], patterns: ['план продаж', 'выполнения плана', 'выполнение плана', 'kpi'] },
-  'Удержание 90 дней': { names: [], patterns: ['удержание 90', '90 дней', 'retention'] },
-  'Долгосрочная результативность': { names: ['План продаж'], patterns: ['годовой результат', 'долгосрочн', 'годовых целей', 'kpi'] },
+const MATCHES: Record<string, string[]> = {
+  'Продажи корпоративного страхования': ['продажа страховых продуктов', 'страхование', 'корпоративное страхование', 'активные продажи', 'прямые продажи', 'поиск и привлечение клиентов', 'b2b'],
+  'Удержание клиентов': ['удержание клиентов', 'развитие клиентской базы', 'продление договоров', 'пролонгация договоров', 'работа с клиентами', 'клиентоориентированность'],
+  'Кросс-продажи': ['кросс-продажи', 'кросс продажи', 'допродажи', 'cross-sell'],
+  'Выполнение плана продаж': ['план продаж', 'выполнение плана', 'kpi', 'ориентация на результат', 'навыки продаж', 'развитие продаж'],
+  'Удержание 90 дней': ['удержание 90', '90 дней', 'retention'],
+  'Долгосрочная результативность': ['ориентация на результат', 'нацеленность на результат', 'работа на результат', 'долгосрочная результативность', 'годовой результат'],
 };
 
 const COPY = {
-  ru: { title: 'Карта рынка навыков', subtitle: 'Рыночные данные сопоставлены с требованиями этой роли.', refresh: 'Обновить данные рынка', loading: 'Загружаем данные рынка…', empty: 'Данные рынка пока не загружены.', error: 'Не удалось загрузить данные рынка', deficit: 'Дефицитных навыков', balance: 'Баланс рынка', surplus: 'Профицитных навыков', gap: 'Рыночный разрыв Skill Gap', gapHelp: 'Положительное значение = дефицит навыка на рынке. Отрицательное = профицит.', skill: 'Навык', weight: 'Вес роли', vacancies: 'Вакансии', resumes: 'Резюме', salary: 'Зарплата', actions: 'Что делать по результатам рынка', actionsHelp: 'Рекомендации учитывают Skill Gap и вес навыка в этой роли.', priority: 'Главный приоритет', critical: 'Критический', high: 'Высокий', moderate: 'Средний', low: 'Низкий', noCritical: 'Критического дефицита навыков не выявлено.', deficitSummary: 'Рынок показывает дефицит навыков. В первую очередь стоит усиливать поиск и проверку кандидатов по навыкам с максимальным разрывом и весом роли.', balanceSummary: 'Рынок и предложение кандидатов находятся в относительном балансе. Основной резерв улучшения сейчас не в расширении поиска, а в качестве оценки кандидатов.', surplusSummary: 'Критического дефицита нет. Рынок кандидатов в целом покрывает требования роли, поэтому можно повышать точность отбора по наиболее важным для результата навыкам.', addScreening: 'Добавить навык в обязательный скрининг и отдельное практическое задание: рынок требует его, а подходящих резюме пока нет.', strengthen: 'Усилить скрининг и оценку навыка: сравнивать кандидатов по реальным кейсам, а не только по наличию навыка в резюме.', moderateAction: 'Оставить навык в фокусе отбора, но не завышать порог: дефицит умеренный.', surplusAction: 'Не делать навык главным фильтром: кандидатов с ним больше, чем вакансий. Использовать его как дополнительный критерий.', enoughAction: 'Навык доступен на рынке в достаточном количестве. Использовать как дополнительный критерий при равных кандидатах.' },
-  en: { title: 'Skills market map', subtitle: 'Market data is matched against the requirements of this role.', refresh: 'Refresh market data', loading: 'Loading market data…', empty: 'Market data has not been uploaded yet.', error: 'Failed to load market data', deficit: 'Skills in shortage', balance: 'Market balance', surplus: 'Skills in surplus', gap: 'Market gap Skill Gap', gapHelp: 'Positive value = skill shortage. Negative value = surplus.', skill: 'Skill', weight: 'Role weight', vacancies: 'Vacancies', resumes: 'Resumes', salary: 'Salary', actions: 'What to do based on the market', actionsHelp: 'Recommendations consider Skill Gap and the skill weight in this role.', priority: 'Top priority', critical: 'Critical', high: 'High', moderate: 'Medium', low: 'Low', noCritical: 'No critical skill shortage was identified.', deficitSummary: 'The market shows a skills shortage. First strengthen search and candidate assessment for skills with the largest gap and role weight.', balanceSummary: 'Market demand and candidate supply are relatively balanced. The main improvement opportunity is better candidate assessment.', surplusSummary: 'There is no critical shortage. The candidate market generally covers the role requirements, so selection accuracy can be improved around the most important skills.', addScreening: 'Add the skill to mandatory screening and a separate practical task: the market requires it, while matching resumes are not yet available.', strengthen: 'Strengthen screening and skill assessment: compare candidates using real cases, not only skill presence in a resume.', moderateAction: 'Keep the skill in focus during selection, but do not raise the threshold excessively: the shortage is moderate.', surplusAction: 'Do not make the skill the main filter: there are more candidates with it than vacancies. Use it as an additional criterion.', enoughAction: 'The skill is sufficiently available on the market. Use it as an additional criterion when candidates are otherwise equal.' },
-  kk: { title: 'Дағдылар нарығының картасы', subtitle: 'Нарық деректері осы рөлдің талаптарымен салыстырылды.', refresh: 'Нарық деректерін жаңарту', loading: 'Нарық деректері жүктелуде…', empty: 'Нарық деректері әлі жүктелмеген.', error: 'Нарық деректерін жүктеу мүмкін болмады', deficit: 'Тапшы дағдылар', balance: 'Нарық теңгерімі', surplus: 'Артық дағдылар', gap: 'Нарықтық алшақтық Skill Gap', gapHelp: 'Оң мән = дағды тапшылығы. Теріс мән = артық ұсыныс.', skill: 'Дағды', weight: 'Рөл салмағы', vacancies: 'Вакансиялар', resumes: 'Түйіндемелер', salary: 'Жалақы', actions: 'Нарық нәтижелері бойынша не істеу керек', actionsHelp: 'Ұсынымдар Skill Gap пен рөлдегі дағды салмағын ескереді.', priority: 'Негізгі басымдық', critical: 'Критикалық', high: 'Жоғары', moderate: 'Орташа', low: 'Төмен', noCritical: 'Критикалық дағды тапшылығы анықталған жоқ.', deficitSummary: 'Нарықта дағдылар тапшылығы бар. Алдымен ең үлкен алшақтық пен рөл салмағы бар дағдылар бойынша іздеу мен бағалауды күшейткен жөн.', balanceSummary: 'Нарық сұранысы мен кандидаттар ұсынысы салыстырмалы түрде теңгерілген. Негізгі мүмкіндік кандидаттарды бағалау сапасында.', surplusSummary: 'Критикалық тапшылық жоқ. Кандидаттар нарығы рөл талаптарын жалпы жабады, сондықтан маңызды дағдылар бойынша іріктеу дәлдігін арттыруға болады.', addScreening: 'Дағдыны міндетті скринингке және жеке практикалық тапсырмаға қосыңыз: нарыққа бұл дағды қажет, ал сәйкес түйіндемелер әзірге жоқ.', strengthen: 'Скрининг пен дағдыны бағалауды күшейтіңіз: кандидаттарды нақты кейстерге қарай салыстырыңыз.', moderateAction: 'Дағдыны іріктеу фокусында қалдырыңыз, бірақ шекті тым көтермеңіз: тапшылық орташа.', surplusAction: 'Дағдыны негізгі сүзгі етпеңіз: оны меңгерген кандидаттар вакансиялардан көп. Қосымша критерий ретінде қолданыңыз.', enoughAction: 'Дағды нарықта жеткілікті. Қосымша критерий ретінде пайдаланыңыз.' },
-  az: { title: 'Bacarıqlar bazarı xəritəsi', subtitle: 'Bazar məlumatları bu rolun tələbləri ilə müqayisə edilir.', refresh: 'Bazar məlumatlarını yenilə', loading: 'Bazar məlumatları yüklənir…', empty: 'Bazar məlumatları hələ yüklənməyib.', error: 'Bazar məlumatlarını yükləmək mümkün olmadı', deficit: 'Çatışmayan bacarıqlar', balance: 'Bazar balansı', surplus: 'Artıq bacarıqlar', gap: 'Bazar fərqi Skill Gap', gapHelp: 'Müsbət dəyər = bacarıq çatışmazlığı. Mənfi dəyər = artıqlıq.', skill: 'Bacarıq', weight: 'Rol çəkisi', vacancies: 'Vakansiyalar', resumes: 'CV-lər', salary: 'Maaş', actions: 'Bazar nəticələrinə əsasən nə etməli', actionsHelp: 'Tövsiyələr Skill Gap-i və bacarığın roldakı çəkisini nəzərə alır.', priority: 'Əsas prioritet', critical: 'Kritik', high: 'Yüksək', moderate: 'Orta', low: 'Aşağı', noCritical: 'Kritik bacarıq çatışmazlığı müəyyən edilmədi.', deficitSummary: 'Bazar bacarıq çatışmazlığını göstərir. İlk növbədə ən böyük fərqə və rol çəkisinə malik bacarıqlar üzrə axtarışı və qiymətləndirməni gücləndirmək lazımdır.', balanceSummary: 'Bazar tələbi və namizəd təklifi nisbətən balanslıdır. Əsas inkişaf imkanı namizədlərin qiymətləndirilməsinin keyfiyyətindədir.', surplusSummary: 'Kritik çatışmazlıq yoxdur. Namizəd bazarı ümumilikdə rol tələblərini qarşılayır, buna görə vacib bacarıqlar üzrə seçim dəqiqliyini artırmaq olar.', addScreening: 'Bacarığı məcburi skrininqə və ayrıca praktiki tapşırığa əlavə edin: bazarda bu bacarığa tələb var, uyğun CV-lər isə hələ yoxdur.', strengthen: 'Skrininqi və bacarıq qiymətləndirməsini gücləndirin: namizədləri real кейslər üzrə müqayisə edin.', moderateAction: 'Bacarığı seçim fokusunda saxlayın, lakin həddi həddən artıq yüksəltməyin: çatışmazlıq orta səviyyədədir.', surplusAction: 'Bacarığı əsas filtr etməyin: bu bacarığa sahib namizədlər vakansiyalardan çoxdur. Əlavə meyar kimi istifadə edin.', enoughAction: 'Bacarıq bazarda kifayət qədər mövcuddur. Əlavə meyar kimi istifadə edin.' },
+  ru: { title: 'Карта рынка навыков', subtitle: 'Реальные данные HH.ru сопоставлены с требованиями этой роли.', refresh: 'Обновить данные рынка', loading: 'Загружаем данные HH.ru…', empty: 'Для этой роли пока нет сопоставленных рыночных данных HH.ru.', error: 'Не удалось загрузить данные рынка', deficit: 'Дефицитных навыков', balance: 'Баланс рынка', surplus: 'Профицитных навыков', gap: 'Рыночный разрыв Skill Gap', gapHelp: 'Положительное значение = дефицит навыка на рынке. Отрицательное = профицит.', skill: 'Навык', weight: 'Вес роли', vacancies: 'Вакансии', resumes: 'Резюме', salary: 'Зарплата', actions: 'Что делать по результатам рынка', actionsHelp: 'Рекомендации учитывают реальный Skill Gap и вес навыка в этой роли.', priority: 'Главный приоритет', critical: 'Критический', high: 'Высокий', moderate: 'Средний', noCritical: 'Критического дефицита навыков не выявлено.', noDirectData: 'Прямого рыночного сопоставления пока нет.', deficitSummary: 'Рынок показывает дефицит навыков. В первую очередь усиливайте поиск и проверку кандидатов по навыкам с максимальным разрывом и весом роли.', balanceSummary: 'Спрос и предложение находятся в относительном балансе. Основной резерв улучшения сейчас в качестве оценки кандидатов.', surplusSummary: 'Критического дефицита нет. Используйте рыночные данные для повышения точности отбора.', addScreening: 'Добавьте навык в обязательный скрининг и практическое задание: спрос на рынке существенно выше доступного предложения.', strengthen: 'Усильте скрининг и оценку навыка: сравнивайте кандидатов по реальным кейсам.', moderateAction: 'Оставьте навык в фокусе отбора, но не завышайте порог: дефицит умеренный.', surplusAction: 'Не делайте навык главным фильтром: предложение превышает спрос.', enoughAction: 'Навык доступен на рынке в достаточном объёме. Используйте его как дополнительный критерий.', ppts: 'п.п.' },
+  en: { title: 'Skills market map', subtitle: 'Real HH.ru data is matched against the requirements of this role.', refresh: 'Refresh market data', loading: 'Loading HH.ru data…', empty: 'No matched HH.ru market data is available for this role yet.', error: 'Failed to load market data', deficit: 'Skills in shortage', balance: 'Market balance', surplus: 'Skills in surplus', gap: 'Market Skill Gap', gapHelp: 'Positive value = skill shortage. Negative value = surplus.', skill: 'Skill', weight: 'Role weight', vacancies: 'Vacancies', resumes: 'Resumes', salary: 'Salary', actions: 'What to do based on the market', actionsHelp: 'Recommendations use the real Skill Gap and role skill weight.', priority: 'Top priority', critical: 'Critical', high: 'High', moderate: 'Medium', noCritical: 'No critical skill shortage was identified.', noDirectData: 'There is no direct market match yet.', deficitSummary: 'The market shows a skill shortage. Prioritize search and candidate assessment for skills with the largest gap and role weight.', balanceSummary: 'Demand and supply are relatively balanced. The main improvement opportunity is candidate assessment quality.', surplusSummary: 'There is no critical shortage. Use market data to improve selection accuracy.', addScreening: 'Add the skill to mandatory screening and a practical task: market demand is substantially higher than available supply.', strengthen: 'Strengthen screening and skill assessment using real candidate cases.', moderateAction: 'Keep the skill in selection focus, but do not raise the threshold excessively: the shortage is moderate.', surplusAction: 'Do not make the skill the main filter: supply exceeds demand.', enoughAction: 'The skill is sufficiently available on the market. Use it as an additional criterion.', ppts: 'pp.' },
+  kk: { title: 'Дағдылар нарығының картасы', subtitle: 'Нақты HH.ru деректері осы рөлдің талаптарымен салыстырылды.', refresh: 'Нарық деректерін жаңарту', loading: 'HH.ru деректері жүктелуде…', empty: 'Бұл рөл үшін сәйкестендірілген HH.ru нарық деректері әлі жоқ.', error: 'Нарық деректерін жүктеу мүмкін болмады', deficit: 'Тапшы дағдылар', balance: 'Нарық теңгерімі', surplus: 'Артық дағдылар', gap: 'Нарықтық Skill Gap', gapHelp: 'Оң мән = дағды тапшылығы. Теріс мән = артық ұсыныс.', skill: 'Дағды', weight: 'Рөл салмағы', vacancies: 'Вакансиялар', resumes: 'Түйіндемелер', salary: 'Жалақы', actions: 'Нарық нәтижелері бойынша не істеу керек', actionsHelp: 'Ұсынымдар нақты Skill Gap пен рөлдегі дағды салмағын ескереді.', priority: 'Негізгі басымдық', critical: 'Критикалық', high: 'Жоғары', moderate: 'Орташа', noCritical: 'Критикалық дағды тапшылығы анықталған жоқ.', noDirectData: 'Тікелей нарықтық сәйкестік әлі жоқ.', deficitSummary: 'Нарықта дағдылар тапшылығы бар. Ең үлкен алшақтық пен рөл салмағы бар дағдылар бойынша іздеу мен бағалауды күшейтіңіз.', balanceSummary: 'Сұраныс пен ұсыныс салыстырмалы түрде теңгерілген. Негізгі мүмкіндік кандидаттарды бағалау сапасында.', surplusSummary: 'Критикалық тапшылық жоқ. Іріктеу дәлдігін арттыру үшін нарық деректерін пайдаланыңыз.', addScreening: 'Дағдыны міндетті скринингке және практикалық тапсырмаға қосыңыз: нарық сұранысы ұсыныстан айтарлықтай жоғары.', strengthen: 'Нақты кандидат кейстері арқылы скрининг пен дағды бағалауын күшейтіңіз.', moderateAction: 'Дағдыны іріктеу фокусында қалдырыңыз, бірақ шекті тым көтермеңіз: тапшылық орташа.', surplusAction: 'Дағдыны негізгі сүзгі етпеңіз: ұсыныс сұраныстан жоғары.', enoughAction: 'Дағды нарықта жеткілікті. Оны қосымша критерий ретінде пайдаланыңыз.', ppts: 'п.п.' },
+  az: { title: 'Bacarıqlar bazarı xəritəsi', subtitle: 'Real HH.ru məlumatları bu rolun tələbləri ilə müqayisə edilir.', refresh: 'Bazar məlumatlarını yenilə', loading: 'HH.ru məlumatları yüklənir…', empty: 'Bu rol üçün uyğunlaşdırılmış HH.ru bazar məlumatı hələ yoxdur.', error: 'Bazar məlumatlarını yükləmək mümkün olmadı', deficit: 'Çatışmayan bacarıqlar', balance: 'Bazar balansı', surplus: 'Artıq bacarıqlar', gap: 'Bazar Skill Gap', gapHelp: 'Müsbət dəyər = bacarıq çatışmazlığı. Mənfi dəyər = artıq təklif.', skill: 'Bacarıq', weight: 'Rol çəkisi', vacancies: 'Vakansiyalar', resumes: 'CV-lər', salary: 'Maaş', actions: 'Bazar nəticələrinə əsasən nə etməli', actionsHelp: 'Tövsiyələr real Skill Gap-i və bacarığın rol çəkisini nəzərə alır.', priority: 'Əsas prioritet', critical: 'Kritik', high: 'Yüksək', moderate: 'Orta', noCritical: 'Kritik bacarıq çatışmazlığı müəyyən edilmədi.', noDirectData: 'Birbaşa bazar uyğunluğu hələ yoxdur.', deficitSummary: 'Bazar bacarıq çatışmazlığını göstərir. Ən böyük fərqə və rol çəkisinə malik bacarıqlar üzrə axtarışı və qiymətləndirməni gücləndirin.', balanceSummary: 'Tələb və təklif nisbətən balanslıdır. Əsas imkan namizədlərin qiymətləndirilməsi keyfiyyətindədir.', surplusSummary: 'Kritik çatışmazlıq yoxdur. Seçim dəqiqliyini artırmaq üçün bazar məlumatlarından istifadə edin.', addScreening: 'Bacarığı məcburi skrininqə və praktiki tapşırığa əlavə edin: bazar tələbi mövcud təklifdən xeyli yüksəkdir.', strengthen: 'Real namizəd кейsləri ilə skrininqi və bacarıq qiymətləndirməsini gücləndirin.', moderateAction: 'Bacarığı seçim fokusunda saxlayın, lakin həddi həddən artıq yüksəltməyin: çatışmazlıq orta səviyyədədir.', surplusAction: 'Bacarığı əsas filtr etməyin: təklif tələbdən yüksəkdir.', enoughAction: 'Bacarıq bazarda kifayət qədər mövcuddur. Əlavə meyar kimi istifadə edin.', ppts: 'f.b.' },
 } as const;
 
-function median(values: number[]) {
-  if (!values.length) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+function normalize(value: string) {
+  return value.trim().toLowerCase().replace(/ё/g, 'е');
 }
 
-function matches(profile: MarketProfile, mapping: { names: string[]; patterns: string[] }) {
-  const body = (profile.text || '').toLowerCase();
-  const skills = Array.isArray(profile.skills) ? profile.skills : [];
-  return mapping.names.some(name => skills.includes(name)) || mapping.patterns.some(pattern => body.includes(pattern));
+function rowMatches(row: MarketRow, terms: string[]) {
+  const name = normalize(row.canonical_skill);
+  return terms.some(term => name.includes(normalize(term)));
 }
 
 export function RoleMarketAnalysis({ skills }: { skills: SkillDefinition[] }) {
@@ -55,7 +53,7 @@ export function RoleMarketAnalysis({ skills }: { skills: SkillDefinition[] }) {
   const detected = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0];
   const lang = (detected === 'kz' ? 'kk' : detected) as keyof typeof COPY;
   const copy = COPY[lang] || COPY.ru;
-  const [profiles, setProfiles] = useState<MarketProfile[]>([]);
+  const [rows, setRows] = useState<MarketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -63,48 +61,53 @@ export function RoleMarketAnalysis({ skills }: { skills: SkillDefinition[] }) {
     setLoading(true);
     setError('');
     const { data, error: queryError } = await supabase
-      .from('market_profiles')
-      .select('source_type, text, salary, skills')
-      .order('created_at', { ascending: false });
+      .from('hh_skill_market_gap')
+      .select('canonical_skill,demand_count,demand_share,supply_count,supply_share,skill_gap')
+      .eq('role_key', 'insurance_agent')
+      .eq('country', 'RU');
     if (queryError) {
       setError(`${copy.error}: ${queryError.message}`);
-      setProfiles([]);
+      setRows([]);
     } else {
-      setProfiles((data ?? []) as MarketProfile[]);
+      setRows((data ?? []).map(row => ({
+        canonical_skill: String(row.canonical_skill ?? ''),
+        demand_count: Number(row.demand_count ?? 0),
+        demand_share: Number(row.demand_share ?? 0),
+        supply_count: Number(row.supply_count ?? 0),
+        supply_share: Number(row.supply_share ?? 0),
+        skill_gap: Number(row.skill_gap ?? 0),
+      })));
     }
     setLoading(false);
   };
 
   useEffect(() => { void load(); }, []);
 
-  const stats = useMemo<Stat[]>(() => {
-    const vacancies = profiles.filter(profile => profile.source_type === 'vacancy');
-    const resumes = profiles.filter(profile => profile.source_type === 'resume');
-    return skills.map(skill => {
-      const mapping = MATCHES[skill.name] ?? { names: [skill.name], patterns: [skill.name.toLowerCase()] };
-      const mv = vacancies.filter(profile => matches(profile, mapping));
-      const mr = resumes.filter(profile => matches(profile, mapping));
-      const vacancyShare = vacancies.length ? mv.length / vacancies.length * 100 : null;
-      const resumeShare = resumes.length ? mr.length / resumes.length * 100 : null;
-      const gap = vacancyShare !== null && resumeShare !== null ? vacancyShare - resumeShare : null;
-      const salaries = mv.map(profile => profile.salary).filter((value): value is number => value !== null);
-      return { skill, vacancies: mv.length, resumes: mr.length, vacancyShare, resumeShare, gap, salary: median(salaries) };
-    });
-  }, [profiles, skills]);
+  const stats = useMemo<Stat[]>(() => skills.map(skill => {
+    const terms = MATCHES[skill.name] ?? [skill.name];
+    const matched = rows.filter(row => rowMatches(row, terms));
+    if (!matched.length) return { skill, vacancies: 0, resumes: 0, vacancyShare: null, resumeShare: null, gap: null, salary: null };
+    const vacancyShare = Math.max(...matched.map(row => row.demand_share));
+    const resumeShare = Math.max(...matched.map(row => row.supply_share));
+    return {
+      skill,
+      vacancies: Math.max(...matched.map(row => row.demand_count)),
+      resumes: Math.max(...matched.map(row => row.supply_count)),
+      vacancyShare,
+      resumeShare,
+      gap: vacancyShare - resumeShare,
+      salary: null,
+    };
+  }), [rows, skills]);
 
   const ordered = useMemo(() => [...stats].sort((a, b) => (b.gap ?? -Infinity) - (a.gap ?? -Infinity)), [stats]);
   const critical = ordered.filter(stat => (stat.gap ?? -Infinity) >= 20);
   const surplus = ordered.filter(stat => (stat.gap ?? Infinity) <= -20);
   const balance = ordered.filter(stat => stat.gap !== null && stat.gap > -20 && stat.gap < 20);
-
+  const matchedCount = ordered.filter(stat => stat.gap !== null).length;
   const marketSummary = critical.length ? copy.deficitSummary : surplus.length ? copy.surplusSummary : copy.balanceSummary;
-
-  const formatMoney = (value: number | null) => {
-    if (value === null) return '—';
-    const locale = lang === 'ru' ? 'ru-RU' : lang === 'kk' ? 'kk-KZ' : lang === 'az' ? 'az-AZ' : 'en-US';
-    const currency = lang === 'ru' ? '₽' : lang === 'kk' ? '₸' : lang === 'az' ? '₼' : '$';
-    return `${new Intl.NumberFormat(locale).format(Math.round(value))} ${currency}`;
-  };
+  const locale = lang === 'ru' ? 'ru-RU' : lang === 'kk' ? 'kk-KZ' : lang === 'az' ? 'az-AZ' : 'en-US';
+  const currency = lang === 'ru' ? '₽' : lang === 'kk' ? '₸' : lang === 'az' ? '₼' : '$';
 
   const recommendation = (stat: Stat) => {
     const gap = stat.gap ?? 0;
@@ -118,67 +121,22 @@ export function RoleMarketAnalysis({ skills }: { skills: SkillDefinition[] }) {
     <section className="w-full min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm">
       <div className="border-b border-gray-100 p-5 md:p-6">
         <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B8860B]/10"><BarChart3 className="h-5 w-5 text-[#B8860B]" /></div>
-            <div className="min-w-0"><h3 className="break-words text-lg font-bold text-[#000052]">{copy.title}</h3><p className="mt-1 break-words text-sm text-gray-500">{copy.subtitle}</p></div>
-          </div>
-          <button type="button" onClick={() => void load()} aria-label={copy.refresh} title={copy.refresh} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-[#000052] transition-colors hover:border-[#000052] hover:bg-[#000052]/5"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
+          <div className="flex min-w-0 items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B8860B]/10"><BarChart3 className="h-5 w-5 text-[#B8860B]" /></div><div className="min-w-0"><h3 className="break-words text-lg font-bold text-[#000052]">{copy.title}</h3><p className="mt-1 break-words text-sm text-gray-500">{copy.subtitle}</p></div></div>
+          <button type="button" onClick={() => void load()} aria-label={copy.refresh} title={copy.refresh} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-[#000052] hover:border-[#000052] hover:bg-[#000052]/5"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
       </div>
 
-      {loading ? <div className="p-10 text-center text-sm text-gray-400">{copy.loading}</div> : error ? <div className="border-t border-[#000052]/10 bg-[#f0f0fa] p-5 text-sm text-[#000052]">{error}</div> : !profiles.length ? <div className="p-8 text-center text-sm text-gray-500">{copy.empty}</div> : (
+      {loading ? <div className="p-10 text-center text-sm text-gray-400">{copy.loading}</div> : error ? <div className="border-t border-[#000052]/10 bg-[#f0f0fa] p-5 text-sm text-[#000052]">{error}</div> : !rows.length ? <div className="p-8 text-center text-sm text-gray-500">{copy.empty}</div> : (
         <div className="min-w-0 p-5 md:p-6">
-          <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <MarketStat label={copy.deficit} value={critical.length} tone="navy" />
-            <MarketStat label={copy.balance} value={balance.length} tone="gold" />
-            <MarketStat label={copy.surplus} value={surplus.length} tone="steel" />
+          <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-3"><MarketStat label={copy.deficit} value={critical.length} tone="navy" /><MarketStat label={copy.balance} value={balance.length} tone="gold" /><MarketStat label={copy.surplus} value={surplus.length} tone="steel" /></div>
+          <div className="mb-4 min-w-0"><h4 className="break-words font-bold text-[#000052]">{copy.gap}</h4><p className="mt-1 break-words text-xs text-gray-400">{copy.gapHelp}</p><p className="mt-2 text-xs text-gray-400">{matchedCount} / {skills.length} {lang === 'ru' ? 'навыков роли сопоставлены с HH.ru' : lang === 'en' ? 'role skills matched with HH.ru' : lang === 'kk' ? 'рөл дағдысы HH.ru деректерімен сәйкестендірілді' : 'rol bacarığı HH.ru ilə uyğunlaşdırılıb'}</p></div>
+          <div className="min-w-0 space-y-3">{ordered.map(stat => { const gap = stat.gap; const width = Math.min(100, Math.abs(gap ?? 0)); const bar = gap === null ? 'bg-gray-300' : gap >= 20 ? 'bg-[#000052]' : gap <= -20 ? 'bg-[#46618C]' : 'bg-[#B8860B]'; return <div key={stat.skill.name} className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(70px,2fr)_auto] items-center gap-3"><div className="min-w-0 break-words text-sm font-semibold text-[#000052]">{stat.skill.name}</div><div className="h-7 min-w-0 overflow-hidden rounded-lg bg-gray-100"><div className={`${bar} h-full rounded-lg`} style={{ width: `${width}%` }} /></div><div className="whitespace-nowrap text-right text-sm font-bold tabular-nums text-[#000052]">{gap === null ? '—' : `${gap > 0 ? '+' : ''}${gap.toFixed(1)} ${copy.ppts}`}</div></div>; })}</div>
+
+          <div className="mt-7 min-w-0"><div className="hidden overflow-hidden rounded-xl border border-gray-100 md:block"><table className="w-full table-fixed"><thead><tr className="bg-gray-50 text-xs text-gray-500"><th className="w-[28%] p-3 text-left font-medium">{copy.skill}</th><th className="w-[13%] p-3 text-right font-medium">{copy.weight}</th><th className="w-[14%] p-3 text-right font-medium">{copy.vacancies}</th><th className="w-[14%] p-3 text-right font-medium">{copy.resumes}</th><th className="w-[15%] p-3 text-right font-medium">Skill Gap</th><th className="w-[16%] p-3 text-right font-medium">{copy.salary}</th></tr></thead><tbody className="divide-y divide-gray-100">{ordered.map(stat => <tr key={stat.skill.name}><td className="break-words p-3 font-semibold text-[#000052]">{stat.skill.name}</td><td className="p-3 text-right font-semibold tabular-nums text-[#B8860B]">{Math.round(stat.skill.weight * 100)}%</td><td className="p-3 text-right text-sm tabular-nums">{stat.vacancies} <span className="text-xs text-gray-400">({stat.vacancyShare === null ? '—' : `${stat.vacancyShare.toFixed(1)}%`})</span></td><td className="p-3 text-right text-sm tabular-nums">{stat.resumes} <span className="text-xs text-gray-400">({stat.resumeShare === null ? '—' : `${stat.resumeShare.toFixed(1)}%`})</span></td><td className={`p-3 text-right font-bold tabular-nums ${stat.gap !== null && stat.gap >= 20 ? 'text-[#000052]' : stat.gap !== null && stat.gap <= -20 ? 'text-[#1E3A5F]' : 'text-[#8A6508]'}`}>{stat.gap === null ? '—' : `${stat.gap > 0 ? '+' : ''}${stat.gap.toFixed(1)} ${copy.ppts}`}</td><td className="p-3 text-right text-sm tabular-nums">—</td></tr>)}</tbody></table></div>
+            <div className="space-y-3 md:hidden">{ordered.map(stat => <div key={stat.skill.name} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 break-words font-semibold text-[#000052]">{stat.skill.name}</div><span className="shrink-0 rounded-full bg-[#B8860B]/10 px-2.5 py-1 text-xs font-bold tabular-nums text-[#8A6508]">{Math.round(stat.skill.weight * 100)}%</span></div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><div className="text-xs text-gray-400">{copy.vacancies}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">{stat.vacancies} <span className="font-normal text-gray-400">({stat.vacancyShare === null ? '—' : `${stat.vacancyShare.toFixed(1)}%`})</span></div></div><div><div className="text-xs text-gray-400">{copy.resumes}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">{stat.resumes} <span className="font-normal text-gray-400">({stat.resumeShare === null ? '—' : `${stat.resumeShare.toFixed(1)}%`})</span></div></div><div><div className="text-xs text-gray-400">Skill Gap</div><div className={`mt-1 font-bold tabular-nums ${stat.gap !== null && stat.gap >= 20 ? 'text-[#000052]' : stat.gap !== null && stat.gap <= -20 ? 'text-[#1E3A5F]' : 'text-[#8A6508]'}`}>{stat.gap === null ? '—' : `${stat.gap > 0 ? '+' : ''}${stat.gap.toFixed(1)} ${copy.ppts}`}</div></div><div><div className="text-xs text-gray-400">{copy.salary}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">—</div></div></div></div>)}</div>
           </div>
 
-          <div className="mb-4 min-w-0"><h4 className="break-words font-bold text-[#000052]">{copy.gap}</h4><p className="mt-1 break-words text-xs text-gray-400">{copy.gapHelp}</p></div>
-
-          <div className="min-w-0 space-y-3">
-            {ordered.map(stat => {
-              const gap = stat.gap;
-              const width = Math.min(100, Math.abs(gap ?? 0));
-              const bar = gap === null ? 'bg-gray-300' : gap >= 20 ? 'bg-[#000052]' : gap <= -20 ? 'bg-[#46618C]' : 'bg-[#B8860B]';
-              return <div key={stat.skill.name} className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(70px,2fr)_auto] items-center gap-3">
-                <div className="min-w-0 break-words text-sm font-semibold text-[#000052]">{stat.skill.name}</div>
-                <div className="h-7 min-w-0 overflow-hidden rounded-lg bg-gray-100"><div className={`${bar} h-full rounded-lg`} style={{ width: `${width}%` }} /></div>
-                <div className="whitespace-nowrap text-right text-sm font-bold tabular-nums text-[#000052]">{gap === null ? '—' : `${gap > 0 ? '+' : ''}${gap.toFixed(1)} п.п.`}</div>
-              </div>;
-            })}
-          </div>
-
-          <div className="mt-7 min-w-0">
-            <div className="hidden overflow-hidden rounded-xl border border-gray-100 md:block">
-              <table className="w-full table-fixed">
-                <thead><tr className="bg-gray-50 text-xs text-gray-500">
-                  <th className="w-[28%] p-3 text-left font-medium">{copy.skill}</th><th className="w-[13%] p-3 text-right font-medium">{copy.weight}</th><th className="w-[14%] p-3 text-right font-medium">{copy.vacancies}</th><th className="w-[14%] p-3 text-right font-medium">{copy.resumes}</th><th className="w-[15%] p-3 text-right font-medium">Skill Gap</th><th className="w-[16%] p-3 text-right font-medium">{copy.salary}</th>
-                </tr></thead>
-                <tbody className="divide-y divide-gray-100">{ordered.map(stat => <tr key={stat.skill.name}>
-                  <td className="break-words p-3 font-semibold text-[#000052]">{stat.skill.name}</td><td className="p-3 text-right font-semibold tabular-nums text-[#B8860B]">{Math.round(stat.skill.weight * 100)}%</td><td className="p-3 text-right text-sm tabular-nums">{stat.vacancies} <span className="text-xs text-gray-400">({stat.vacancyShare === null ? '—' : `${stat.vacancyShare.toFixed(1)}%`})</span></td><td className="p-3 text-right text-sm tabular-nums">{stat.resumes} <span className="text-xs text-gray-400">({stat.resumeShare === null ? '—' : `${stat.resumeShare.toFixed(1)}%`})</span></td>
-                  <td className={`p-3 text-right font-bold tabular-nums ${stat.gap !== null && stat.gap >= 20 ? 'text-[#000052]' : stat.gap !== null && stat.gap <= -20 ? 'text-[#1E3A5F]' : 'text-[#8A6508]'}`}>{stat.gap === null ? '—' : `${stat.gap > 0 ? '+' : ''}${stat.gap.toFixed(1)} п.п.`}</td><td className="p-3 text-right text-sm tabular-nums">{formatMoney(stat.salary)}</td>
-                </tr>)}</tbody>
-              </table>
-            </div>
-
-            <div className="space-y-3 md:hidden">{ordered.map(stat => <div key={stat.skill.name} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 break-words font-semibold text-[#000052]">{stat.skill.name}</div><span className="shrink-0 rounded-full bg-[#B8860B]/10 px-2.5 py-1 text-xs font-bold tabular-nums text-[#8A6508]">{Math.round(stat.skill.weight * 100)}%</span></div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <div><div className="text-xs text-gray-400">{copy.vacancies}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">{stat.vacancies} <span className="font-normal text-gray-400">({stat.vacancyShare === null ? '—' : `${stat.vacancyShare.toFixed(1)}%`})</span></div></div>
-                <div><div className="text-xs text-gray-400">{copy.resumes}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">{stat.resumes} <span className="font-normal text-gray-400">({stat.resumeShare === null ? '—' : `${stat.resumeShare.toFixed(1)}%`})</span></div></div>
-                <div><div className="text-xs text-gray-400">Skill Gap</div><div className={`mt-1 font-bold tabular-nums ${stat.gap !== null && stat.gap >= 20 ? 'text-[#000052]' : stat.gap !== null && stat.gap <= -20 ? 'text-[#1E3A5F]' : 'text-[#8A6508]'}`}>{stat.gap === null ? '—' : `${stat.gap > 0 ? '+' : ''}${stat.gap.toFixed(1)} п.п.`}</div></div>
-                <div><div className="text-xs text-gray-400">{copy.salary}</div><div className="mt-1 font-semibold tabular-nums text-[#000052]">{formatMoney(stat.salary)}</div></div>
-              </div>
-            </div>)}</div>
-          </div>
-
-          <div className="mt-7 overflow-hidden rounded-2xl border border-[#B8860B]/20 bg-gradient-to-br from-[#fffaf0] to-white">
-            <div className="border-b border-[#B8860B]/10 p-5"><div className="flex min-w-0 items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B8860B]/10"><Lightbulb className="h-5 w-5 text-[#B8860B]" /></div><div className="min-w-0"><h4 className="break-words text-lg font-bold text-[#000052]">{copy.actions}</h4><p className="mt-1 break-words text-sm text-gray-600">{copy.actionsHelp}</p></div></div></div>
-            <div className="p-5"><div className="mb-5 flex min-w-0 items-start gap-3"><Target className="mt-0.5 h-5 w-5 shrink-0 text-[#000052]" /><div className="min-w-0"><div className="font-semibold text-[#000052]">{copy.priority}</div><div className="mt-1 break-words text-sm text-gray-600">{profiles.length ? marketSummary : copy.noCritical}</div></div></div>
-              {critical.length > 0 && <div className="space-y-3">{critical.map((stat, index) => <div key={stat.skill.name} className="rounded-xl border border-gray-100 bg-white/80 p-4"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 break-words font-semibold text-[#000052]">{index + 1}. {stat.skill.name}</div><span className="shrink-0 rounded-full bg-[#000052]/5 px-2.5 py-1 text-xs font-semibold text-[#000052]">{(stat.gap ?? 0) >= 20 && stat.skill.weight >= 0.2 ? copy.critical : copy.high}</span></div><p className="mt-2 break-words text-sm leading-6 text-gray-600">{recommendation(stat)}</p></div>)}</div>}
-            </div>
-          </div>
+          <div className="mt-7 overflow-hidden rounded-2xl border border-[#B8860B]/20 bg-gradient-to-br from-[#fffaf0] to-white"><div className="border-b border-[#B8860B]/10 p-5"><div className="flex min-w-0 items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#B8860B]/10"><Lightbulb className="h-5 w-5 text-[#B8860B]" /></div><div className="min-w-0"><h4 className="break-words text-lg font-bold text-[#000052]">{copy.actions}</h4><p className="mt-1 break-words text-sm text-gray-600">{copy.actionsHelp}</p></div></div></div><div className="p-5"><div className="mb-5 flex min-w-0 items-start gap-3"><Target className="mt-0.5 h-5 w-5 shrink-0 text-[#000052]" /><div className="min-w-0"><div className="font-semibold text-[#000052]">{copy.priority}</div><div className="mt-1 break-words text-sm text-gray-600">{matchedCount ? marketSummary : copy.noDirectData}</div></div></div>{critical.length > 0 && <div className="space-y-3">{critical.map((stat, index) => <div key={stat.skill.name} className="rounded-xl border border-gray-100 bg-white/80 p-4"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0 break-words font-semibold text-[#000052]">{index + 1}. {stat.skill.name}</div><span className="shrink-0 rounded-full bg-[#000052]/5 px-2.5 py-1 text-xs font-semibold text-[#000052]">{(stat.gap ?? 0) >= 20 && stat.skill.weight >= 0.2 ? copy.critical : copy.high}</span></div><p className="mt-2 break-words text-sm leading-6 text-gray-600">{recommendation(stat)}</p></div>)}</div>}</div></div>
         </div>
       )}
     </section>
