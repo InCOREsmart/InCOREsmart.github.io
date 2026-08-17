@@ -27,15 +27,31 @@ export function calculateContractFinancialsFromPayoutStreams(revenue: number, st
   return { totalContractRevenue, totalEscrow, platformFee, agentPayout, companyProfit, roi };
 }
 
-/** Contract value used by the financial core. It intentionally retains revenue/planned_revenue. */
+/**
+ * Contract value used by the financial core.
+ *
+ * IMPORTANT: Bitrix deals are realized sales data and must NOT replace the
+ * full value of an active contract. Otherwise a contract worth $18,750 could
+ * appear as a smaller revenue amount merely because only part of its sales
+ * have been realized. Realized sales are calculated separately below.
+ */
 export function getActualContractRevenue(contract: any): number {
-  const explicit = [contract?.actual_contract_revenue, contract?.actual_revenue, contract?.client_contract_amount]
-    .map(Number).find(value => Number.isFinite(value) && value > 0);
+  const explicit = [
+    contract?.actual_contract_revenue,
+    contract?.contract_value,
+    contract?.client_contract_amount,
+    contract?.revenue,
+    contract?.planned_revenue,
+  ]
+    .map(Number)
+    .find(value => Number.isFinite(value) && value > 0);
+
   if (explicit !== undefined) return money(explicit);
+
+  // Legacy fallback only for records that have no persisted contract value.
   const deals = Array.isArray(contract?.bitrix_deals) ? contract.bitrix_deals : [];
   const dealTotal = deals.reduce((sum: number, deal: any) => sum + money(deal?.amount), 0);
-  if (dealTotal > 0) return dealTotal;
-  return money(contract?.revenue ?? contract?.planned_revenue);
+  return money(dealTotal);
 }
 
 /** Realized sales only. Never falls back to contract value. */
