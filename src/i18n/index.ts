@@ -16,10 +16,12 @@ import { featureTranslationsI18nFix } from "./featureTranslationsI18nFix";
 import { tooltipTranslations } from "./tooltips";
 import { notificationTranslations } from "./notifications";
 import { smartContractTranslations } from "./smartContractTranslations";
+import { hhMarketTranslations } from "./hhMarketTranslations";
 
-const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any) => ({
+const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any, hhMarket: any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   tooltips, notifications,
+  hhMarket,
   layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}), ...(feature.layout || {}), ...(extendedFeature.layout || {}), ...(uiPatch.layout || {}), ...(demoPatch.layout || {}) },
   accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}), ...(feature.accounting || {}), ...(extendedFeature.accounting || {}), ...(uiPatch.accounting || {}), ...(demoPatch.accounting || {}) },
   agent: { ...(base.agent || {}), ...(extra.agent || {}), ...(ui.agent || {}), ...(supplement.agent || {}), ...(feature.agent || {}), ...(extendedFeature.agent || {}), ...(uiPatch.agent || {}), ...(demoPatch.agent || {}) },
@@ -36,7 +38,7 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
 });
 
 const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => ({
-  ...mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang]),
+  ...mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang], hhMarketTranslations[lang].hhMarket),
   smartContract: smartContractTranslations[lang],
 });
 
