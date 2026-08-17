@@ -46,7 +46,7 @@ export function getRealizedSalesRevenue(contract: any): number {
   if (explicit !== undefined) return money(explicit);
   const deals = Array.isArray(contract?.bitrix_deals) ? contract.bitrix_deals : [];
   const dealTotal = deals.reduce((sum: number, deal: any) => sum + money(deal?.amount), 0);
-  if (dealTotal > 0) return dealTotal;
+  if (dealTotal > 0) return money(dealTotal);
   if (contract?.is_demo === true) {
     const fields = [contract?.actual_property_revenue, contract?.actual_casco_revenue, contract?.actual_dms_revenue, contract?.actual_renewal_revenue, contract?.actual_cross_sell_revenue].map(Number);
     if (fields.some(value => Number.isFinite(value) && value > 0)) return money(fields.reduce((sum, value) => sum + (Number.isFinite(value) && value > 0 ? value : 0), 0));
@@ -54,10 +54,11 @@ export function getRealizedSalesRevenue(contract: any): number {
   return 0;
 }
 
+/** Sales-plan achievement is allowed to exceed 100% for overachievement. */
 export function getSalesPlanAchievement(contract: any): number {
   if (!contract) return 0;
   const plan = money(contract?.planned_revenue ?? contract?.sales_plan_revenue ?? contract?.revenue);
-  return plan > 0 ? Math.round(Math.min(1, getRealizedSalesRevenue(contract) / plan) * 100) : 0;
+  return plan > 0 ? Math.round((getRealizedSalesRevenue(contract) / plan) * 100) : 0;
 }
 
 export function getActualContractRevenueBreakdown(contract: any): ContractRevenueBreakdown {
