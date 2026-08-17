@@ -33,7 +33,6 @@ import { getAnnualBonusForAgent } from '../../lib/annualBonus';
 
 import {
   getContractAccountingSnapshot,
-  getActualContractRevenueBreakdown,
   getStoredPayoutAmounts,
   money,
 } from '../../lib/contractFinance';
@@ -277,21 +276,16 @@ export function AgentContractDetailPage() {
   /*
    * ЕДИНЫЙ ИСТОЧНИК ФИНАНСОВЫХ РАСЧЁТОВ.
    *
-   * Никаких собственных:
-   * escrow = ...
-   * platformFee = ...
-   * companyProfit = ...
-   * roi = ...
+   * Финансовое ядро используется здесь только для
+   * финансовых показателей, которые имеет право видеть агент.
    *
-   * Всё берём из contractFinance.ts.
+   * Комиссия платформы, прибыль компании и ROI компании
+   * НЕ выводятся в кабинете агента.
    */
   const accounting = getContractAccountingSnapshot({
     ...contract,
     payout_streams: streams,
   });
-
-  const revenueBreakdown =
-    getActualContractRevenueBreakdown(contract);
 
   const payout = getStoredPayoutAmounts(streams);
 
@@ -302,18 +296,13 @@ export function AgentContractDetailPage() {
     new Date().getFullYear()
   );
 
-  const actualRevenue = money(accounting.revenue);
+  const contractValue = money(accounting.revenue);
   const escrow = money(accounting.escrow);
   const paid = money(accounting.paid);
   const locked = money(accounting.locked);
-  const platformFee = money(accounting.commission);
-  const companyProfit = money(accounting.companyProfit);
-  const roi =
-    actualRevenue > 0
-      ? Math.round((companyProfit / actualRevenue) * 100)
-      : 0;
 
   const deadlineDate = new Date(contract.deadline);
+
   const daysLeft = Math.ceil(
     (deadlineDate.getTime() - Date.now()) / 86400000
   );
@@ -448,11 +437,11 @@ export function AgentContractDetailPage() {
 
         <div className="bg-white p-4 rounded-xl border border-[#000052]/10 min-w-0">
           <p className="text-xs text-[#000052]/60 mb-1">
-            Фактическая сумма договоров
+            Сумма контракта
           </p>
 
           <p className="text-xl font-bold text-[#000052] break-words">
-            ${actualRevenue.toLocaleString()}
+            ${contractValue.toLocaleString()}
           </p>
         </div>
 
@@ -533,9 +522,7 @@ export function AgentContractDetailPage() {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 rounded-lg bg-[#B8860B]/10 border border-[#B8860B]/20 min-w-0">
             <div className="min-w-0">
               <span className="text-sm text-[#000052]/80 break-words">
-                {String(
-                  t('agentContractDetail.annualBonus')
-                )}
+                {String(t('agentContractDetail.annualBonus'))}
               </span>
 
               <p className="text-xs text-[#000052]/60 mt-1 break-words">
@@ -557,14 +544,14 @@ export function AgentContractDetailPage() {
           Итоговый расчёт
         </h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
           <div>
             <div className="text-xs text-gray-400">
-              Сумма договоров
+              Сумма контракта
             </div>
 
             <div className="font-bold text-[#000052] mt-1 break-words">
-              ${actualRevenue.toLocaleString()}
+              ${contractValue.toLocaleString()}
             </div>
           </div>
 
@@ -595,20 +582,6 @@ export function AgentContractDetailPage() {
 
             <div className="font-bold text-[#000052] mt-1 break-words">
               ${locked.toLocaleString()}
-            </div>
-          </div>
-
-          <div className="col-span-2 sm:col-span-3 md:col-span-1">
-            <div className="text-xs text-gray-400">
-              Результат компании
-            </div>
-
-            <div className="font-bold text-[#000052] mt-1 break-words">
-              ${companyProfit.toLocaleString()} · ROI {roi}%
-            </div>
-
-            <div className="text-xs text-gray-400 mt-1 break-words">
-              Комиссия InCORE ${platformFee.toLocaleString()}
             </div>
           </div>
         </div>
