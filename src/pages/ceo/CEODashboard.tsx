@@ -6,7 +6,7 @@ import { DollarSign, Shield, TrendingUp, CheckCircle, BarChart3, Wallet, Award }
 import { DEMO_AGENTS } from '../../lib/demoData';
 import { calculateAnnualBonusProgress } from '../../lib/annualBonus';
 import { InfoTooltip } from '../../components/ui/InfoTooltip';
-import { getActualContractRevenue, getContractAccountingSnapshot, getSalesPlanAchievement, money, PLATFORM_FEE_PERCENT } from '../../lib/contractFinance';
+import { getContractAccountingSnapshot, getSalesPlanAchievement, money } from '../../lib/contractFinance';
 
 const active = (contract: any) => contract?.status === 'ACTIVE' || contract?.status === 'IN_PROGRESS';
 
@@ -17,26 +17,33 @@ const getStreamsForContract = (contract: any, payoutStreams: any[]) => (
 );
 
 /**
- * Financial core uses the contractual value of an active contract.
- * Sales-plan achievement uses confirmed realized sales separately.
- * Annual bonus is excluded from escrow.
+ * ЕДИНЫЙ ФИНАНСОВЫЙ ИСТОЧНИК.
+ *
+ * Все экономические показатели контракта берём из contractFinance.ts.
+ * Здесь допускается только агрегация статусов payout streams для
+ * отображения операционных показателей CEO.
+ *
+ * Комиссия, payout и прибыль НЕ пересчитываются здесь повторно.
  */
 const getDashboardAccounting = (contract: any, streams: any[]) => {
+  const snapshot = getContractAccountingSnapshot({
+    ...contract,
+    payout_streams: streams,
+  });
+
   const nonAnnual = streams.filter((stream: any) => stream?.stream_key !== 'annual');
-  const storedPayout = nonAnnual.reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
-  const contractRevenue = money(contract?.planned_revenue ?? contract?.revenue);
+  const liability = nonAnnual
+    .filter((stream: any) => ['LOCKED', 'UNLOCKED', 'PAYABLE'].includes(stream?.status))
+    .reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
+  const pending = nonAnnual
+    .filter((stream: any) => ['UNLOCKED', 'PAYABLE'].includes(stream?.status))
+    .reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
 
-  if (storedPayout > 0) {
-    const paid = nonAnnual.filter((stream: any) => stream?.status === 'PAID').reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
-    const locked = nonAnnual.filter((stream: any) => stream?.status === 'LOCKED').reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
-    const liability = nonAnnual.filter((stream: any) => ['LOCKED', 'UNLOCKED', 'PAYABLE'].includes(stream?.status)).reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
-    const pending = nonAnnual.filter((stream: any) => ['UNLOCKED', 'PAYABLE'].includes(stream?.status)).reduce((sum: number, stream: any) => sum + money(stream?.amount), 0);
-    const commission = money(storedPayout * PLATFORM_FEE_PERCENT / 100);
-    return { revenue: contractRevenue, escrow: storedPayout, payout: storedPayout, paid, locked, liability, pending, commission, companyProfit: money(contractRevenue - storedPayout - commission) };
-  }
-
-  const snapshot = getContractAccountingSnapshot({ ...contract, payout_streams: streams });
-  return { revenue: contractRevenue, escrow: snapshot.escrow, payout: snapshot.payout, paid: snapshot.paid, locked: snapshot.locked, liability: snapshot.locked, pending: 0, commission: snapshot.commission, companyProfit: money(contractRevenue - snapshot.payout - snapshot.commission) };
+  return {
+    ...snapshot,
+    liability,
+    pending,
+  };
 };
 
 export function CEODashboard() {
