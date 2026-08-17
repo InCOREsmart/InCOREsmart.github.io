@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, BriefcaseBusiness, Users, TrendingDown, RefreshCw } from 'lucide-react';
+import { Activity, Briefcase, Users, TrendingDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 
@@ -164,7 +164,7 @@ export function HHMarketAnalyticsPanel() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 shadow-sm">
-          <div className="flex items-center justify-between"><span className="text-xs text-[#000052]/55">{t('hhMarket.vacancies')}</span><BriefcaseBusiness className="w-5 h-5 text-[#B8860B]" /></div>
+          <div className="flex items-center justify-between"><span className="text-xs text-[#000052]/55">{t('hhMarket.vacancies')}</span><Briefcase className="w-5 h-5 text-[#B8860B]" /></div>
           <div className="text-2xl md:text-3xl font-bold text-[#000052] mt-2">{state.vacancyCount.toLocaleString(locale)}</div>
         </div>
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 shadow-sm">
