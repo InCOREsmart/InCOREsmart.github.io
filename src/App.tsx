@@ -50,15 +50,16 @@ function HHOAuthCallback() {
 
     let cancelled = false;
     setStatus('loading');
+
     fetch(`${HH_MARKET_FUNCTION}?action=exchange&code=${encodeURIComponent(code)}`)
       .then(async (response) => {
-        if (response.redirected) {
-          window.location.replace(response.url);
-          return;
-        }
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'HH OAuth exchange failed');
-        if (!cancelled) setStatus('success');
+        if (!response.ok) throw new Error(data.error || data.details?.error_description || 'HH OAuth exchange failed');
+        if (data.success !== true) throw new Error(data.error || 'HH OAuth exchange failed');
+        if (!cancelled) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setStatus('success');
+        }
       })
       .catch((err) => {
         if (!cancelled) {
