@@ -1,162 +1,24 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { DEMO_AGENTS } from '../lib/demoData';
+import { COMPLETED_DEMO_CONTRACTS } from '../lib/demoCompletedContracts';
 
-type UserRole = 'ceo' | 'agent' | 'guest' | null;
+type UserRole='ceo'|'agent'|'guest'|null;
+interface AuthContextType{user:User|null;session:Session|null;role:UserRole;loading:boolean;signIn:(email:string,password:string)=>Promise<void>;signOut:()=>Promise<void>}
+const AuthContext=createContext<AuthContextType|undefined>(undefined);
+const DEMO_EMAILS=new Set(['hronline1226@gmail.com','hronline2612@gmail.com','hronline1226ceo@gmail.com']);
+const demoAgentsBackup=DEMO_AGENTS.slice();
+const demoContractsBackup=COMPLETED_DEMO_CONTRACTS.slice();
+const syncDemoVisibility=(email?:string|null)=>{const isDemo=!!email&&DEMO_EMAILS.has(email.toLowerCase());DEMO_AGENTS.splice(0,DEMO_AGENTS.length,...(isDemo?demoAgentsBackup:[]));COMPLETED_DEMO_CONTRACTS.splice(0,COMPLETED_DEMO_CONTRACTS.length,...(isDemo?demoContractsBackup:[]));};
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  role: UserRole;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<UserRole>(null);
-  const [loading, setLoading] = useState(true);
-
-  const determineRole = async (currentUser: User): Promise<UserRole> => {
-    console.log('🔍 Определяем роль для:', currentUser.id);
-    
-    // 1. Проверяем metadata (приводим к нижнему регистру)
-    const metaRole = (currentUser.user_metadata?.role as string | undefined)?.toLowerCase();
-    if (metaRole === 'agent' || metaRole === 'ceo') {
-      console.log('✅ Роль найдена в metadata:', metaRole);
-      return metaRole;
-    }
-
-    // 2. Проверяем таблицу companies (CEO)
-    try {
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-        
-      if (companyData) {
-        console.log('✅ Роль найдена в таблице companies -> ceo');
-        return 'ceo';
-      }
-    } catch (err) {
-      console.error('Ошибка проверки companies:', err);
-    }
-
-    // 3. Проверяем таблицу agents (Агент)
-    try {
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-        
-      if (agentData) {
-        console.log('✅ Роль найдена в таблице agents -> agent');
-        return 'agent';
-      }
-    } catch (err) {
-      console.error('Ошибка проверки agents:', err);
-    }
-
-    console.log('⚠️ Роль не найдена, устанавливаем ceo по умолчанию');
-    return 'ceo';
-  };
-
-  useEffect(() => {
-    console.log('🚀 AUTH INIT');
-    
-    // ГАРАНТИРОВАННАЯ РАЗБЛОКИРОВКА ЧЕРЕЗ 300 МС
-    const forceLoadTimer = setTimeout(() => {
-      console.log('⏱️ AUTH: Таймаут истек, принудительно снимаем loading');
-      setLoading(false);
-    }, 300);
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          const userRole = await determineRole(currentSession.user);
-          setRole(userRole);
-        } else {
-          setRole(null);
-        }
-      } catch (error) {
-        console.error('💥 AUTH ERROR:', error);
-        setRole(null);
-      } finally {
-        console.log('🏁 AUTH: Загрузка завершена (loading = false)');
-        setLoading(false);
-        clearTimeout(forceLoadTimer);
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('🔄 AUTH STATE CHANGED:', event);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          const userRole = await determineRole(currentSession.user);
-          setRole(userRole);
-        } else {
-          setRole(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      clearTimeout(forceLoadTimer);
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-    } catch (error: any) {
-      console.error('Ошибка входа:', error);
-      throw new Error(error.message || 'Неверный email или пароль');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error(e);
-    }
-    setUser(null);
-    setSession(null);
-    setRole(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, session, role, loading, signIn, signOut }}>
-      {children}
-    </AuthContext.Provider>
-  );
+export const AuthProvider=({children}:{children:ReactNode})=>{
+ const [user,setUser]=useState<User|null>(null),[session,setSession]=useState<Session|null>(null),[role,setRole]=useState<UserRole>(null),[loading,setLoading]=useState(true);
+ const determineRole=async(u:User):Promise<UserRole>=>{const meta=(u.user_metadata?.role as string|undefined)?.toLowerCase();if(meta==='agent'||meta==='ceo')return meta;const {data:c}=await supabase.from('companies').select('id').eq('user_id',u.id).maybeSingle();if(c)return'ceo';const {data:a}=await supabase.from('agents').select('id').eq('user_id',u.id).maybeSingle();if(a)return'agent';return'ceo';};
+ const applyUser=async(u:User|null)=>{setUser(u);syncDemoVisibility(u?.email);if(u)setRole(await determineRole(u));else setRole(null);};
+ useEffect(()=>{let alive=true;supabase.auth.getSession().then(async({data:{session:s}})=>{if(!alive)return;setSession(s);await applyUser(s?.user??null);setLoading(false);});const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_event,s)=>{setSession(s);await applyUser(s?.user??null);setLoading(false);});return()=>{alive=false;subscription.unsubscribe();};},[]);
+ const signIn=async(email:string,password:string)=>{setLoading(true);try{const{error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;}catch(e:any){throw new Error(e.message||'Неверный email или пароль');}finally{setLoading(false);}};
+ const signOut=async()=>{await supabase.auth.signOut();syncDemoVisibility(null);setUser(null);setSession(null);setRole(null);};
+ return <AuthContext.Provider value={{user,session,role,loading,signIn,signOut}}>{children}</AuthContext.Provider>;
 };
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth=()=>{const c=useContext(AuthContext);if(!c)throw new Error('useAuth must be used within AuthProvider');return c;};
