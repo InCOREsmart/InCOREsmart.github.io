@@ -3,6 +3,7 @@ import { ArrowRight, BarChart3, CheckCircle2, CircleDollarSign, RotateCcw, Shiel
 import { useTranslation } from 'react-i18next';
 import { calculateHrLoss, type HrCalculatorInput } from '../../features/hrCalculator/hrCalculator';
 import { HrLossDiagnosisPanel } from '../../features/hrCalculator/HrLossDiagnosisPanel';
+import { HrReportLeadCapture } from '../../features/hrCalculator/HrReportLeadCapture';
 import { HrEconomicOpportunityPanel } from '../../features/hrCalculator/HrEconomicOpportunityPanel';
 
 const initialInput: HrCalculatorInput = { averageSalary: 120000, departuresPerYear: 24, rampMonths: 2, revenuePerEmployee: 450000, hrCount: 2, hrSalary: 100000, hiresPerMonthPerHr: 5 };
@@ -59,6 +60,20 @@ export function HrLossCalculatorPage() {
     <section className="mt-6 rounded-3xl border border-indigo-100 bg-indigo-50 p-6 sm:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="max-w-xl"><div className="flex items-center gap-2 text-sm font-bold text-indigo-700"><TrendingDown size={18} /> {t('hrCalculator.scenario.badge')}</div><h2 className="mt-2 text-2xl font-black">{t('hrCalculator.scenario.title', { value: scenario })}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{t('hrCalculator.scenario.description')}</p></div><div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sm"><div className="flex justify-between text-sm font-bold"><span>{t('hrCalculator.scenario.slider')}</span><span>{scenario}%</span></div><input aria-label={t('hrCalculator.scenario.slider')} type="range" min="5" max="60" step="5" value={scenario} onChange={(e) => setScenario(Number(e.target.value))} className="mt-4 w-full accent-indigo-600" /><div className="mt-4 grid grid-cols-2 gap-4"><div><div className="text-xs text-slate-500">{t('hrCalculator.scenario.saving')}</div><div className="text-2xl font-black text-indigo-700">{money(scenarioSaving, language)}</div></div><div className="text-right"><div className="text-xs text-slate-500">{t('hrCalculator.scenario.remaining')}</div><div className="text-2xl font-black text-slate-900">{number(scenarioDepartures, language)}</div></div></div></div></div></section>
 
     <div className="mt-6"><HrEconomicOpportunityPanel input={input} result={result} t={t} money={(value) => money(value, language)} /></div>
+
+    <div className="mt-6"><HrReportLeadCapture
+      t={t}
+      totalLoss={money(result.totalLoss, language)}
+      potentialEffect={money(scenarioSaving, language)}
+      onSubmit={(contact) => {
+        localStorage.setItem('incore.hrCalculator.lead', JSON.stringify({
+          contact,
+          totalLoss: result.totalLoss,
+          potentialEffect: scenarioSaving,
+          capturedAt: new Date().toISOString(),
+        }));
+      }}
+    /></div>
 
     <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"><div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center"><div><div className="flex items-center gap-2 text-sm font-bold text-slate-700"><ShieldAlert size={18} /> {t('hrCalculator.next.badge')}</div><h2 className="mt-2 text-2xl font-black">{t('hrCalculator.next.title')}</h2><p className="mt-2 max-w-2xl leading-7 text-slate-600">{t('hrCalculator.next.description')}</p><div className="mt-5 grid gap-2 sm:grid-cols-2">{['resultCost', 'roleCost', 'contractRoi', 'financialForecast'].map((key) => <div key={key} className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 size={16} className="text-indigo-600" /> {t(`hrCalculator.next.items.${key}`)}</div>)}</div></div><button onClick={() => setShowFullReport(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-4 font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700">{t('hrCalculator.next.cta')} <ArrowRight size={18} /></button></div></section>
 
