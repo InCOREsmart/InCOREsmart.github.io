@@ -63,7 +63,7 @@ export const insuranceAgentDecomposition: RoleDecomposition = {
   skills_relations: [
     { skill_from: 'Продажи корпоративного страхования', skill_to: 'Кросс-продажи', relation_type: 'enhances', strength: 0.62, is_directed: true },
     { skill_from: 'Продажи корпоративного страхования', skill_to: 'Удержание клиентов', relation_type: 'related_to', strength: 0.68, is_directed: false },
-    { skill_from: 'Продажи корпоративного страхования', skill_to: 'Выполнение плана продаж', relation_type: 'enhances', strength: 0.80, is_directed: true },
+    { skill_from: 'Продажи корпоративного страхования', skill_to: 'Выполнение плана продаж', relation_type: 'enhances', strength: 0.55, is_directed: true },
     { skill_from: 'Удержание клиентов', skill_to: 'Продажи корпоративного страхования', relation_type: 'requires', strength: 0.80, is_directed: true },
     { skill_from: 'Долгосрочная результативность', skill_to: 'Удержание клиентов', relation_type: 'requires', strength: 0.70, is_directed: true },
     { skill_from: 'Долгосрочная результативность', skill_to: 'Выполнение плана продаж', relation_type: 'requires', strength: 0.65, is_directed: true },
