@@ -11,6 +11,7 @@ on:
       - "src/pages/public/HrLossCalculatorPage.tsx"
       - "src/features/hrCalculator/**"
       - "src/i18n/hrCalculatorTranslations.ts"
+      - "src/i18n/hrCalculatorBenchmarkTranslations.ts"
       - "src/i18n/index.ts"
       - "src/i18n/locales/**"
       - "scripts/check-hr-calculator-i18n.mjs"
