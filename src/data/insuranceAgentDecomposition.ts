@@ -1,5 +1,6 @@
 import { RoleDecomposition } from '../types/decomposition';
 
+// Canonical insurance-agent decomposition: 90-day retention is part of client retention.
 export const insuranceAgentDecomposition: RoleDecomposition = {
   role: {
     name: 'Страховой агент',
