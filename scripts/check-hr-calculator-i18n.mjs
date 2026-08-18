@@ -6,6 +6,7 @@ const root = process.cwd();
 const sources = [
   { file: path.join(root, 'src', 'i18n', 'hrCalculatorTranslations.ts'), prefix: 'hrCalculator' },
   { file: path.join(root, 'src', 'i18n', 'hrCalculatorBenchmarkTranslations.ts'), prefix: 'hrCalculatorBenchmark' },
+  { file: path.join(root, 'src', 'i18n', 'hrCalculatorOpportunityTranslations.ts'), prefix: 'hrCalculator' },
 ];
 const languages = ['ru', 'en', 'kk', 'az'];
 
