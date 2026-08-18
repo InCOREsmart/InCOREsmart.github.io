@@ -7,7 +7,7 @@ const srcDir = path.join(root, 'src');
 const localeDir = path.join(srcDir, 'i18n', 'locales');
 const localeFiles = { ru: 'ru.json', en: 'en.json', kk: 'kk.json', az: 'az.json' };
 const languages = Object.keys(localeFiles);
-const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts'];
+const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts', 'candidateTranslations.ts', 'onboardingTranslations.ts'];
 
 function flatten(value, prefix = '', out = new Set()) {
   if (!value || typeof value !== 'object') return out;
@@ -42,7 +42,6 @@ function collectRuntimeKeys(file) {
   const text = fs.readFileSync(file, 'utf8');
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const result = Object.fromEntries(languages.map(lang => [lang, new Set()]));
-
   function visit(node) {
     if (ts.isObjectLiteralExpression(node)) {
       for (const property of node.properties) {
@@ -55,7 +54,6 @@ function collectRuntimeKeys(file) {
     }
     ts.forEachChild(node, visit);
   }
-
   visit(source);
   return result;
 }
@@ -97,13 +95,6 @@ for (const file of walk(srcDir)) {
 }
 
 const missing = [];
-for (const key of [...used].sort()) {
-  for (const lang of languages) if (!resources[lang].has(key)) missing.push(`${lang}: ${key}`);
-}
-
-if (missing.length) {
-  console.error(`Missing i18n keys: ${missing.length}`);
-  for (const item of missing) console.error(`- ${item}`);
-  process.exit(1);
-}
-console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KZ/AZ.`);
+for (const key of [...used].sort()) for (const lang of languages) if (!resources[lang].has(key)) missing.push(`${lang}: ${key}`);
+if (missing.length) { console.error(`Missing i18n keys: ${missing.length}`); for (const item of missing) console.error(`- ${item}`); process.exit(1); }
+console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KK/AZ.`);
