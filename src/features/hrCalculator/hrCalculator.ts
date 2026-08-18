@@ -55,24 +55,34 @@ export function calculateHrLoss(input: HrCalculatorInput): HrCalculatorResult {
   const replacementRevenueGap = departures * revenue * ramp;
 
   return {
-    hiresPerHrYear,
-    hrAnnualCapacity,
-    costPerHire,
-    recruitmentCost,
-    adaptationSalary,
-    lostRevenue,
-    totalLoss,
-    annualSalaryBase,
+    hiresPerHrYear, hrAnnualCapacity, costPerHire, recruitmentCost, adaptationSalary,
+    lostRevenue, totalLoss, annualSalaryBase,
     lossAsPercentOfSalary: annualSalaryBase > 0 ? (totalLoss / annualSalaryBase) * 100 : 0,
     lossPerDeparture: departures > 0 ? totalLoss / departures : 0,
     monthlyRevenueAtRisk: lostRevenue / 12,
-    productivityLossMonths,
-    productivityLossSalary,
-    replacementRevenueGap,
-    hrCostPerYear,
+    productivityLossMonths, productivityLossSalary, replacementRevenueGap, hrCostPerYear,
     turnoverCostPerEmployee: departures > 0 ? totalLoss / departures : 0,
     savingsAt10PercentLowerTurnover: totalLoss * 0.10,
     savingsAt25PercentLowerTurnover: totalLoss * 0.25,
     savingsAt40PercentLowerTurnover: totalLoss * 0.40,
+  };
+}
+
+export function calculateHrScenario(input: HrCalculatorInput, turnoverReductionPercent: number, rampReductionPercent: number) {
+  const turnover = Math.min(100, Math.max(0, turnoverReductionPercent));
+  const rampReduction = Math.min(100, Math.max(0, rampReductionPercent));
+  const scenarioInput: HrCalculatorInput = {
+    ...input,
+    departuresPerYear: input.departuresPerYear * (1 - turnover / 100),
+    rampMonths: input.rampMonths * (1 - rampReduction / 100),
+  };
+  const baseline = calculateHrLoss(input);
+  const scenario = calculateHrLoss(scenarioInput);
+  return {
+    baseline,
+    scenario,
+    saving: Math.max(0, baseline.totalLoss - scenario.totalLoss),
+    savingPercent: baseline.totalLoss > 0 ? Math.max(0, ((baseline.totalLoss - scenario.totalLoss) / baseline.totalLoss) * 100) : 0,
+    scenarioInput,
   };
 }
