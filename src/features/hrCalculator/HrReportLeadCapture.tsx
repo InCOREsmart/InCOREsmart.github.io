@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, Mail, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
@@ -30,6 +30,24 @@ export function HrReportLeadCapture({ t, input, result, scenarioReduction = 0, s
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap';
+    link.dataset.incoreHrFont = 'manrope';
+    document.head.appendChild(link);
+
+    const style = document.createElement('style');
+    style.dataset.incoreHrFont = 'manrope-scope';
+    style.textContent = "main:has(#hr-report-contact){font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}main:has(#hr-report-contact) h1,main:has(#hr-report-contact) h2,main:has(#hr-report-contact) h3,main:has(#hr-report-contact) button,main:has(#hr-report-contact) input{font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}";
+    document.head.appendChild(style);
+
+    return () => {
+      link.remove();
+      style.remove();
+    };
+  }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
