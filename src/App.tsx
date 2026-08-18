@@ -20,6 +20,7 @@ import { AgentSettings } from './pages/agent/AgentSettings';
 import { AgentContractsPage } from './pages/agent/AgentContractsPage';
 import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
 import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
+import { HrLossCalculatorPage } from './pages/public/HrLossCalculatorPage';
 import { RoleSkillsProgressPanel } from './components/role/RoleSkillsProgressPanel';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { LegacyUiTranslator } from './components/common/LegacyUiTranslator';
@@ -101,6 +102,7 @@ function App() {
         <HHOAuthCallback />
         <Router>
           <Routes>
+            <Route path="/hr-calculator" element={<HrLossCalculatorPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/ceo" element={<ProtectedRoute><DashboardLayout><CEODashboard /></DashboardLayout></ProtectedRoute>} />
