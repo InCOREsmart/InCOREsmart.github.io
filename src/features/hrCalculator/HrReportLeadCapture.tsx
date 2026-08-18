@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { ArrowRight, CheckCircle2, Mail, Send } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 
 type Props = {
   t: (key: string) => string;
   totalLoss: string;
   potentialEffect: string;
-  locale?: string;
   onSubmit?: (contact: string) => void;
 };
 
@@ -16,7 +16,8 @@ const detectContactType = (value: string): 'email' | 'telegram' | 'other' => {
   return 'other';
 };
 
-export function HrReportLeadCapture({ t, totalLoss, potentialEffect, locale = 'ru', onSubmit }: Props) {
+export function HrReportLeadCapture({ t, totalLoss, potentialEffect, onSubmit }: Props) {
+  const { i18n } = useTranslation();
   const [contact, setContact] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -32,11 +33,12 @@ export function HrReportLeadCapture({ t, totalLoss, potentialEffect, locale = 'r
 
     const rawLoss = Number(totalLoss.replace(/[^0-9,.-]/g, '').replace(/\s/g, '').replace(',', '.')) || 0;
     const rawEffect = Number(potentialEffect.replace(/[^0-9,.-]/g, '').replace(/\s/g, '').replace(',', '.')) || 0;
+    const locale = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0];
 
     const { error: insertError } = await supabase.from('hr_calculator_leads').insert({
       contact: value,
       contact_type: detectContactType(value),
-      locale: locale.split('-')[0],
+      locale,
       total_loss: rawLoss,
       potential_effect: rawEffect,
       source: 'hr-calculator',
