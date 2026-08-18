@@ -31,18 +31,17 @@ const INSURANCE_FALLBACK = {
   },
   skills: [
     { name: 'Продажи корпоративного страхования', description: 'Привлечение корпоративных клиентов, подготовка предложения, заключение и активация договоров.', skill_type: 'hard', verification_level: 'L4_smart_contract', weight: 0.50, is_required: true, expected_outcomes: ['Заключены и оплачены новые корпоративные договоры страхования.'], verification_criteria: ['Договор создан и активирован.', 'Оплата клиента подтверждена.'] },
-    { name: 'Удержание клиентов', description: 'Сопровождение действующих корпоративных клиентов и своевременное продление договоров.', skill_type: 'hybrid', verification_level: 'L3_digital_twin', weight: 0.15, is_required: true, expected_outcomes: ['Действующие договоры продлены в установленный срок.'], verification_criteria: ['Есть подтвержденное продление договора.'] },
+    { name: 'Удержание клиентов', description: 'Сопровождение действующих корпоративных клиентов, своевременное продление договоров и сохранение клиента после продажи не менее 90 дней.', skill_type: 'hybrid', verification_level: 'L3_digital_twin', weight: 0.25, is_required: true, expected_outcomes: ['Действующие договоры продлены в установленный срок.', 'Клиент сохраняется не менее 90 дней после заключения договора.'], verification_criteria: ['Есть подтвержденное продление договора.', 'Нет досрочного расторжения или возврата в течение 90 дней.'] },
     { name: 'Кросс-продажи', description: 'Выявление дополнительных потребностей действующих клиентов и продажа дополнительных страховых продуктов.', skill_type: 'hard', verification_level: 'L4_smart_contract', weight: 0.10, is_required: false, expected_outcomes: ['Действующим клиентам проданы дополнительные страховые продукты.'], verification_criteria: ['Дополнительный договор или продукт активирован и оплачен.'] },
     { name: 'Выполнение плана продаж', description: 'Выполнение установленного плана продаж и KPI.', skill_type: 'hard', verification_level: 'L4_smart_contract', weight: 0.10, is_required: true, expected_outcomes: ['Установленный план продаж и KPI выполнены.'], verification_criteria: ['Фактический результат подтвержден данными системы учета.'] },
-    { name: 'Удержание 90 дней', description: 'Стабилизация клиента после заключения договора и предотвращение досрочного расторжения.', skill_type: 'hybrid', verification_level: 'L4_smart_contract', weight: 0.10, is_required: true, expected_outcomes: ['Клиент сохраняется не менее 90 дней после заключения договора.'], verification_criteria: ['Нет досрочного расторжения, возврата или отмены в течение 90 дней.'] },
     { name: 'Долгосрочная результативность', description: 'Стабильное выполнение целей роли и поддержание результата в течение года.', skill_type: 'hybrid', verification_level: 'L3_digital_twin', weight: 0.05, is_required: false, expected_outcomes: ['Годовые условия результативности выполнены.'], verification_criteria: ['Накопленный результат и годовые KPI подтверждены системой.'] },
   ],
   skills_relations: [
     { skill_from: 'Продажи корпоративного страхования', skill_to: 'Удержание клиентов', relation_type: 'related_to', strength: 0.68, is_directed: false },
     { skill_from: 'Продажи корпоративного страхования', skill_to: 'Кросс-продажи', relation_type: 'related_to', strength: 0.62, is_directed: false },
     { skill_from: 'Продажи корпоративного страхования', skill_to: 'Выполнение плана продаж', relation_type: 'enhances', strength: 0.55, is_directed: true },
-    { skill_from: 'Удержание 90 дней', skill_to: 'Продажи корпоративного страхования', relation_type: 'requires', strength: 0.80, is_directed: true },
-    { skill_from: 'Долгосрочная результативность', skill_to: 'Удержание 90 дней', relation_type: 'requires', strength: 0.70, is_directed: true },
+    { skill_from: 'Удержание клиентов', skill_to: 'Продажи корпоративного страхования', relation_type: 'requires', strength: 0.80, is_directed: true },
+    { skill_from: 'Долгосрочная результативность', skill_to: 'Удержание клиентов', relation_type: 'requires', strength: 0.70, is_directed: true },
     { skill_from: 'Долгосрочная результативность', skill_to: 'Выполнение плана продаж', relation_type: 'requires', strength: 0.65, is_directed: true },
   ],
 };
