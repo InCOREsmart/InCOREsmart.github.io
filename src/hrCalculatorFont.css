@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+/* Manrope is intentionally scoped to the public HR calculator lead magnet. */
+main:has(#hr-report-contact) {
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+main:has(#hr-report-contact) h1,
+main:has(#hr-report-contact) h2,
+main:has(#hr-report-contact) h3,
+main:has(#hr-report-contact) button,
+main:has(#hr-report-contact) input {
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
