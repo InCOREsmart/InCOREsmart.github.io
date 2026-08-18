@@ -4,7 +4,7 @@ const file = 'src/pages/public/HrLossCalculatorPage.tsx';
 const diagnosisImport = "import { HrLossDiagnosisPanel } from '../../features/hrCalculator/HrLossDiagnosisPanel';";
 const diagnosisJsx = '<HrLossDiagnosisPanel result={result} t={t} money={(value) => money(value, language)} />';
 const leadImport = "import { HrReportLeadCapture } from '../../features/hrCalculator/HrReportLeadCapture';";
-const leadJsx = `<HrReportLeadCapture\n      t={t}\n      totalLoss={money(result.totalLoss, language)}\n      potentialEffect={money(scenarioSaving, language)}\n      onSubmit={(contact) => {\n        localStorage.setItem('incore.hrCalculator.lead', JSON.stringify({\n          contact,\n          totalLoss: result.totalLoss,\n          potentialEffect: scenarioSaving,\n          capturedAt: new Date().toISOString(),\n        }));\n      }}\n    />`;
+const leadJsx = `<HrReportLeadCapture\n      t={t}\n      locale={language}\n      totalLoss={money(result.totalLoss, language)}\n      potentialEffect={money(scenarioSaving, language)}\n    />`;
 
 let source = fs.readFileSync(file, 'utf8');
 
