@@ -19,9 +19,12 @@ export function CEOCandidatesPage(){
   const skills=useMemo(()=>selectedRole?.role_skills.flatMap(rs=>rs.skills?[rs.skills]:[])||[],[selectedRole]);
   const match=useMemo(()=>{
     if(!selectedRole||!skills.length)return 0;
-    const validRoleSkills=selectedRole.role_skills.filter((rs):rs is RoleSkill & {skills:{id:string;name:string}}=>Boolean(rs.skills));
+    const validRoleSkills=selectedRole.role_skills.filter(rs=>rs.skills!==null);
     const total=validRoleSkills.reduce((sum,rs)=>sum+Number(rs.weight||0),0)||1;
-    return Math.round(validRoleSkills.reduce((sum,rs)=>sum+(Number(scores[rs.skills.id]||0)*Number(rs.weight||0)),0)/total);
+    return Math.round(validRoleSkills.reduce((sum,rs)=>{
+      if(!rs.skills)return sum;
+      return sum+(Number(scores[rs.skills.id]||0)*Number(rs.weight||0));
+    },0)/total);
   },[selectedRole,skills,scores]);
 
   const load=async()=>{if(!user)return;setLoading(true);setError('');try{const {data:rs,error:re}=await supabase.from('roles').select('id,name,description,role_skills(weight,skills(id,name))').eq('is_active',true).order('created_at',{ascending:false});if(re)throw re;setRoles((rs||[]) as unknown as Role[]);const {data:cs,error:ce}=await supabase.from('candidates').select('id,full_name,email,source,role_id,skill_scores').eq('user_id',user.id).order('created_at',{ascending:false});if(ce)throw ce;setCandidates((cs||[]) as Candidate[]);}catch(e:any){setError(e?.message||t('candidates.error'));}finally{setLoading(false);}};
