@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, UserPlus, Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-type Role = { id:string; name:string; description:string|null; role_skills:Array<{weight:number;skills:{id:string;name:string}|null}> };
+type RoleSkill = { weight:number; skills:{id:string;name:string}|null };
+type Role = { id:string; name:string; description:string|null; role_skills:RoleSkill[] };
 type Candidate = { id:string; full_name:string; email:string|null; source:string; role_id:string|null; skill_scores:Record<string,number> };
 
 export function CEOCandidatesPage(){
@@ -15,8 +16,13 @@ export function CEOCandidatesPage(){
   const [scores,setScores]=useState<Record<string,number>>({}); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(''); const [showForm,setShowForm]=useState(false);
 
   const selectedRole=useMemo(()=>roles.find(r=>r.id===roleId)||null,[roles,roleId]);
-  const skills=useMemo(()=>selectedRole?.role_skills.map(rs=>rs.skills).filter((s):s is {id:string;name:string}=>Boolean(s))||[],[selectedRole]);
-  const match=useMemo(()=>{if(!selectedRole||!skills.length)return 0;const total=selectedRole.role_skills.reduce((sum,rs)=>sum+Number(rs.weight||0),0)||1;return Math.round(selectedRole.role_skills.reduce((sum,rs)=>sum+(Number(scores[rs.skills?.id||'']||0)*Number(rs.weight||0)),0)/total);},[selectedRole,skills,scores]);
+  const skills=useMemo(()=>selectedRole?.role_skills.flatMap(rs=>rs.skills?[rs.skills]:[])||[],[selectedRole]);
+  const match=useMemo(()=>{
+    if(!selectedRole||!skills.length)return 0;
+    const validRoleSkills=selectedRole.role_skills.filter((rs):rs is RoleSkill & {skills:{id:string;name:string}}=>Boolean(rs.skills));
+    const total=validRoleSkills.reduce((sum,rs)=>sum+Number(rs.weight||0),0)||1;
+    return Math.round(validRoleSkills.reduce((sum,rs)=>sum+(Number(scores[rs.skills.id]||0)*Number(rs.weight||0)),0)/total);
+  },[selectedRole,skills,scores]);
 
   const load=async()=>{if(!user)return;setLoading(true);setError('');try{const {data:rs,error:re}=await supabase.from('roles').select('id,name,description,role_skills(weight,skills(id,name))').eq('is_active',true).order('created_at',{ascending:false});if(re)throw re;setRoles((rs||[]) as unknown as Role[]);const {data:cs,error:ce}=await supabase.from('candidates').select('id,full_name,email,source,role_id,skill_scores').eq('user_id',user.id).order('created_at',{ascending:false});if(ce)throw ce;setCandidates((cs||[]) as Candidate[]);}catch(e:any){setError(e?.message||t('candidates.error'));}finally{setLoading(false);}};
   useEffect(()=>{void load();},[user]);
