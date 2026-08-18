@@ -21,11 +21,12 @@ import { hrCalculatorTranslations } from "./hrCalculatorTranslations";
 import { hrCalculatorBenchmarkTranslations } from "./hrCalculatorBenchmarkTranslations";
 import { hrCalculatorDiagnosisTranslations } from "./hrCalculatorDiagnosisTranslations";
 import { hrCalculatorOpportunityTranslations } from "./hrCalculatorOpportunityTranslations";
+import { hrCalculatorLeadTranslations } from "./hrCalculatorLeadTranslations";
 
-const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any, hhMarket: any, hrCalculator: any, hrCalculatorBenchmark: any, hrCalculatorDiagnosis: any, hrCalculatorOpportunity: any) => ({
+const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: any, extendedFeature: any, uiPatch: any, demoPatch: any, i18nFix: any, tooltips: any, notifications: any, hhMarket: any, hrCalculator: any, hrCalculatorBenchmark: any, hrCalculatorDiagnosis: any, hrCalculatorOpportunity: any, hrCalculatorLead: any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   tooltips, notifications, hhMarket,
-  hrCalculator: { ...(hrCalculator || {}), ...(hrCalculatorDiagnosis || {}), ...(hrCalculatorOpportunity || {}) },
+  hrCalculator: { ...(hrCalculator || {}), ...(hrCalculatorDiagnosis || {}), ...(hrCalculatorOpportunity || {}), ...(hrCalculatorLead || {}) },
   hrCalculatorBenchmark,
   layout: { ...(base.layout || {}), ...(extra.layout || {}), ...(ui.layout || {}), ...(supplement.layout || {}), ...(feature.layout || {}), ...(extendedFeature.layout || {}), ...(uiPatch.layout || {}), ...(demoPatch.layout || {}) },
   accounting: { ...(base.accounting || {}), ...(extra.accounting || {}), ...(ui.accounting || {}), ...(supplement.accounting || {}), ...(feature.accounting || {}), ...(extendedFeature.accounting || {}), ...(uiPatch.accounting || {}), ...(demoPatch.accounting || {}) },
@@ -43,7 +44,7 @@ const mergeLocale = (base: any, extra: any, ui: any, supplement: any, feature: a
 });
 
 const buildLocale = (lang: 'ru' | 'en' | 'kk' | 'az', base: any) => ({
-  ...mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang], hhMarketTranslations[lang].hhMarket, hrCalculatorTranslations[lang].hrCalculator, hrCalculatorBenchmarkTranslations[lang].hrCalculatorBenchmark, hrCalculatorDiagnosisTranslations[lang].hrCalculator, hrCalculatorOpportunityTranslations[lang].hrCalculator),
+  ...mergeLocale(base, coreTranslations[lang], uiTranslations[lang], uiSupplement[lang], featureTranslations[lang], featureTranslationsExtended[lang], featureTranslationsUiPatch[lang], featureTranslationsDemoPatch[lang], featureTranslationsI18nFix[lang], tooltipTranslations[lang], notificationTranslations[lang], hhMarketTranslations[lang].hhMarket, hrCalculatorTranslations[lang].hrCalculator, hrCalculatorBenchmarkTranslations[lang].hrCalculatorBenchmark, hrCalculatorDiagnosisTranslations[lang].hrCalculator, hrCalculatorOpportunityTranslations[lang].hrCalculator, hrCalculatorLeadTranslations[lang].hrCalculator),
   smartContract: smartContractTranslations[lang],
 });
 
