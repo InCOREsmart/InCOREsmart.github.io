@@ -30,6 +30,17 @@ export type HrCalculatorResult = {
   savingsAt40PercentLowerTurnover: number;
 };
 
+export type HrLossDriver = 'turnover' | 'productivity' | 'recruitment';
+
+export type HrDiagnostic = {
+  primaryDriver: HrLossDriver;
+  primaryShare: number;
+  secondaryDriver: HrLossDriver;
+  secondaryShare: number;
+  headline: 'turnover' | 'productivity' | 'recruitment';
+  recommendation: 'turnover' | 'productivity' | 'recruitment';
+};
+
 const safe = (value: number) => Number.isFinite(value) && value > 0 ? value : 0;
 
 export function calculateHrLoss(input: HrCalculatorInput): HrCalculatorResult {
@@ -84,5 +95,39 @@ export function calculateHrScenario(input: HrCalculatorInput, turnoverReductionP
     saving: Math.max(0, baseline.totalLoss - scenario.totalLoss),
     savingPercent: baseline.totalLoss > 0 ? Math.max(0, ((baseline.totalLoss - scenario.totalLoss) / baseline.totalLoss) * 100) : 0,
     scenarioInput,
+  };
+}
+
+export function diagnoseHrLoss(result: HrCalculatorResult): HrDiagnostic {
+  const drivers: Array<{ key: HrLossDriver; amount: number }> = [
+    { key: 'turnover', amount: result.recruitmentCost },
+    { key: 'productivity', amount: result.adaptationSalary + result.lostRevenue },
+    { key: 'recruitment', amount: result.recruitmentCost },
+  ];
+  const total = Math.max(result.totalLoss, 1);
+  const ranked = [...drivers].sort((a, b) => b.amount - a.amount);
+  const primary = ranked[0];
+  const secondary = ranked[1];
+  const productivityShare = ((result.adaptationSalary + result.lostRevenue) / total) * 100;
+  const recruitmentShare = (result.recruitmentCost / total) * 100;
+
+  if (productivityShare >= recruitmentShare) {
+    return {
+      primaryDriver: 'productivity',
+      primaryShare: productivityShare,
+      secondaryDriver: 'recruitment',
+      secondaryShare: recruitmentShare,
+      headline: 'productivity',
+      recommendation: 'productivity',
+    };
+  }
+
+  return {
+    primaryDriver: primary.key,
+    primaryShare: (primary.amount / total) * 100,
+    secondaryDriver: secondary.key,
+    secondaryShare: (secondary.amount / total) * 100,
+    headline: primary.key === 'turnover' ? 'turnover' : 'recruitment',
+    recommendation: primary.key === 'turnover' ? 'turnover' : 'recruitment',
   };
 }
