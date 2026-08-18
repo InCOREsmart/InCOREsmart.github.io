@@ -9,18 +9,9 @@ type Props = {
 };
 
 export function HrEconomicOpportunityPanel({ input, result, t, money }: Props) {
-  const maxReduction = 60;
-  const [reduction, setReduction] = (() => {
-    let value = 25;
-    const setter = (next: number) => { value = Math.max(0, Math.min(maxReduction, next)); };
-    return [value, setter] as const;
-  })();
+  const reduction = 25;
   const scenarioDepartures = Math.max(0, input.departuresPerYear * (1 - reduction / 100));
-  const scenario = { ...input, departuresPerYear: scenarioDepartures };
-  const turnoverSaving = Math.max(0, result.totalLoss - (
-    scenarioDepartures * result.lossPerDeparture
-  ));
-  const annualOpportunity = Math.min(result.totalLoss, turnoverSaving);
+  const annualOpportunity = Math.min(result.totalLoss, Math.max(0, result.lossPerDeparture * (input.departuresPerYear - scenarioDepartures)));
 
   return (
     <section className="rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm sm:p-8">
@@ -38,7 +29,7 @@ export function HrEconomicOpportunityPanel({ input, result, t, money }: Props) {
           <div className="mt-1 text-xs text-slate-500">{t('hrCalculator.opportunity.perYear')}</div>
           <div className="mt-5">
             <div className="flex justify-between text-sm font-bold"><span>{t('hrCalculator.opportunity.control')}</span><span>{reduction}%</span></div>
-            <div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${(reduction / maxReduction) * 100}%` }} /></div>
+            <div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${reduction * 100 / 60}%` }} /></div>
             <div className="mt-3 flex justify-between text-xs text-slate-400"><span>0%</span><span>30%</span><span>60%</span></div>
           </div>
         </div>
