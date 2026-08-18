@@ -1,0 +1,53 @@
+import type { TFunction } from 'i18next';
+import type { HrCalculatorInput, HrCalculatorResult } from './hrCalculator';
+
+type Props = {
+  input: HrCalculatorInput;
+  result: HrCalculatorResult;
+  t: TFunction;
+  money: (value: number) => string;
+};
+
+export function HrEconomicOpportunityPanel({ input, result, t, money }: Props) {
+  const maxReduction = 60;
+  const [reduction, setReduction] = (() => {
+    let value = 25;
+    const setter = (next: number) => { value = Math.max(0, Math.min(maxReduction, next)); };
+    return [value, setter] as const;
+  })();
+  const scenarioDepartures = Math.max(0, input.departuresPerYear * (1 - reduction / 100));
+  const scenario = { ...input, departuresPerYear: scenarioDepartures };
+  const turnoverSaving = Math.max(0, result.totalLoss - (
+    scenarioDepartures * result.lossPerDeparture
+  ));
+  const annualOpportunity = Math.min(result.totalLoss, turnoverSaving);
+
+  return (
+    <section className="rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm sm:p-8">
+      <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="max-w-2xl">
+          <div className="text-sm font-bold uppercase tracking-wide text-indigo-700">{t('hrCalculator.opportunity.badge')}</div>
+          <h2 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">{t('hrCalculator.opportunity.title')}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{t('hrCalculator.opportunity.description')}</p>
+        </div>
+        <div className="rounded-2xl bg-white p-5 shadow-sm lg:min-w-[320px]">
+          <div className="text-xs font-bold uppercase tracking-wide text-slate-500">{t('hrCalculator.opportunity.currentLoss')}</div>
+          <div className="mt-1 text-2xl font-black text-slate-950">{money(result.totalLoss)}</div>
+          <div className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-500">{t('hrCalculator.opportunity.potential')}</div>
+          <div className="mt-1 text-3xl font-black text-indigo-700">+{money(annualOpportunity)}</div>
+          <div className="mt-1 text-xs text-slate-500">{t('hrCalculator.opportunity.perYear')}</div>
+          <div className="mt-5">
+            <div className="flex justify-between text-sm font-bold"><span>{t('hrCalculator.opportunity.control')}</span><span>{reduction}%</span></div>
+            <div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-600" style={{ width: `${(reduction / maxReduction) * 100}%` }} /></div>
+            <div className="mt-3 flex justify-between text-xs text-slate-400"><span>0%</span><span>30%</span><span>60%</span></div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl bg-white p-4"><div className="text-xs text-slate-500">{t('hrCalculator.opportunity.remainingDepartures')}</div><div className="mt-1 text-xl font-black">{Math.round(scenarioDepartures * 10) / 10}</div></div>
+        <div className="rounded-2xl bg-white p-4"><div className="text-xs text-slate-500">{t('hrCalculator.opportunity.lossPerDeparture')}</div><div className="mt-1 text-xl font-black">{money(result.lossPerDeparture)}</div></div>
+        <div className="rounded-2xl bg-white p-4"><div className="text-xs text-slate-500">{t('hrCalculator.opportunity.assumption')}</div><div className="mt-1 text-sm font-bold text-slate-800">{t('hrCalculator.opportunity.buyerControlled')}</div></div>
+      </div>
+    </section>
+  );
+}
