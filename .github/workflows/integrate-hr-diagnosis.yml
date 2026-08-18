@@ -1,0 +1,42 @@
+name: Integrate HR Diagnosis
+
+on:
+  push:
+    branches:
+      - "agent/hr-loss-calculator"
+    paths:
+      - "scripts/integrate-hr-diagnosis.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message || '', '[hr-integration]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/hr-loss-calculator
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Integrate diagnosis panel
+        run: node scripts/integrate-hr-diagnosis.mjs
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No integration changes needed"
+            exit 0
+          fi
+          git add src/pages/public/HrLossCalculatorPage.tsx
+          git commit -m "feat: integrate HR financial diagnosis panel [hr-integration]"
+          git push origin HEAD:agent/hr-loss-calculator
