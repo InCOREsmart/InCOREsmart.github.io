@@ -7,7 +7,29 @@ const srcDir = path.join(root, 'src');
 const localeDir = path.join(srcDir, 'i18n', 'locales');
 const localeFiles = { ru: 'ru.json', en: 'en.json', kk: 'kk.json', az: 'az.json' };
 const languages = Object.keys(localeFiles);
-const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts', 'hrCalculatorTranslations.ts'];
+
+// Keep this list aligned with the translation modules actually merged by src/i18n/index.ts.
+// The previous checker only inspected four files, so it reported hundreds of false
+// positives for keys that already existed in the runtime translation patches.
+const sourceFiles = [
+  'core.ts',
+  'uiTranslations.ts',
+  'uiSupplement.ts',
+  'featureTranslations.ts',
+  'featureTranslationsExtended.ts',
+  'featureTranslationsUiPatch.ts',
+  'featureTranslationsDemoPatch.ts',
+  'featureTranslationsI18nFix.ts',
+  'tooltips.ts',
+  'notifications.ts',
+  'smartContractTranslations.ts',
+  'hhMarketTranslations.ts',
+  'hrCalculatorTranslations.ts',
+  'hrCalculatorBenchmarkTranslations.ts',
+  'hrCalculatorDiagnosisTranslations.ts',
+  'hrCalculatorOpportunityTranslations.ts',
+  'hrCalculatorLeadTranslations.ts',
+];
 
 function flatten(value, prefix = '', out = new Set()) {
   if (!value || typeof value !== 'object') return out;
@@ -106,4 +128,4 @@ if (missing.length) {
   for (const item of missing) console.error(`- ${item}`);
   process.exit(1);
 }
-console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KZ/AZ.`);
+console.log(`i18n check passed: ${used.size} translation keys verified across RU/EN/KK/AZ.`);
