@@ -13,7 +13,7 @@ on:
       - "src/i18n/hrCalculatorTranslations.ts"
       - "src/i18n/index.ts"
       - "src/i18n/locales/**"
-      - "scripts/check-i18n.mjs"
+      - "scripts/check-hr-calculator-i18n.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/hr-calculator-check.yml"
@@ -38,8 +38,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check i18n
-        run: npm run check:i18n
+      - name: Check HR Calculator i18n
+        run: node scripts/check-hr-calculator-i18n.mjs
 
       - name: Typecheck
         run: npm run check
