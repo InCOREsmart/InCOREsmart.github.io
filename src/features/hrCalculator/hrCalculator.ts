@@ -23,7 +23,6 @@ export type HrCalculatorResult = {
   productivityLossMonths: number;
   lossPerEmployee: number;
   savingsAt25PercentLowerTurnover: number;
-  breakEvenDepartures: number;
 };
 
 const safe = (value: number) => Number.isFinite(value) && value > 0 ? value : 0;
@@ -60,6 +59,5 @@ export function calculateHrLoss(input: HrCalculatorInput): HrCalculatorResult {
     productivityLossMonths: departures * ramp,
     lossPerEmployee: departures > 0 ? totalLoss / departures : 0,
     savingsAt25PercentLowerTurnover: totalLoss * 0.25,
-    breakEvenDepartures: totalLoss > 0 ? Math.max(1, Math.ceil(totalLoss / Math.max(totalLoss / Math.max(departures, 1), 1))) : 0,
   };
 }
