@@ -27,17 +27,6 @@ jobs:
         run: npm ci
       - name: Validate
         run: npm run check
-      - name: Remove obsolete HR badge
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          path = Path('src/pages/public/HrLossCalculatorPage.tsx')
-          text = path.read_text(encoding='utf-8')
-          text, count = re.subn(r'\s*<div className="mb-3 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">\{t\([\'\"]hrCalculator\.badge[\'\"]\)\}</div>', '', text, count=1)
-          print(f'Removed obsolete badge: {count}')
-          path.write_text(text, encoding='utf-8')
-          PY
       - name: Build HR Calculator
         run: npm run build -- --base=/hr-calculator/
         env:
