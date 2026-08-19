@@ -28,33 +28,23 @@ export function calculateContractFinancialsFromPayoutStreams(revenue: number, st
 }
 
 /**
- * Contract value used by the financial core.
+ * Contract value used for planning/accounting context.
  *
- * IMPORTANT: Bitrix deals are realized sales data and must NOT replace the
- * full value of an active contract. Otherwise a contract worth $18,750 could
- * appear as a smaller revenue amount merely because only part of its sales
- * have been realized. Realized sales are calculated separately below.
+ * IMPORTANT: a contract's nominal value is NOT realized revenue for a new
+ * real CEO. Realized sales are calculated separately below. Demo contracts
+ * keep their existing financial model unchanged.
  */
 export function getActualContractRevenue(contract: any): number {
-  const explicit = [
-    contract?.actual_contract_revenue,
-    contract?.contract_value,
-    contract?.client_contract_amount,
-    contract?.revenue,
-    contract?.planned_revenue,
-  ]
-    .map(Number)
-    .find(value => Number.isFinite(value) && value > 0);
+  if (contract?.is_demo === true) {
+    const demoValue = [contract?.contract_value, contract?.client_contract_amount, contract?.revenue, contract?.planned_revenue]
+      .map(Number).find(value => Number.isFinite(value) && value > 0);
+    if (demoValue !== undefined) return money(demoValue);
+  }
 
-  if (explicit !== undefined) return money(explicit);
-
-  // Legacy fallback only for records that have no persisted contract value.
-  const deals = Array.isArray(contract?.bitrix_deals) ? contract.bitrix_deals : [];
-  const dealTotal = deals.reduce((sum: number, deal: any) => sum + money(deal?.amount), 0);
-  return money(dealTotal);
+  return getRealizedSalesRevenue(contract);
 }
 
-/** Realized sales only. Never falls back to contract value. */
+/** Realized sales only. Never falls back to nominal contract value. */
 export function getRealizedSalesRevenue(contract: any): number {
   if (!contract) return 0;
   const explicit = [contract?.realized_sales_revenue, contract?.actual_sales_revenue]
@@ -73,7 +63,7 @@ export function getRealizedSalesRevenue(contract: any): number {
 /** Sales-plan achievement is allowed to exceed 100% for overachievement. */
 export function getSalesPlanAchievement(contract: any): number {
   if (!contract) return 0;
-  const plan = money(contract?.planned_revenue ?? contract?.sales_plan_revenue ?? contract?.revenue);
+  const plan = money(contract?.planned_revenue ?? contract?.sales_plan_revenue ?? contract?.revenue ?? contract?.contract_value);
   return plan > 0 ? Math.round((getRealizedSalesRevenue(contract) / plan) * 100) : 0;
 }
 
@@ -104,7 +94,7 @@ export function getContractAccountingSnapshot(contract: any): ContractAccounting
   const revenue = getActualContractRevenue(contract), streams = Array.isArray(contract?.payout_streams) ? contract.payout_streams : [];
   const persistedEscrow = money(contract?.escrow_amount), persistedPaid = money(contract?.total_paid), persistedLocked = money(contract?.total_locked);
   const streamPaid = streams.filter((s: any) => s?.status === 'PAID' && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
-  const streamLocked = streams.filter((s: any) => s?.status === 'LOCKED' && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
+  const streamLocked = streams.filter((s: any) => ['LOCKED', 'UNLOCKED', 'PAYABLE'].includes(s?.status) && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
   const payout = persistedEscrow || (persistedPaid + persistedLocked) || (streamPaid + streamLocked);
   const paid = contract?.status === 'COMPLETED' ? payout : persistedPaid || streamPaid;
   const locked = contract?.status === 'COMPLETED' ? 0 : persistedLocked || streamLocked || Math.max(0, payout - paid);
