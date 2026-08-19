@@ -7,7 +7,7 @@ const srcDir = path.join(root, 'src');
 const localeDir = path.join(srcDir, 'i18n', 'locales');
 const localeFiles = { ru: 'ru.json', en: 'en.json', kk: 'kk.json', az: 'az.json' };
 const languages = Object.keys(localeFiles);
-const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts', 'candidateTranslations.ts', 'onboardingTranslations.ts'];
+const sourceFiles = ['core.ts', 'uiTranslations.ts', 'uiSupplement.ts', 'candidateTranslations.ts', 'financeFundingTranslations.ts', 'onboardingTranslations.ts'];
 
 function flatten(value, prefix = '', out = new Set()) {
   if (!value || typeof value !== 'object') return out;
