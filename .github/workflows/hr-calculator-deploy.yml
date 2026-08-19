@@ -18,37 +18,31 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.x'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Validate
         run: npm run check
-
-      - name: Replace HR badge with InCORE logo
+      - name: Remove obsolete HR badge
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           path = Path('src/pages/public/HrLossCalculatorPage.tsx')
           text = path.read_text(encoding='utf-8')
-          old = '<div className="mb-3 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">{t(\'hrCalculator.badge\')}</div>'
-          if old in text:
-              text = text.replace(old, '')
-              path.write_text(text, encoding='utf-8')
+          text, count = re.subn(r'\s*<div className="mb-3 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">\{t\([\'\"]hrCalculator\.badge[\'\"]\)\}</div>', '', text, count=1)
+          print(f'Removed obsolete badge: {count}')
+          path.write_text(text, encoding='utf-8')
           PY
-
       - name: Build HR Calculator
         run: npm run build -- --base=/hr-calculator/
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-
       - name: Publish calculator into gh-pages/hr-calculator
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,11 +56,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add hr-calculator .nojekyll
-          if git diff --cached --quiet; then
-            echo "No calculator changes to publish"
-          else
-            git commit -m "deploy: publish HR calculator"
-            git push origin gh-pages
-          fi
-
-# Triggered after the main Pages deployment cleared the calculator subdirectory.
+          git commit -m "deploy: publish HR calculator from agent branch"
+          git push origin gh-pages
