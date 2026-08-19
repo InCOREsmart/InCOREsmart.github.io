@@ -3,6 +3,8 @@ import { Activity, Briefcase, Users, TrendingDown, RefreshCw } from 'lucide-reac
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 
+type CountryCode = 'RU' | 'AZ';
+
 type SkillRow = {
   canonical_skill: string;
   demand_share: number;
@@ -30,9 +32,10 @@ function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
-function formatMoney(value: number | null, locale: string) {
+function formatMoney(value: number | null, locale: string, country: CountryCode) {
   if (value === null) return '—';
-  return `${new Intl.NumberFormat(locale).format(Math.round(value))} ₽`;
+  const currency = country === 'AZ' ? 'AZN' : 'RUB';
+  return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(Math.round(value));
 }
 
 function difficultyKey(level: string) {
@@ -44,6 +47,7 @@ function difficultyKey(level: string) {
 
 export function HHMarketAnalyticsPanel() {
   const { t, i18n } = useTranslation();
+  const [country, setCountry] = useState<CountryCode>('RU');
   const [state, setState] = useState<MarketState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,16 +61,18 @@ export function HHMarketAnalyticsPanel() {
           .from('hh_vacancies')
           .select('id,salary_from,salary_to,fetched_at')
           .eq('role_key', 'insurance_agent')
-          .eq('country', 'RU'),
+          .eq('country', country),
         supabase
           .from('hh_market_resumes')
           .select('hh_id,salary,created_at')
+          .eq('role_key', 'insurance_agent')
+          .eq('country', country)
           .limit(5000),
         supabase
           .from('hh_skill_hiring_difficulty')
           .select('canonical_skill,demand_share,supply_share,skill_gap,hiring_difficulty_score,difficulty_level,sample_resumes,sample_vacancies')
           .eq('role_key', 'insurance_agent')
-          .eq('country', 'RU')
+          .eq('country', country)
           .order('hiring_difficulty_score', { ascending: false })
           .limit(12),
       ]);
@@ -118,13 +124,16 @@ export function HHMarketAnalyticsPanel() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [country]);
 
   const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'az' ? 'az-AZ' : i18n.language === 'en' ? 'en-US' : 'kk-KZ';
   const updatedLabel = useMemo(() => {
     if (!state?.updatedAt) return null;
     return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(state.updatedAt));
   }, [state?.updatedAt, locale]);
+
+  const countryLabel = country === 'AZ' ? t('hhMarket.countryAzerbaijan') : t('hhMarket.countryRussia');
+  const sourceLabel = country === 'AZ' ? 'HH1.AZ' : 'HH.RU';
 
   if (loading) {
     return <section className="bg-white rounded-2xl border border-[#000052]/10 shadow-sm p-6 text-sm text-[#000052]/60">{t('hhMarket.loading')}</section>;
@@ -147,18 +156,28 @@ export function HHMarketAnalyticsPanel() {
               {t('hhMarket.role')}
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#B8860B]/10 text-[#8A6500] text-xs font-semibold">
-              {t('hhMarket.country')}
+              {countryLabel}
             </span>
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-[#000052]">{t('hhMarket.title')}</h2>
           <p className="text-sm text-[#000052]/60 mt-1 max-w-2xl">{t('hhMarket.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-[#000052]/55">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>{state.updatedAt ? `${t('hhMarket.fresh')} · ${t('hhMarket.updated')}: ${updatedLabel}` : t('hhMarket.stale')}</span>
-          <button onClick={() => void load()} className="p-2 rounded-lg hover:bg-[#000052]/5 text-[#000052]" title={t('common.refresh', 'Refresh')}>
-            <RefreshCw className="w-4 h-4" />
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-xl bg-[#000052]/5 p-1">
+            <button onClick={() => setCountry('RU')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${country === 'RU' ? 'bg-white text-[#000052] shadow-sm' : 'text-[#000052]/55'}`}>
+              {t('hhMarket.countryRussia')}
+            </button>
+            <button onClick={() => setCountry('AZ')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${country === 'AZ' ? 'bg-white text-[#000052] shadow-sm' : 'text-[#000052]/55'}`}>
+              {t('hhMarket.countryAzerbaijan')}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-[#000052]/55">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>{state.updatedAt ? `${t('hhMarket.fresh')} · ${t('hhMarket.updated')}: ${updatedLabel}` : t('hhMarket.stale')}</span>
+            <button onClick={() => void load()} className="p-2 rounded-lg hover:bg-[#000052]/5 text-[#000052]" title={t('common.refresh', 'Refresh')}>
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -173,11 +192,11 @@ export function HHMarketAnalyticsPanel() {
         </div>
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 shadow-sm">
           <div className="text-xs text-[#000052]/55">{t('hhMarket.medianVacancySalary')}</div>
-          <div className="text-xl md:text-2xl font-bold text-[#000052] mt-2 break-words">{formatMoney(state.vacancyMedian, locale)}</div>
+          <div className="text-xl md:text-2xl font-bold text-[#000052] mt-2 break-words">{formatMoney(state.vacancyMedian, locale, country)}</div>
         </div>
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 shadow-sm">
           <div className="text-xs text-[#000052]/55">{t('hhMarket.medianResumeSalary')}</div>
-          <div className="text-xl md:text-2xl font-bold text-[#000052] mt-2 break-words">{formatMoney(state.resumeMedian, locale)}</div>
+          <div className="text-xl md:text-2xl font-bold text-[#000052] mt-2 break-words">{formatMoney(state.resumeMedian, locale, country)}</div>
         </div>
       </div>
 
@@ -235,7 +254,7 @@ export function HHMarketAnalyticsPanel() {
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1 text-xs text-[#000052]/45">
-        <span>{t('hhMarket.source')}</span>
+        <span>{t('hhMarket.source')} · {sourceLabel}</span>
         <span>{t('hhMarket.nextUpdate')}</span>
       </div>
     </section>
