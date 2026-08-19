@@ -96,6 +96,13 @@ function AgentContractWithRoleProgress() { return <><AgentContractDetailPage /><
 function App() {
   const { i18n } = useTranslation();
   const languageKey = i18n.resolvedLanguage || i18n.language || 'ru';
+
+  // HR Calculator is deployed as a standalone Pages site under /hr-calculator/.
+  // Keep it outside the main authenticated HashRouter so it can never redirect to /login.
+  if (window.location.pathname.replace(/\/$/, '') === '/hr-calculator') {
+    return <LegacyUiTranslator key={languageKey}><HrLossCalculatorPage /></LegacyUiTranslator>;
+  }
+
   return (
     <LegacyUiTranslator key={languageKey}>
       <AuthProvider>
@@ -119,7 +126,7 @@ function App() {
             <Route path="/agent" element={<ProtectedRoute><DashboardLayout><AgentDashboard /></DashboardLayout></ProtectedRoute>} />
             <Route path="/agent/settings" element={<ProtectedRoute><DashboardLayout><AgentSettings /></DashboardLayout></ProtectedRoute>} />
             <Route path="/agent/contracts" element={<ProtectedRoute><DashboardLayout><AgentContractsPage /></DashboardLayout></ProtectedRoute>} />
-            <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractWithRoleProgress /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/agent/contracts/:id" element={<ProtectedRoute><DashboardLayout><AgentContractDetailPage /></DashboardLayout></ProtectedRoute>} />
             <Route path="/agent/payouts" element={<ProtectedRoute><DashboardLayout><AgentPayoutsPage /></DashboardLayout></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
