@@ -30,6 +30,16 @@ export type HrCalculatorResult = {
   savingsAt40PercentLowerTurnover: number;
 };
 
+export type HrLossDriver = 'turnover' | 'productivity';
+
+export type HrDiagnostic = {
+  primaryDriver: HrLossDriver;
+  primaryShare: number;
+  secondaryDriver: HrLossDriver;
+  secondaryShare: number;
+  recommendation: HrLossDriver;
+};
+
 const safe = (value: number) => Number.isFinite(value) && value > 0 ? value : 0;
 
 export function calculateHrLoss(input: HrCalculatorInput): HrCalculatorResult {
@@ -55,24 +65,60 @@ export function calculateHrLoss(input: HrCalculatorInput): HrCalculatorResult {
   const replacementRevenueGap = departures * revenue * ramp;
 
   return {
-    hiresPerHrYear,
-    hrAnnualCapacity,
-    costPerHire,
-    recruitmentCost,
-    adaptationSalary,
-    lostRevenue,
-    totalLoss,
-    annualSalaryBase,
+    hiresPerHrYear, hrAnnualCapacity, costPerHire, recruitmentCost, adaptationSalary,
+    lostRevenue, totalLoss, annualSalaryBase,
     lossAsPercentOfSalary: annualSalaryBase > 0 ? (totalLoss / annualSalaryBase) * 100 : 0,
     lossPerDeparture: departures > 0 ? totalLoss / departures : 0,
     monthlyRevenueAtRisk: lostRevenue / 12,
-    productivityLossMonths,
-    productivityLossSalary,
-    replacementRevenueGap,
-    hrCostPerYear,
+    productivityLossMonths, productivityLossSalary, replacementRevenueGap, hrCostPerYear,
     turnoverCostPerEmployee: departures > 0 ? totalLoss / departures : 0,
     savingsAt10PercentLowerTurnover: totalLoss * 0.10,
     savingsAt25PercentLowerTurnover: totalLoss * 0.25,
     savingsAt40PercentLowerTurnover: totalLoss * 0.40,
+  };
+}
+
+export function calculateHrScenario(input: HrCalculatorInput, turnoverReductionPercent: number, rampReductionPercent: number) {
+  const turnover = Math.min(100, Math.max(0, turnoverReductionPercent));
+  const rampReduction = Math.min(100, Math.max(0, rampReductionPercent));
+  const scenarioInput: HrCalculatorInput = {
+    ...input,
+    departuresPerYear: input.departuresPerYear * (1 - turnover / 100),
+    rampMonths: input.rampMonths * (1 - rampReduction / 100),
+  };
+  const baseline = calculateHrLoss(input);
+  const scenario = calculateHrLoss(scenarioInput);
+  return {
+    baseline,
+    scenario,
+    saving: Math.max(0, baseline.totalLoss - scenario.totalLoss),
+    savingPercent: baseline.totalLoss > 0 ? Math.max(0, ((baseline.totalLoss - scenario.totalLoss) / baseline.totalLoss) * 100) : 0,
+    scenarioInput,
+  };
+}
+
+export function diagnoseHrLoss(result: HrCalculatorResult): HrDiagnostic {
+  const turnoverAmount = result.recruitmentCost;
+  const productivityAmount = result.adaptationSalary + result.lostRevenue;
+  const total = Math.max(result.totalLoss, 1);
+  const turnoverShare = (turnoverAmount / total) * 100;
+  const productivityShare = (productivityAmount / total) * 100;
+
+  if (productivityShare >= turnoverShare) {
+    return {
+      primaryDriver: 'productivity',
+      primaryShare: productivityShare,
+      secondaryDriver: 'turnover',
+      secondaryShare: turnoverShare,
+      recommendation: 'productivity',
+    };
+  }
+
+  return {
+    primaryDriver: 'turnover',
+    primaryShare: turnoverShare,
+    secondaryDriver: 'productivity',
+    secondaryShare: productivityShare,
+    recommendation: 'turnover',
   };
 }
