@@ -68,3 +68,5 @@ jobs:
             git commit -m "deploy: publish HR calculator"
             git push origin gh-pages
           fi
+
+# Triggered after the main Pages deployment cleared the calculator subdirectory.
