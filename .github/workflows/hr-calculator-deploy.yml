@@ -32,6 +32,10 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
       - name: Publish calculator into gh-pages/hr-calculator
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
