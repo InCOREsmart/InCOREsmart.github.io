@@ -31,6 +31,19 @@ jobs:
       - name: Validate
         run: npm run check
 
+      - name: Replace HR badge with InCORE logo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/pages/public/HrLossCalculatorPage.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = '<div className="mb-3 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">{t(\'hrCalculator.badge\')}</div>'
+          if old not in text:
+              raise SystemExit('HR calculator badge markup not found')
+          text = text.replace(old, '')
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Build HR Calculator
         run: npm run build -- --base=/hr-calculator/
         env:
