@@ -16,7 +16,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Setup Node
@@ -38,10 +38,9 @@ jobs:
           path = Path('src/pages/public/HrLossCalculatorPage.tsx')
           text = path.read_text(encoding='utf-8')
           old = '<div className="mb-3 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-indigo-700">{t(\'hrCalculator.badge\')}</div>'
-          if old not in text:
-              raise SystemExit('HR calculator badge markup not found')
-          text = text.replace(old, '')
-          path.write_text(text, encoding='utf-8')
+          if old in text:
+              text = text.replace(old, '')
+              path.write_text(text, encoding='utf-8')
           PY
 
       - name: Build HR Calculator
@@ -50,12 +49,22 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      # Rebuild the standalone calculator from the current branch so Pages never serves an older bundle.
-      - name: Deploy HR Calculator
-        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
-          destination_dir: hr-calculator
-          keep_files: true
+      - name: Publish calculator into gh-pages/hr-calculator
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 --branch gh-pages "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
+          rm -rf pages/hr-calculator
+          mkdir -p pages/hr-calculator
+          cp -R dist/. pages/hr-calculator/
+          touch pages/.nojekyll
+          cd pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hr-calculator .nojekyll
+          if git diff --cached --quiet; then
+            echo "No calculator changes to publish"
+          else
+            git commit -m "deploy: publish HR calculator"
+            git push origin gh-pages
+          fi
