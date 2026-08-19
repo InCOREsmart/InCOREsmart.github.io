@@ -28,11 +28,23 @@ import { hrCalculatorBenchmarkTranslations } from "./hrCalculatorBenchmarkTransl
 import { hrCalculatorOpportunityTranslations } from "./hrCalculatorOpportunityTranslations";
 import { hrCalculatorLeadTranslations } from "./hrCalculatorLeadTranslations";
 
+const deepMerge = (...objects:any[]) => objects.reduce((target, source) => {
+  if (!source || typeof source !== 'object') return target;
+  for (const [key, value] of Object.entries(source)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      target[key] = deepMerge(target[key] || {}, value);
+    } else {
+      target[key] = value;
+    }
+  }
+  return target;
+}, {} as any);
+
 const mergeLocale = (base:any, extra:any, ui:any, supplement:any, feature:any, extendedFeature:any, uiPatch:any, demoPatch:any, i18nFix:any, tooltips:any, notifications:any, hhMarket:any, candidates:any, financeFunding:any, outcome:any, onboarding:any, hrCalculator:any, hrMarketing:any, diagnosis:any, benchmark:any, opportunity:any, lead:any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   ...onboarding,
   tooltips, notifications, hhMarket,
-  hrCalculator: { ...(base.hrCalculator || {}), ...(hrCalculator.hrCalculator || {}), ...(hrMarketing.hrCalculator || {}), ...(diagnosis.hrCalculator || {}), ...(benchmark.hrCalculator || {}), ...(opportunity.hrCalculator || {}), ...(lead.hrCalculator || {}) },
+  hrCalculator: deepMerge(base.hrCalculator, hrCalculator.hrCalculator, hrMarketing.hrCalculator, diagnosis.hrCalculator, benchmark.hrCalculator, opportunity.hrCalculator, lead.hrCalculator),
   candidates:{...(base.candidates||{}),...(candidates.candidates||{}),...(financeFunding.candidates||{}),...(outcome.candidates||{})},
   layout:{...(base.layout||{}),...(extra.layout||{}),...(ui.layout||{}),...(supplement.layout||{}),...(feature.layout||{}),...(extendedFeature.layout||{}),...(uiPatch.layout||{}),...(demoPatch.layout||{})},
   accounting:{...(base.accounting||{}),...(extra.accounting||{}),...(ui.accounting||{}),...(supplement.accounting||{}),...(feature.accounting||{}),...(extendedFeature.accounting||{}),...(uiPatch.accounting||{}),...(demoPatch.accounting||{})},
