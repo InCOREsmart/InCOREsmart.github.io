@@ -31,13 +31,16 @@ import { hrCalculatorLeadTranslations } from "./hrCalculatorLeadTranslations";
 const mergeLocale = (base:any, extra:any, ui:any, supplement:any, feature:any, extendedFeature:any, uiPatch:any, demoPatch:any, i18nFix:any, tooltips:any, notifications:any, hhMarket:any, candidates:any, financeFunding:any, outcome:any, onboarding:any, hrCalculator:any, hrMarketing:any, diagnosis:any, benchmark:any, opportunity:any, lead:any) => ({
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   ...onboarding,
-  ...hrCalculator,
-  ...hrMarketing,
-  ...diagnosis,
-  ...benchmark,
-  ...opportunity,
-  ...lead,
   tooltips, notifications, hhMarket,
+  hrCalculator: {
+    ...(base.hrCalculator || {}),
+    ...(hrCalculator.hrCalculator || {}),
+    ...(hrMarketing.hrCalculator || {}),
+    ...(diagnosis.hrCalculator || {}),
+    ...(benchmark.hrCalculator || {}),
+    ...(opportunity.hrCalculator || {}),
+    ...(lead.hrCalculator || {}),
+  },
   candidates:{...(base.candidates||{}),...(candidates.candidates||{}),...(financeFunding.candidates||{}),...(outcome.candidates||{})},
   layout:{...(base.layout||{}),...(extra.layout||{}),...(ui.layout||{}),...(supplement.layout||{}),...(feature.layout||{}),...(extendedFeature.layout||{}),...(uiPatch.layout||{}),...(demoPatch.layout||{})},
   accounting:{...(base.accounting||{}),...(extra.accounting||{}),...(ui.accounting||{}),...(supplement.accounting||{}),...(feature.accounting||{}),...(extendedFeature.accounting||{}),...(uiPatch.accounting||{}),...(demoPatch.accounting||{})},
@@ -49,7 +52,7 @@ const mergeLocale = (base:any, extra:any, ui:any, supplement:any, feature:any, e
   agentContractDetail:{...(base.agentContractDetail||{}),...(extra.agentContractDetail||{}),...(feature.agentContractDetail||{}),...(extendedFeature.agentContractDetail||{}),...(uiPatch.agentContractDetail||{}),...(demoPatch.agentContractDetail||{})},
   agentProfile:{...(base.agentProfile||{}),...(extra.agentProfile||{}),...(feature.agentProfile||{}),...(extendedFeature.agentProfile||{}),...(uiPatch.agentProfile||{}),...(demoPatch.agentProfile||{})},
   company:{...(base.company||{}),...(extra.company||{}),...(feature.company||{}),...(extendedFeature.company||{}),...(uiPatch.company||{}),...(demoPatch.company||{})},
-  disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(feature.disputes||{}),...(extendedFeature.disputes||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
+  disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(feature.disputes||{}),...(extendedFeature.feature||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
   actions:{...(base.actions||{}),...(extra.actions||{}),...(feature.actions||{}),...(extendedFeature.actions||{}),...(uiPatch.actions||{}),...(demoPatch.actions||{})},
   legacyUi:{...(feature.legacyUi||{}),...(extendedFeature.legacyUi||{}),...(uiPatch.legacyUi||{}),...(demoPatch.legacyUi||{}),...(i18nFix.legacyUi||{})}
 });
