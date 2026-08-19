@@ -90,14 +90,37 @@ export function getActualContractRevenueBreakdown(contract: any): ContractRevenu
 
 export function getStoredPayoutAmounts(streams: any[] = []) { const byKey = new Map(streams.map(stream => [stream.stream_key, money(stream.amount)])); return { property: byKey.get('new_sales_property') || 0, casco: byKey.get('new_sales_casco') || 0, dms: byKey.get('new_sales_dms') || 0, renewal: byKey.get('renewal') || 0, crossSell: byKey.get('cross_sell') || 0, planBonus: byKey.get('plan_bonus') || 0, retention: byKey.get('retention') || 0, annual: byKey.get('annual') || ANNUAL_BONUS }; }
 
+/**
+ * Runtime accounting state, kept separate from contract economics.
+ *
+ * - revenue: realized revenue only (never nominal contract value for real CEOs)
+ * - escrow: amount actually funded/reserved on the contract
+ * - locked: funded amount still locked or payable
+ * - paid: amount actually paid to the agent
+ * - payout: total funded payout obligation represented by paid + locked
+ * - commission: platform fee on actual agent payouts, not on locked funds
+ * - companyProfit: realized revenue minus actual paid agent payouts and fees
+ */
 export function getContractAccountingSnapshot(contract: any): ContractAccountingSnapshot {
-  const revenue = getActualContractRevenue(contract), streams = Array.isArray(contract?.payout_streams) ? contract.payout_streams : [];
-  const persistedEscrow = money(contract?.escrow_amount), persistedPaid = money(contract?.total_paid), persistedLocked = money(contract?.total_locked);
-  const streamPaid = streams.filter((s: any) => s?.status === 'PAID' && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
-  const streamLocked = streams.filter((s: any) => ['LOCKED', 'UNLOCKED', 'PAYABLE'].includes(s?.status) && s?.stream_key !== 'annual').reduce((sum: number, s: any) => sum + money(s?.amount), 0);
-  const payout = persistedEscrow || (persistedPaid + persistedLocked) || (streamPaid + streamLocked);
-  const paid = contract?.status === 'COMPLETED' ? payout : persistedPaid || streamPaid;
-  const locked = contract?.status === 'COMPLETED' ? 0 : persistedLocked || streamLocked || Math.max(0, payout - paid);
-  const commission = money(payout * PLATFORM_FEE_PERCENT / 100), companyProfit = money(revenue - payout - commission);
-  return { revenue, escrow: persistedEscrow, paid, locked, payout, commission, companyProfit, annualBonus: ANNUAL_BONUS };
+  const revenue = getActualContractRevenue(contract);
+  const streams = Array.isArray(contract?.payout_streams) ? contract.payout_streams : [];
+  const persistedEscrow = money(contract?.escrow_amount);
+  const persistedPaid = money(contract?.total_paid);
+  const persistedLocked = money(contract?.total_locked);
+
+  const streamPaid = streams
+    .filter((s: any) => s?.status === 'PAID' && s?.stream_key !== 'annual')
+    .reduce((sum: number, s: any) => sum + money(s?.amount), 0);
+  const streamLocked = streams
+    .filter((s: any) => ['LOCKED', 'UNLOCKED', 'PAYABLE'].includes(s?.status) && s?.stream_key !== 'annual')
+    .reduce((sum: number, s: any) => sum + money(s?.amount), 0);
+
+  const paid = persistedPaid || streamPaid;
+  const locked = persistedLocked || streamLocked;
+  const payout = paid + locked;
+  const escrow = persistedEscrow || payout;
+  const commission = money(paid * PLATFORM_FEE_PERCENT / 100);
+  const companyProfit = money(revenue - paid - commission);
+
+  return { revenue, escrow, paid, locked, payout, commission, companyProfit, annualBonus: ANNUAL_BONUS };
 }
