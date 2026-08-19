@@ -32,15 +32,7 @@ const mergeLocale = (base:any, extra:any, ui:any, supplement:any, feature:any, e
   ...base, ...extra, ...ui, ...supplement, ...feature, ...extendedFeature, ...uiPatch, ...demoPatch, ...i18nFix,
   ...onboarding,
   tooltips, notifications, hhMarket,
-  hrCalculator: {
-    ...(base.hrCalculator || {}),
-    ...(hrCalculator.hrCalculator || {}),
-    ...(hrMarketing.hrCalculator || {}),
-    ...(diagnosis.hrCalculator || {}),
-    ...(benchmark.hrCalculator || {}),
-    ...(opportunity.hrCalculator || {}),
-    ...(lead.hrCalculator || {}),
-  },
+  hrCalculator: { ...(base.hrCalculator || {}), ...(hrCalculator.hrCalculator || {}), ...(hrMarketing.hrCalculator || {}), ...(diagnosis.hrCalculator || {}), ...(benchmark.hrCalculator || {}), ...(opportunity.hrCalculator || {}), ...(lead.hrCalculator || {}) },
   candidates:{...(base.candidates||{}),...(candidates.candidates||{}),...(financeFunding.candidates||{}),...(outcome.candidates||{})},
   layout:{...(base.layout||{}),...(extra.layout||{}),...(ui.layout||{}),...(supplement.layout||{}),...(feature.layout||{}),...(extendedFeature.layout||{}),...(uiPatch.layout||{}),...(demoPatch.layout||{})},
   accounting:{...(base.accounting||{}),...(extra.accounting||{}),...(ui.accounting||{}),...(supplement.accounting||{}),...(feature.accounting||{}),...(extendedFeature.accounting||{}),...(uiPatch.accounting||{}),...(demoPatch.accounting||{})},
@@ -52,11 +44,10 @@ const mergeLocale = (base:any, extra:any, ui:any, supplement:any, feature:any, e
   agentContractDetail:{...(base.agentContractDetail||{}),...(extra.agentContractDetail||{}),...(feature.agentContractDetail||{}),...(extendedFeature.agentContractDetail||{}),...(uiPatch.agentContractDetail||{}),...(demoPatch.agentContractDetail||{})},
   agentProfile:{...(base.agentProfile||{}),...(extra.agentProfile||{}),...(feature.agentProfile||{}),...(extendedFeature.agentProfile||{}),...(uiPatch.agentProfile||{}),...(demoPatch.agentProfile||{})},
   company:{...(base.company||{}),...(extra.company||{}),...(feature.company||{}),...(extendedFeature.company||{}),...(uiPatch.company||{}),...(demoPatch.company||{})},
-  disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(feature.disputes||{}),...(extendedFeature.feature||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
+  disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(feature.disputes||{}),...(extendedFeature.disputes||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
   actions:{...(base.actions||{}),...(extra.actions||{}),...(feature.actions||{}),...(extendedFeature.actions||{}),...(uiPatch.actions||{}),...(demoPatch.actions||{})},
   legacyUi:{...(feature.legacyUi||{}),...(extendedFeature.legacyUi||{}),...(uiPatch.legacyUi||{}),...(demoPatch.legacyUi||{}),...(i18nFix.legacyUi||{})}
 });
-
 const buildLocale=(lang:'ru'|'en'|'kk'|'az',base:any)=>({...mergeLocale(base,coreTranslations[lang],uiTranslations[lang],uiSupplement[lang],featureTranslations[lang],featureTranslationsExtended[lang],featureTranslationsUiPatch[lang],featureTranslationsDemoPatch[lang],featureTranslationsI18nFix[lang],tooltipTranslations[lang],notificationTranslations[lang],hhMarketTranslations[lang].hhMarket,candidateTranslations[lang],financeFundingTranslations[lang],outcomeTranslations[lang],onboardingTranslations[lang],hrCalculatorTranslations[lang],hrCalculatorMarketingPatch[lang],hrCalculatorDiagnosisTranslations[lang],hrCalculatorBenchmarkTranslations[lang],hrCalculatorOpportunityTranslations[lang],hrCalculatorLeadTranslations[lang]),smartContract:smartContractTranslations[lang]});
 const ruTranslation=buildLocale('ru',ru);const enTranslation=buildLocale('en',en);const kkTranslation=buildLocale('kk',kk);const azTranslation=buildLocale('az',az);
 const resources={ru:{translation:ruTranslation},en:{translation:enTranslation},kk:{translation:kkTranslation},kz:{translation:kkTranslation},az:{translation:azTranslation}};
