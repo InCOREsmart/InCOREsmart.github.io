@@ -72,14 +72,10 @@ export function CEODashboard() {
           const contractsResult = await supabase.from('contracts').select('*').eq('company_id', company.id).order('created_at', { ascending: false });
           if (contractsResult.error) throw contractsResult.error;
           const realAgentNames = new Map(agents.map(agent => [agent.id, (agent.full_name || agent.name || agent.email || '').trim().toLowerCase()]));
-          const latestByAgent = new Map<string, any>();
-          (contractsResult.data || []).forEach(contract => {
+          realContracts = (contractsResult.data || []).filter(contract => {
             const name = (realAgentNames.get(contract.agent_id) || '').trim().toLowerCase();
-            if (name && demoNames.has(name)) return;
-            const key = contract.agent_id || contract.id;
-            if (!latestByAgent.has(key)) latestByAgent.set(key, contract);
+            return !(name && demoNames.has(name));
           });
-          realContracts = Array.from(latestByAgent.values());
           const ids = realContracts.map(contract => contract.id).filter(Boolean);
           if (ids.length) {
             const streamsResult = await supabase.from('contract_payout_streams').select('*').in('contract_id', ids);
@@ -108,7 +104,6 @@ export function CEODashboard() {
           if (!annualByAgent[key]) annualByAgent[key] = [];
           annualByAgent[key].push(contract);
 
-          // This block is SALES PLAN ACHIEVEMENT, not an operational KPI average.
           const planAchievement = getSalesPlanAchievement(contract);
           efficiencyByAgent[key].value += planAchievement;
           efficiencyByAgent[key].count += 1;
