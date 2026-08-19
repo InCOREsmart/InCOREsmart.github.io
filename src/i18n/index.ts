@@ -31,9 +31,9 @@ const mergeLocale=(base:any,extra:any,ui:any,supplement:any,feature:any,extended
  ui:{...(base.ui||{}),...(extra.ui||{}),...(ui.ui||{}),...(supplement.ui||{}),...(feature.ui||{}),...(extendedFeature.ui||{}),...(uiPatch.ui||{}),...(demoPatch.ui||{})},
  contractDetail:{...(base.contractDetail||{}),...(extra.contractDetail||{}),...(ui.contractDetail||{}),...(supplement.contractDetail||{}),...(feature.contractDetail||{}),...(extendedFeature.contractDetail||{}),...(uiPatch.contractDetail||{}),...(demoPatch.contractDetail||{})},
  agentContractDetail:{...(base.agentContractDetail||{}),...(extra.agentContractDetail||{}),...(ui.agentContractDetail||{}),...(supplement.agentContractDetail||{}),...(feature.agentContractDetail||{}),...(extendedFeature.agentContractDetail||{}),...(uiPatch.agentContractDetail||{}),...(demoPatch.agentContractDetail||{})},
- agentProfile:{...(base.agentProfile||{}),...(extra.agentProfile||{}),...(ui.agentProfile||{}),...(supplement.agentProfile||{}),...(feature.agentProfile||{}),...(extendedFeature.featureTranslationsExtended||{}),...(uiPatch.agentProfile||{}),...(demoPatch.agentProfile||{})},
+ agentProfile:{...(base.agentProfile||{}),...(extra.agentProfile||{}),...(feature.agentProfile||{}),...(extendedFeature.agentProfile||{}),...(uiPatch.agentProfile||{}),...(demoPatch.agentProfile||{})},
  company:{...(base.company||{}),...(extra.company||{}),...(ui.company||{}),...(supplement.company||{}),...(feature.company||{}),...(extendedFeature.company||{}),...(uiPatch.company||{}),...(demoPatch.company||{})},
- disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(ui.disputes||{}),...(supplement.disputes||{}),...(feature.disputes||{}),...(extendedFeature.disputes||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
+ disputes:{...(base.disputes||{}),...(extra.disputes||{}),...(feature.disputes||{}),...(extendedFeature.disputes||{}),...(uiPatch.disputes||{}),...(demoPatch.disputes||{})},
  actions:{...(base.actions||{}),...(extra.actions||{}),...(ui.actions||{}),...(supplement.actions||{}),...(feature.actions||{}),...(extendedFeature.actions||{}),...(uiPatch.actions||{}),...(demoPatch.actions||{})},
  legacyUi:{...(feature.legacyUi||{}),...(extendedFeature.legacyUi||{}),...(uiPatch.legacyUi||{}),...(demoPatch.legacyUi||{}),...(i18nFix.legacyUi||{})}
 });
