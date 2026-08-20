@@ -5,7 +5,7 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# Не допускаем одновременную публикацию нескольких сборок в gh-pages.
+# Не допускаем одновременной публикации нескольких сборок в gh-pages.
 concurrency:
   group: github-pages-deploy
   cancel-in-progress: true
@@ -47,3 +47,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
+          # Force a fresh publication of the current main build.
+          force_orphan: false
