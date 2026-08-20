@@ -52,6 +52,8 @@ export function HHMarketAnalyticsPanel() {
     setLoading(true);
     setError('');
     try {
+      // The automated HH import stores the canonical market data in these tables.
+      // Do not use market_profiles here: that table contains only manually uploaded samples.
       const [vacancyResult, resumeResult, skillResult] = await Promise.all([
         supabase
           .from('hh_vacancies')
@@ -61,6 +63,7 @@ export function HHMarketAnalyticsPanel() {
         supabase
           .from('hh_market_resumes')
           .select('hh_id,salary,created_at')
+          .eq('country', 'RU')
           .limit(5000),
         supabase
           .from('hh_skill_hiring_difficulty')
