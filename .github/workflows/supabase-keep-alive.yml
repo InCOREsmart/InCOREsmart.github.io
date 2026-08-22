@@ -1,0 +1,22 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase database
+        env:
+          SUPABASE_URL: https://xyzofaaarpjsgljwprhg.supabase.co
+          SUPABASE_KEY: sb_publishable__cEvf_u0evIx_ygy2qS6kg_LkOVd2MG
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/keep_alive" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'
