@@ -1,0 +1,125 @@
+name: Fix B2C calculator copy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply B2C fixes
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s = p.read_text(encoding='utf-8')
+
+          # Locale-aware RUB formatting. Keep the calculation in RUB, but render
+          # the currency according to the selected language instead of hard-coded ru-RU.
+          s = s.replace(
+              "const money=(n:number)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(n))+' ₽';",
+              "const money=(n:number,lang:Lang='ru')=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(Math.round(n));"
+          )
+
+          # Correct corrupted mixed-language fragments everywhere in the file.
+          for a,b in {
+              'Дofайнер':'Дизайнер',
+              'Бofнес':'Бизнес',
+              'автоматofировать':'автоматизировать',
+              'Автоматofируй':'Автоматизируй',
+              'Criticalсть':'Критичность',
+              'of твоего':'твоего',
+              'of воздуха':'воздуха',
+          }.items():
+              s = s.replace(a,b)
+
+          # Russian result explanation: remove "Например" and make the meaning direct.
+          s = s.replace(
+              'Например, 0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.',
+              '0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'
+          )
+
+          # Localized checklist terminology, in the order RU / EN / KK / AZ.
+          def replace_key_values(text, key, values):
+              it = iter(values)
+              def repl(m):
+                  try:
+                      v = next(it)
+                  except StopIteration:
+                      return m.group(0)
+                  return m.group(1) + v + m.group(3)
+              return re.sub(r"(\\b"+re.escape(key)+r"\\s*:\s*')([^']*)(')", repl, text)
+
+          s = replace_key_values(s, 'criticalityLabel', [
+              'Критичность','Criticality','Маңыздылығы','Маңыздылығы'
+          ])
+          s = replace_key_values(s, 'priorityLabel', [
+              'Приоритет','Priority','Басымдық','Басымдық'
+          ])
+          s = replace_key_values(s, 'evidenceLabel', [
+              'Доказательство результата','Evidence of Work','Нәтиже дәлелі','Нәтиже дәлелі'
+          ])
+
+          # The rule belongs with the skill checklist, before the bottleneck section.
+          s = replace_key_values(s, 'skillsHint', [
+              'Заполни от 5 до 7 способностей. Приоритет = Уровень × Критичность. Приоритет 50+ при уровне ниже 7 — узкое место.',
+              'Fill in 5 to 7 abilities. Priority = Level × Criticality. Priority 50+ with a level below 7 is a bottleneck.',
+              '5–7 қабілетті толтыр. Басымдық = Деңгей × Маңыздылығы. Деңгей 7-ден төмен және басымдық 50+ болса — тар орын.',
+              '5–7 bacarıq daxil et. Prioritet = Səviyyə × Əhəmiyyətlilik. Səviyyə 7-dən aşağı və prioritet 50+ olduqda bu, dar boğazdır.'
+          ])
+          s = replace_key_values(s, 'bottleneckEmpty', [
+              'Заполни от 5 до 7 способностей, чтобы найти узкое место.',
+              'Fill in 5 to 7 abilities to find your bottleneck.',
+              'Dar орынды табу үшін 5–7 қабілетті толтыр.',
+              'Dar boğazı tapmaq üçün 5–7 bacarıq daxil et.'
+          ])
+
+          # The checklist must contain at least 5 and no more than 7 abilities.
+          # Convert an empty initial list to five editable rows if present.
+          s = re.sub(
+              r"useState<Skill\\[\\]>(\\[\\])",
+              "useState<Skill[]>(Array.from({length:5},()=>({name:'',level:5,criticality:5,evidence:''})))",
+              s,
+              count=1
+          )
+
+          # Prevent adding an eighth ability. This handles the common disabled-button form.
+          s = re.sub(
+              r"(onClick=\\{\\(\\)=>setSkills\\(.*?\\)\\})(?![^<]{0,200}disabled)",
+              r"\\1",
+              s,
+              flags=re.S
+          )
+          s = re.sub(
+              r"(skills\.length\s*<\s*)\\d+",
+              r"\\g<1>7",
+              s
+          )
+
+          # Use the selected language for all money() calls when a language variable is in scope.
+          s = re.sub(r"money\\(([^,()]+)\\)", r"money(\\1,lang)", s)
+
+          p.write_text(s, encoding='utf-8')
+
+          # Remove this one-shot maintenance workflow after applying the changes.
+          wf = Path('.github/workflows/fix-b2c-copy.yml')
+          wf.unlink()
+
+      - name: Commit fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/public/MarketValueCalculatorPage.tsx .github/workflows/fix-b2c-copy.yml
+          git commit -m "fix: localize B2C calculator and enforce skill checklist" || exit 0
+          git push
