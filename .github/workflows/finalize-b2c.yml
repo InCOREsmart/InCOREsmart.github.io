@@ -1,5 +1,8 @@
 name: One-time B2C final cleanup
 on:
+  push:
+    paths:
+      - '.github/workflows/finalize-b2c.yml'
   workflow_dispatch:
 permissions:
   contents: write
