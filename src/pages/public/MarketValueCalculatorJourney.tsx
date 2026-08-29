@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MarketValueCalculatorPage } from './MarketValueCalculatorPage';
 import { MarketValueGrowthMatrix } from './MarketValueGrowthMatrix';
+import { useAuth } from '../../contexts/AuthContext';
 
 type Lang = 'ru' | 'en' | 'kk' | 'az';
 type Skill = { name: string; level: number; criticality: number; evidence: string };
@@ -28,6 +29,7 @@ function readSkillProfile(): { role: string; skills: Skill[] } {
 }
 
 export function MarketValueCalculatorJourney() {
+  const { user, signOut } = useAuth();
   const [showMatrix, setShowMatrix] = useState(false);
   const [lang, setLang] = useState<Lang>('ru');
   const [profile, setProfile] = useState<{ role: string; skills: Skill[] }>({ role: '', skills: [] });
@@ -58,8 +60,9 @@ export function MarketValueCalculatorJourney() {
     return () => { window.removeEventListener('storage', onLang); window.clearInterval(id); };
   }, []);
 
-  return <>
+  return <div className="min-h-screen">
+    {user && <div className="mx-auto flex max-w-5xl justify-end px-4 pt-3"><button type="button" onClick={() => void signOut()} className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50" aria-label="Выйти из аккаунта">Выйти из аккаунта</button></div>}
     <MarketValueCalculatorPage />
     {showMatrix && <div className="mx-auto max-w-5xl px-4 pb-10"><MarketValueGrowthMatrix lang={lang} role={profile.role} skills={profile.skills} /></div>}
-  </>;
+  </div>;
 }
