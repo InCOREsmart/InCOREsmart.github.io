@@ -16,29 +16,43 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm install
-      - name: Apply exact B2C fixes
+      - name: Restore valid B2C source and apply final fixes
         run: |
+          git checkout b432c38f762d5f0cc8efd08b188a96cd3738f36e -- src/pages/public/MarketValueCalculatorPage.tsx
           python3 <<'PY'
           from pathlib import Path
           p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
           s=p.read_text(encoding='utf-8')
-          replacements={
-            'Дofайнер':'Дизайнер','Бofнес':'Бизнес','автоматofировать':'автоматизировать','Автоматofируй':'Автоматизируй',
-            'Criticalсть':'Критичность','of твоего':'твоего','of воздуха':'воздуха','Например, 0,48 означает:':'0,48 означает:',
-            'Дofайнер':'Дизайнер','Бofнес':'Бизнес'
-          }
-          for a,b in replacements.items(): s=s.replace(a,b)
+          old="const money=(n:number,lang:Lang='ru')=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(Math.round(n));"
+          new="const money=(n:number,lang:Lang='ru')=>{ const locale=lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ'; const currency=lang==='ru'?'RUB':lang==='en'?'USD':lang==='kk'?'KZT':'AZN'; return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(Math.round(n)); };\nconst currencyLabel=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';"
+          if old not in s: raise SystemExit('Expected currency function not found')
+          s=s.replace(old,new,1)
+          fixes={"Дofайнер":"Дизайнер","Бofнес":"Бизнес","автоматofировать":"автоматизировать","Автоматofируй":"Автоматизируй","Criticalсть":"Критичность","of твоего":"твоего","of воздуха":"воздуха","Например, 0,48 означает:":"0,48 означает:","For example, 0.48 means:":"0.48 means:","Мысалы, 0,48":"0,48","Məsələn, 0,48":"0,48","2024–2030":"2026–2030","2024-2030":"2026–2030","Заполни хотя бы одну способность, чтобы найти узкое место.":"Заполни от 5 до 7 способностей, чтобы определить узкое место."}
+          for a,b in fixes.items(): s=s.replace(a,b)
           s=s.replace("gaps:[['skill','Skill Gap','", "gaps:[['skill','Разрыв навыков','",1)
           s=s.replace("['system','System Gap','", "['system','Системный разрыв','",1)
           s=s.replace("['clarity','Clarity Gap','", "['clarity','Разрыв ясности','",1)
           s=s.replace("['capacity','Capacity Gap','", "['capacity','Разрыв мощности','",1)
-          s=s.replace('For example, 0.48 means:', '0.48 means:')
-          s=s.replace('Мысалы, 0,48', '0,48')
-          s=s.replace('Məsələn, 0,48', '0,48')
-          s=s.replace('2024–2030','2026–2030').replace('2024-2030','2026–2030')
+          for a,b in [("salaryTitle:'Твоя зарплата на руки (₽/мес)'","salaryTitle:'Твоя зарплата на руки ({currency}/мес)'"),("salaryTitle:'Your net salary (per month)'","salaryTitle:'Your net salary ({currency}/month)'"),("salaryTitle:'Қолыңа алатын жалақы (айына)'","salaryTitle:'Қолыңа алатын жалақы ({currency}/айына)'"),("salaryTitle:'Əlinə keçən maaş (aylıq)'","salaryTitle:'Əlinə keçən maaş ({currency}/aylıq)'")]: s=s.replace(a,b)
+          s=s.replace("verdictLow:'Тебя недооценивают на 30%+'", "verdictLow:'Создаваемая тобой мощность значительно выше полной стоимости для компании'")
+          s=s.replace("verdictLow:'You are undervalued by 30%+'", "verdictLow:'Your created capacity is materially higher than your full company cost'")
+          s=s.replace("verdictLow:'Сені 30%+ төмен бағалайды'", "verdictLow:'Сенің жасайтын қуатың компанияның толық шығынынан едәуір жоғары'")
+          s=s.replace("verdictLow:'Səni 30%+ aşağı qiymətləndirirlər'", "verdictLow:'Yaratdığın güc şirkət üçün tam xərcindən xeyli yüksəkdir'")
+          s=s.replace("planTitle:'План действий на 30 дней'", "planTitle:'План действий на 90 дней'")
+          s=s.replace("planTitle:'30-day action plan'", "planTitle:'90-day action plan'")
+          s=s.replace("planTitle:'30 күндік әрекет жоспары'", "planTitle:'90 күндік әрекет жоспары'")
+          s=s.replace("planTitle:'30 günlük fəaliyyət planı'", "planTitle:'90 günlük fəaliyyət planı'")
+          s=s.replace("addSkill={()=>setSkills(s=>[...s,{name:'',level:5,criticality:5,evidence:''}])}", "addSkill={()=>setSkills(s=>s.length<7?[...s,{name:'',level:5,criticality:5,evidence:''}]:s)}")
+          s=s.replace("removeSkill={(i:number)=>setSkills(s=>s.length>1?s.filter((_,idx)=>idx!==i):s)}", "removeSkill={(i:number)=>setSkills(s=>s.length>5?s.filter((_,idx)=>idx!==i):s)}")
+          needle='bottleneck={bottleneck} plan={plan} setPlan={setPlan}/></div><div className="mx-auto mt-5'
+          replacement='bottleneck={bottleneck} plan={plan} setPlan={setPlan}/><GrowthMatrix lang={lang} role={role} bottleneck={bottleneck}/></div><div className="mx-auto mt-5'
+          if needle not in s: raise SystemExit('B2C render anchor not found')
+          s=s.replace(needle,replacement,1)
+          imp="import GrowthMatrix from '../../components/b2c/GrowthMatrix';\n"
+          if imp not in s: s=s.replace("import { create } from 'zustand';\n", "import { create } from 'zustand';\n"+imp,1)
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Validate and build
+      - name: Validate source and build
         run: |
           python3 <<'PY'
           from pathlib import Path
@@ -47,6 +61,7 @@ jobs:
           bad=[x for x in forbidden if x in s]
           if bad: raise SystemExit('Forbidden strings remain: '+', '.join(bad))
           if '2024–2030' in s or '2024-2030' in s: raise SystemExit('Old matrix period remains')
+          if 'GrowthMatrix' not in s: raise SystemExit('GrowthMatrix was not integrated')
           print('B2C source validation passed')
           PY
           npm run check
@@ -57,5 +72,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src/pages/public/MarketValueCalculatorPage.tsx
           if git diff --cached --quiet; then echo 'No source changes needed'; exit 0; fi
-          git commit -m 'fix: finalize B2C calculator localization and UX copy'
+          git commit -m 'fix: restore valid B2C calculator and finalize localization'
           git push origin main
