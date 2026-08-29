@@ -1,0 +1,58 @@
+name: One-time B2C final cleanup
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply exact B2C fixes
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text(encoding='utf-8')
+          replacements={
+            'Дofайнер':'Дизайнер','Бofнес':'Бизнес','автоматofировать':'автоматизировать','Автоматofируй':'Автоматизируй',
+            'Criticalсть':'Критичность','of твоего':'твоего','of воздуха':'воздуха','Например, 0,48 означает:':'0,48 означает:',
+            'Дofайнер':'Дизайнер','Бofнес':'Бизнес'
+          }
+          for a,b in replacements.items(): s=s.replace(a,b)
+          s=s.replace("gaps:[['skill','Skill Gap','", "gaps:[['skill','Разрыв навыков','",1)
+          s=s.replace("['system','System Gap','", "['system','Системный разрыв','",1)
+          s=s.replace("['clarity','Clarity Gap','", "['clarity','Разрыв ясности','",1)
+          s=s.replace("['capacity','Capacity Gap','", "['capacity','Разрыв мощности','",1)
+          s=s.replace('For example, 0.48 means:', '0.48 means:')
+          s=s.replace('Мысалы, 0,48', '0,48')
+          s=s.replace('Məsələn, 0,48', '0,48')
+          s=s.replace('2024–2030','2026–2030').replace('2024-2030','2026–2030')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Validate and build
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          s=Path('src/pages/public/MarketValueCalculatorPage.tsx').read_text(encoding='utf-8')
+          forbidden=['Дofайнер','Бofнес','автоматofировать','Автоматofируй','Criticalсть','of твоего','of воздуха']
+          bad=[x for x in forbidden if x in s]
+          if bad: raise SystemExit('Forbidden strings remain: '+', '.join(bad))
+          if '2024–2030' in s or '2024-2030' in s: raise SystemExit('Old matrix period remains')
+          print('B2C source validation passed')
+          PY
+          npm run check
+          npm run build
+      - name: Commit source only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/public/MarketValueCalculatorPage.tsx
+          if git diff --cached --quiet; then echo 'No source changes needed'; exit 0; fi
+          git commit -m 'fix: finalize B2C calculator localization and UX copy'
+          git push origin main
