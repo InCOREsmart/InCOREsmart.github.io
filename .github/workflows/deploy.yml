@@ -1,57 +1,38 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
-
-# Не допускаем одновременной публикации нескольких сборок в gh-pages.
 concurrency:
   group: github-pages-deploy
   cancel-in-progress: true
-
 permissions:
   contents: write
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # Original tag: actions/checkout@v4
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
-      # Original tag: actions/setup-node@v4
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.x'
-          cache: 'npm'
-
       - name: Install dependencies
-        run: npm ci
-
+        run: npm install
       - name: Validate TypeScript and translations
         run: npm run check
-
       - name: Build
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-
-      # GitHub Pages returns 404 for direct navigation to SPA routes.
-      # Copying the SPA entrypoint to 404.html lets GitHub Pages serve
-      # the app at /hr-calculator while preserving the browser URL.
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
-
-      # Original tag: peaceiris/actions-gh-pages@v4
       - name: Deploy
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
-          # Force a fresh publication of the current main build.
           force_orphan: false
