@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "feature/b2c-market-value-calculator"]
   workflow_dispatch:
 concurrency:
   group: github-pages-deploy
@@ -20,7 +20,7 @@ jobs:
           node-version: '22.x'
       - name: Install dependencies
         run: npm install
-      - name: Validate TypeScript and translations
+      - name: Validate TypeScript
         run: npm run check
       - name: Build
         run: npm run build
@@ -30,6 +30,7 @@ jobs:
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
       - name: Deploy
+        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
