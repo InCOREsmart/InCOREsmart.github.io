@@ -39,7 +39,10 @@ export function MarketValueCalculatorJourney() {
       const text = document.body.textContent || '';
       const result = ['Твоя реальная рыночная стоимость', 'Your real market value', 'Нарықтағы нақты құның', 'Bazarda real dəyərin'].some(x => text.includes(x));
       setShowMatrix(result);
-      if (result) setProfile(readSkillProfile());
+      if (result) {
+        const nextProfile = readSkillProfile();
+        setProfile(prev => JSON.stringify(prev) === JSON.stringify(nextProfile) ? prev : nextProfile);
+      }
     };
     check();
     const observer = new MutationObserver(check);
