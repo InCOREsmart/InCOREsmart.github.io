@@ -18,6 +18,7 @@ jobs:
       - run: npm install
       - name: Restore valid B2C source and apply final fixes
         run: |
+          git fetch --no-tags origin b432c38f762d5f0cc8efd08b188a96cd3738f36e
           git checkout b432c38f762d5f0cc8efd08b188a96cd3738f36e -- src/pages/public/MarketValueCalculatorPage.tsx
           python3 <<'PY'
           from pathlib import Path
@@ -49,7 +50,7 @@ jobs:
           if needle not in s: raise SystemExit('B2C render anchor not found')
           s=s.replace(needle,replacement,1)
           imp="import GrowthMatrix from '../../components/b2c/GrowthMatrix';\n"
-          if imp not in s: s=s.replace("import { create } from 'zustand';\n", "import { create } from 'zustand';\n"+imp,1)
+          s=s.replace("import { create } from 'zustand';\n", "import { create } from 'zustand';\n"+imp,1)
           p.write_text(s,encoding='utf-8')
           PY
       - name: Validate source and build
