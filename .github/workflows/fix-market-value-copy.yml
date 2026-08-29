@@ -1,0 +1,54 @@
+name: Fix market value calculator copy
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-market-value-copy.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch calculator copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text(encoding='utf-8')
+          replacements={
+            "contributionTitle:'Сколько экономического эффекта ты создаёшь в месяц?'":"contributionTitle:'Какой прямой экономический эффект ты создаёшь?',contributionHelp:'Выручка, сэкономленные затраты, закрытые сделки. Если результат косвенный, оцени рыночную стоимость своей функции — например, сколько стоила бы работа внешнего специалиста или аутсорсинга.',",
+            "contributionTitle:'How much economic impact do you create per month?'":"contributionTitle:'What direct economic impact do you create?',contributionHelp:'Revenue, costs saved or deals closed. If your result is indirect, estimate the market cost of your function, for example the cost of outsourcing this work.',",
+            "contributionTitle:'Айына қандай экономикалық әсер жасайсың?'":"contributionTitle:'Айына қандай тікелей экономикалық әсер жасайсың?',contributionHelp:'Түсім, үнемделген шығындар немесе жабылған мәмілелер. Нәтиже жанама болса, функцияңның нарықтық құнын, мысалы аутсорсинг құнын бағала.',",
+            "contributionTitle:'Ayda nə qədər iqtisadi təsir yaradırsan?'":"contributionTitle:'Bir ayda hansı birbaşa iqtisadi təsiri yaradırsan?',contributionHelp:'Gəlir, qənaət edilmiş xərclər və ya bağlanmış sövdələşmələr. Nəticə dolayıdırsa, funksiyanın bazar dəyərini, məsələn, bu işin autsorsinq qiymətini təxmin et.',",
+            "contributionHint:'Не нужно угадывать до рубля. Дай реалистичную оценку эффекта твоей работы.'":"contributionHint:'Оцени результат в деньгах за обычный месяц. Не нужно угадывать до рубля.'",
+            "contributionHint:'You do not need an exact figure. Give a realistic monthly estimate.'":"contributionHint:'Estimate the result in money for a typical month. You do not need an exact figure.'",
+            "contributionHint:'Дәл сан міндетті емес. Ай сайынғы шынайы бағалауды енгіз.'":"contributionHint:'Қалыпты айдағы нәтижеңді ақшаға шақтап бағала. Дәл сан міндетті емес.'",
+            "contributionHint:'Dəqiq rəqəm lazım deyil. Aylıq real təxminini daxil et.'":"contributionHint:'Adi ayдағы nəticəni pulla qiymətləndir. Dəqiq rəqəm lazım deyil.'",
+            "ratio:'Price-to-Capacity Ratio'":"ratio:'Стоимость компании / рыночная мощность'",
+            "ratioHint:'Чем ниже показатель, тем больше создаваемая мощность относительно полной стоимости для компании.'":"ratioHint:'0,48 означает: полная стоимость тебя для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше запас между затратами компании и создаваемым экономическим эффектом.'",
+            "ratioHint:'The lower the ratio, the more created capacity there is relative to full company cost.'":"ratioHint:'A 0.48 ratio means the full company cost is 48% of your calculated market capacity. A lower ratio means a larger gap between company cost and the economic capacity you create.'",
+            "ratioHint:'Көрсеткіш неғұрлым төмен болса, компанияның толық құнына қатысты жасалған қуат соғұрлым жоғары.'":"ratioHint:'0,48 дегеніміз: компанияның толық шығыны есептелген нарықтық қуатыңның 48%-ына тең. Көрсеткіш төмен болған сайын, компания шығыны мен жасайтын экономикалық әсерің арасындағы қор жоғары.'",
+            "ratioHint:'Göstərici nə qədər aşağıdırsa, şirkətin tam xərcinə nisbətən yaradılan güc bir o qədər yüksəkdir.'":"ratioHint:'0,48 o deməkdir ki, şirkətin tam xərci hesablanan bazar gücünün 48%-idir. Göstərici nə qədər aşağıdırsa, şirkətin xərci ilə yaratdığın iqtisadi təsir arasındakı fərq bir o qədər böyükdür.'",
+          }
+          for a,b in replacements.items():
+            if a not in s: print('MISSING:', a)
+            s=s.replace(a,b)
+          s=re.sub(r",currencyNote:'[^']*'",'',s)
+          s=s.replace("<div className=\"text-lg font-bold\">{t.brand}</div>","<img src=\"/logo.png\" alt=\"InCORE\" className=\"h-8 w-auto object-contain\" />")
+          s=s.replace("<p className=\"mt-2 text-slate-600\">{t.contributionHint}</p>","<p className=\"mt-2 text-slate-600\">{t.contributionHint}</p><p className=\"mt-3 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600\">{t.contributionHelp}</p>")
+          s=s.replace("<p className=\"mt-5 text-xs leading-5 text-slate-500\">{t.currencyNote}</p>","")
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/public/MarketValueCalculatorPage.tsx .github/workflows/fix-market-value-copy.yml
+          git commit -m 'fix: clarify market value calculator' || exit 0
+          git push
+          git rm .github/workflows/fix-market-value-copy.yml
+          git commit -m 'chore: remove temporary patch workflow'
+          git push
