@@ -15,77 +15,51 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Apply B2C fixes
         shell: python
         run: |
           from pathlib import Path
           import re
-
           p = Path('src/pages/public/MarketValueCalculatorPage.tsx')
           s = p.read_text(encoding='utf-8')
+          for a,b in {
+            'Дofайнер':'Дизайнер','Бofнес':'Бизнес','автоматofировать':'автоматизировать','Автоматofируй':'Автоматизируй',
+            'Criticalсть':'Критичность','of твоего':'твоего','of воздуха':'воздуха'
+          }.items(): s=s.replace(a,b)
+          s=s.replace('Например, 0,48 означает:','0,48 означает:')
 
-          # Correct mixed-language fragments.
-          replacements = {
-            'Дofайнер':'Дизайнер', 'Бofнес':'Бизнес',
-            'автоматofировать':'автоматизировать', 'Автоматofируй':'Автоматизируй',
-            'Criticalсть':'Критичность', 'of твоего':'твоего', 'of воздуха':'воздуха',
-          }
-          for a,b in replacements.items(): s = s.replace(a,b)
-
-          s = s.replace('Например, 0,48 означает:', '0,48 означает:')
-
-          # Replace the four language values for each localized label in order.
-          def localized(key, values):
-            nonlocal s
-            pattern = r"(\b" + re.escape(key) + r"\s*:\s*')([^']*)(')"
-            i = 0
+          def localized(text,key,values):
+            pattern=r"(\b"+re.escape(key)+r"\s*:\s*')([^']*)(')"
+            i=[0]
             def repl(m):
-              nonlocal i
-              if i >= len(values): return m.group(0)
-              out = m.group(1) + values[i] + m.group(3)
-              i += 1
-              return out
-            s = re.sub(pattern, repl, s)
+              n=i[0]; i[0]+=1
+              return m.group(1)+(values[n] if n<len(values) else m.group(2))+m.group(3)
+            return re.sub(pattern,repl,text)
 
-          localized('criticalityLabel', ['Критичность','Criticality','Маңыздылығы','Əhəmiyyətlilik'])
-          localized('priorityLabel', ['Приоритет','Priority','Басымдық','Prioritet'])
-          localized('evidenceLabel', ['Доказательство результата','Evidence of Work','Нәтиже дәлелі','Nəticə sübutu'])
-          localized('skillsHint', [
+          s=localized(s,'criticalityLabel',['Критичность','Criticality','Маңыздылығы','Əhəmiyyətlilik'])
+          s=localized(s,'priorityLabel',['Приоритет','Priority','Басымдық','Prioritet'])
+          s=localized(s,'evidenceLabel',['Доказательство результата','Evidence of Work','Нәтиже дәлелі','Nəticə sübutu'])
+          s=localized(s,'skillsHint',[
             'Заполни от 5 до 7 способностей. Приоритет = Уровень × Критичность. Приоритет 50+ при уровне ниже 7 — узкое место.',
             'Fill in 5 to 7 abilities. Priority = Level × Criticality. Priority 50+ with a level below 7 is a bottleneck.',
             '5–7 қабілетті толтыр. Басымдық = Деңгей × Маңыздылығы. Деңгей 7-ден төмен және басымдық 50+ болса — тар орын.',
             '5–7 bacarıq daxil et. Prioritet = Səviyyə × Əhəmiyyətlilik. Səviyyə 7-dən aşağı və prioritet 50+ olduqda bu, dar boğazdır.'
           ])
-          localized('bottleneckEmpty', [
+          s=localized(s,'bottleneckEmpty',[
             'Заполни от 5 до 7 способностей, чтобы найти узкое место.',
             'Fill in 5 to 7 abilities to find your bottleneck.',
             'Тар орынды табу үшін 5–7 қабілетті толтыр.',
             'Dar boğazı tapmaq üçün 5–7 bacarıq daxil et.'
           ])
 
-          # Use RUB with the active locale instead of hard-coded Russian formatting.
-          old = "const money=(n:number)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(n))+' ₽';"
-          new = "const money=(n:number,lang:Lang='ru')=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(Math.round(n));"
-          s = s.replace(old,new)
-
-          # Add the active language to simple money() call sites, without touching the declaration.
-          s = re.sub(r"money\((?!n:number)([^,()\n]+)\)", r"money(\1,lang)", s)
-
-          # Ensure the checklist starts with 5 editable rows if it currently starts empty.
-          s = re.sub(
-            r"useState<Skill\[\]>\(\[\]\)",
-            "useState<Skill[]>(Array.from({length:5},()=>({name:'',level:5,criticality:5,evidence:''})))",
-            s,
-            count=1
-          )
-
-          # Enforce maximum of 7 rows wherever a length guard exists.
-          s = re.sub(r"(skills\.length\s*<\s*)\d+", r"\g<1>7", s)
-
-          p.write_text(s, encoding='utf-8')
+          old="const money=(n:number)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(n))+' ₽';"
+          new="const money=(n:number,lang:Lang='ru')=>new Intl.NumberFormat(lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(Math.round(n));"
+          s=s.replace(old,new)
+          s=re.sub(r"money\((?!n:number)([^,()\n]+)\)",r"money(\1,lang)",s)
+          s=re.sub(r"useState<Skill\[\]>\(\[\]\)","useState<Skill[]>(Array.from({length:5},()=>({name:'',level:5,criticality:5,evidence:''})))",s,count=1)
+          s=re.sub(r"(skills\.length\s*<\s*)\d+",r"\g<1>7",s)
+          p.write_text(s,encoding='utf-8')
           Path('.github/workflows/fix-b2c-copy.yml').unlink()
-
       - name: Commit fixes
         run: |
           git config user.name "github-actions[bot]"
