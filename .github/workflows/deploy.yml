@@ -29,11 +29,6 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - name: Add SPA fallback
         run: cp dist/index.html dist/404.html
-      - name: Cache-bust published assets
-        env:
-          DEPLOY_VERSION: ${{ github.sha }}
-        run: |
-          node -e "const fs=require('fs'); const v=process.env.DEPLOY_VERSION.slice(0,12); for (const p of ['dist/index.html','dist/404.html']) { let s=fs.readFileSync(p,'utf8'); s=s.replace(/(src|href)=\"(\/assets\/[^\"]+\.(?:js|css))\"/g, '$1=\"$2?v='+v+'\"'); fs.writeFileSync(p,s); }"
       - name: Deploy
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453
