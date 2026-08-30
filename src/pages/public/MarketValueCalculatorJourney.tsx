@@ -29,10 +29,17 @@ function readSkillProfile(): { role: string; skills: Skill[] } {
 }
 
 export function MarketValueCalculatorJourney() {
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [showMatrix, setShowMatrix] = useState(false);
   const [lang, setLang] = useState<Lang>('ru');
   const [profile, setProfile] = useState<{ role: string; skills: Skill[] }>({ role: '', skills: [] });
+
+  const handleExit = async () => {
+    try { await signOut(); } finally {
+      localStorage.removeItem('incore-b2c-calculator');
+      window.location.replace('/#/register');
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem('incore-lang') as Lang | null;
@@ -61,7 +68,11 @@ export function MarketValueCalculatorJourney() {
   }, []);
 
   return <div className="min-h-screen">
-    {user && <div className="mx-auto flex max-w-5xl justify-end px-4 pt-3"><button type="button" onClick={() => void signOut()} className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50" aria-label="Выйти из аккаунта">Выйти из аккаунта</button></div>}
+    <div className="mx-auto flex max-w-5xl justify-end px-4 pt-3">
+      <button type="button" onClick={handleExit} className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50" aria-label="Выйти из аккаунта и перейти к регистрации">
+        Выйти из аккаунта
+      </button>
+    </div>
     <MarketValueCalculatorPage />
     {showMatrix && <div className="mx-auto max-w-5xl px-4 pb-10"><MarketValueGrowthMatrix lang={lang} role={profile.role} skills={profile.skills} /></div>}
   </div>;
