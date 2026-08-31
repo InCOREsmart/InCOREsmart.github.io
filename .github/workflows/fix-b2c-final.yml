@@ -1,0 +1,43 @@
+name: Fix B2C calculator final
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/b2c-final"]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply safe fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("money(fullCost(value))", "money(fullCost(value),lang)")
+          s=s.replace("<Tooltip formatter={v=>money(Number(v))}/>", "<Tooltip formatter={v=>money(Number(v),lang)}/>")
+          s=s.replace("salaryTitle:'Твоя зарплата на руки ({currency}/мес)'", "salaryTitle:'Твоя зарплата на руки ({currency}/мес)'")
+          old="""const submitAuth=async()=>{setAuthError('');setAuthMessage('');if(!email||password.length<6){setAuthError(t.authError);return;}setSaving(true);try{if(authMode==='register'){const {data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{source:'market-value-calculator'}}});if(error)throw error;if(!data.session){setAuthMessage(t.confirm);return;}}else{const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;}setShowAuth(false);next();}catch(e:any){setAuthError(e?.message||t.authError);}finally{setSaving(false);}};"""
+          new="""const submitAuth=async()=>{setAuthError('');setAuthMessage('');if(!email||password.length<6){setAuthError(t.authError);return;}setSaving(true);try{if(authMode==='register'){const {data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{source:'market-value-calculator'}}});if(error){if(error.status===422||/already registered|already exists|user already/i.test(error.message)){setAuthMode('login');setAuthError(lang==='ru'?'Этот email уже зарегистрирован. Переключила на вход.':lang==='en'?'This email is already registered. Switched to sign in.':lang==='kk'?'Бұл email бұрын тіркелген. Кіру режиміне ауыстырдым.':'Bu email artıq qeydiyyatdan keçib. Giriş rejiminə keçirdim.');return;}throw error;}if(!data.session){setAuthMessage(t.confirm);return;}}else{const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;}setShowAuth(false);next();}catch(e:any){setAuthError(e?.message||t.authError);}finally{setSaving(false);}};"""
+          if old not in s:
+              raise SystemExit('submitAuth pattern not found')
+          s=s.replace(old,new)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Check
+        run: npm ci && npm run check && npm run build
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/public/MarketValueCalculatorPage.tsx .github/workflows/fix-b2c-final.yml
+          git diff --cached --quiet || git commit -m "fix: finalize B2C currency and auth handling"
+          git push
+      - name: Remove temporary workflow
+        if: success()
+        run: |
+          git rm .github/workflows/fix-b2c-final.yml
+          git commit -m "chore: remove temporary B2C repair workflow"
+          git push
