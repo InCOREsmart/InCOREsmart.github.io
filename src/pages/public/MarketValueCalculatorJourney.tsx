@@ -73,7 +73,13 @@ export function MarketValueCalculatorJourney() {
         Выйти из аккаунта
       </button>
     </div>
-    <MarketValueCalculatorPage />
+
+    {/* В калькуляторе есть старая верхняя матрица. Оставляем только нижнюю MarketValueGrowthMatrix. */}
+    <style>{`[data-market-value-calculator] section[aria-label*="2026"]{display:none!important;}`}</style>
+    <div data-market-value-calculator>
+      <MarketValueCalculatorPage />
+    </div>
+
     {showMatrix && <div className="mx-auto max-w-5xl px-4 pb-10"><MarketValueGrowthMatrix lang={lang} role={profile.role} skills={profile.skills} /></div>}
   </div>;
 }
