@@ -1,0 +1,46 @@
+name: Direct B2C repair
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch calculator
+        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text()
+          s=s.replace("const money=(n:number,lang:Lang='ru')=>", "const currencySymbol=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';\nconst money=(n:number,lang:Lang='ru')=>")
+          s=s.replace("{t.salaryTitle}", "{t.salaryTitle.replace('{currency}', currencySymbol(lang))}")
+          s=s.replace("{money(fullCost(value))}", "{money(fullCost(value),lang)}")
+          s=s.replace("ratioHint:'0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'", "ratioHint:'{ratio} означает: полная стоимость для компании составляет {percent}% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'")
+          s=s.replace("hint={t.ratioHint}", "hint={t.ratioHint.replace('{ratio}',metrics.ratio.toFixed(2)).replace('{percent}',Math.round(metrics.ratio*100).toString())}")
+          s=s.replace("For example, 0.48 means", "The current ratio shows")
+          s=s.replace("0,48 компанияның", "{ratio} компанияның")
+          s=s.replace("0,48 şirkətin", "{ratio} şirkətin")
+          p.write_text(s)
+          PY
+      - name: Validate
+        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+        run: |
+          npm install
+          npm run check
+          npm run build
+      - name: Commit repair
+        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+        run: |
+          git config user.name 'InCORE'
+          git config user.email 'tihonova02@gmail.com'
+          git add src/pages/public/MarketValueCalculatorPage.tsx src/components/b2c/GrowthMatrix.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: B2C calculator production'
+          git push
