@@ -1,0 +1,78 @@
+name: One-time B2C calculator repair
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - ".github/workflows/fix-b2c.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text()
+          s=s.replace("const money=(n:number,lang:Lang='ru')=>", "const currencyLabel=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';\nconst money=(n:number,lang:Lang='ru')=>")
+          s=s.replace("salaryTitle:'Твоя зарплата на руки ({currency}/мес)'", "salaryTitle:'Твоя зарплата на руки ({currency}/мес)'")
+          s=s.replace("salaryTitle:'Your net salary ({currency}/month)'", "salaryTitle:'Your net salary ({currency}/month)'")
+          s=s.replace("hint={t.ratioHint}", "hint={ratioHint(metrics.ratio,lang)}")
+          s=s.replace("{money(fullCost(value))}", "{money(fullCost(value),t.__lang||'ru')}")
+          s=s.replace("<SalaryStep t={t} value={salary} set={set}/>", "<SalaryStep t={{...t,__lang:lang}} value={salary} set={set}/>")
+          marker="const currencyLabel=(lang:Lang)=>"
+          if "const ratioHint=(r:number,lang:Lang)" not in s:
+              s=s.replace(marker, "const ratioHint=(r:number,lang:Lang)=>{const pct=Math.round(r*100);const text={ru:`${r.toFixed(2).replace('.',',')} означает: полная стоимость для компании составляет ${pct}% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.`,en:`${r.toFixed(2)} means the full company cost is ${pct}% of your calculated market capacity. The lower the ratio, the larger the gap in favor of created capacity.`,kk:`${r.toFixed(2).replace('.',',')} компанияның толық шығыны есептелген нарықтық қуаттың ${pct}%-ына тең екенін білдіреді. Көрсеткіш төмен болған сайын, жасайтын қуаттың пайдасына айырмашылық үлкен.`,az:`${r.toFixed(2).replace('.',',')} şirkətin tam xərcinin hesablanan bazar gücünün ${pct}%-i olduğunu göstərir. Göstərici aşağı olduqca, yaratdığın gücün xeyrinə fərq böyüyür.`};return text[lang];};\n"+marker)
+          s=s.replace("t.salaryTitle}</h2>", "t.salaryTitle.replace('{currency}',currencyLabel(t.__lang||'ru'))}</h2>")
+          # Fix the remaining hard-coded example wording.
+          s=s.replace("ratioHint:'0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'", "ratioHint:'Сравнивает полную стоимость компании с рассчитанной рыночной мощностью.'")
+          s=s.replace("ratioHint:'For example, 0.48 means the full company cost is 48% of your calculated market capacity. A lower ratio means a larger gap in favor of created capacity.'", "ratioHint:'Compares the full company cost with your calculated market capacity.'")
+          s=s.replace("ratioHint:'0,48 компанияның толық шығыны есептелген нарықтық қуаттың 48%-ына тең екенін білдіреді. Көрсеткіш төмен болған сайын, жасайтын қуаттың пайдасына айырмашылық үлкен.'", "ratioHint:'Компанияның толық шығынын есептелген нарықтық қуатпен салыстырады.'")
+          s=s.replace("ratioHint:'0,48 şirkətin tam xərcinin hesablanan bazar gücünün 48%-i olduğunu göstərir. Göstərici aşağı olduqca, yaratdığın gücün xeyrinə fərq böyüyür.'", "ratioHint:'Şirkətin tam xərcini hesablanan bazar gücü ilə müqayisə edir.'")
+          # Keep all localized Gap names localized in visible UI while retaining internal keys.
+          for a,b in [("'Skill Gap'","'Разрыв навыков'"),("'System Gap'","'Системный разрыв'"),("'Clarity Gap'","'Разрыв ясности'"),("'Capacity Gap'","'Разрыв мощности'")]:
+              if a in s: s=s.replace(a,b)
+          # Registration: distinguish existing account from real signup errors and handle an existing account gracefully.
+          old="if(error)throw error;if(!data.session){setAuthMessage(t.confirm);return;}"
+          new="if(error){const msg=String(error.message||'');if(/already registered|already exists|user already/i.test(msg)){setAuthError(t.login+': '+t.authError);return;}throw error;}if(!data.session){setAuthMessage(t.confirm);return;}"
+          s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - run: |
+          cat > src/components/b2c/GrowthMatrix.tsx <<'EOF'
+          import React,{useMemo,useState} from 'react';
+          type Lang='ru'|'en'|'kk'|'az';
+          type Props={lang:Lang;role:string;bottleneck?:{name:string}};
+          const copy={
+            ru:{title:'Матрица обесценивания и роста навыков 2026–2030',intro:'Сравни свои навыки с теми, которые дешевеют, растут в цене и только появляются.',red:'Падает в цене',green:'Растёт в цене',blue:'Появляется',choose:'Выбери направление',sales:'Продажи',marketing:'Маркетинг',it:'IT и аналитика',hr:'HR',finance:'Финансы',plan:'Твой план на 90 дней'},
+            en:{title:'Skill value and growth matrix 2026–2030',intro:'Compare your skills with those losing value, gaining value and emerging.',red:'Declining in value',green:'Growing in value',blue:'Emerging',choose:'Choose a direction',sales:'Sales',marketing:'Marketing',it:'IT & analytics',hr:'HR',finance:'Finance',plan:'Your 90-day plan'},
+            kk:{title:'Дағдылардың құнсыздануы мен өсу матрицасы 2026–2030',intro:'Құны төмендейтін, өсетін және пайда болатын дағдыларыңды салыстыр.',red:'Құны төмендейді',green:'Құны өседі',blue:'Пайда болады',choose:'Бағытты таңда',sales:'Сату',marketing:'Маркетинг',it:'IT және аналитика',hr:'HR',finance:'Қаржы',plan:'90 күндік жоспарың'},
+            az:{title:'Bacarıqların dəyər itirməsi və artımı matrisi 2026–2030',intro:'Dəyəri azalan, artan və yeni yaranan bacarıqlarını müqayisə et.',red:'Dəyəri azalır',green:'Dəyəri artır',blue:'Yaranır',choose:'İstiqamət seç',sales:'Satış',marketing:'Marketinq',it:'IT və analitika',hr:'HR',finance:'Maliyyə',plan:'90 günlük planın'}
+          } as const;
+          const data={
+            sales:{ru:['Холодные звонки по скрипту, базовая квалификация лида, механическое заполнение CRM.','Сложные переговоры, защита маржинальности, выявление скрытых потребностей и удержание.','AI-персонализация предложений, прогноз оттока и гибридные воронки человек + AI.'],en:['Scripted cold calls, basic lead qualification and mechanical CRM entry.','Complex negotiations, margin protection, hidden economic needs and retention.','AI-personalized proposals, churn prediction and human + AI sales funnels.'],kk:['Скрипт бойынша суық қоңыраулар, бастапқы лид біліктілігі және CRM-ді механикалық толтыру.','Күрделі келіссөздер, маржаны қорғау, жасырын экономикалық қажеттіліктерді анықтау және ұстап қалу.','AI арқылы дербестендірілген ұсыныстар, кетуді болжау және адам + AI сату воронкалары.'],az:['Skript üzrə soyuq zənglər, ilkin lead kvalifikasiyası və CRM-in mexaniki doldurulması.','Mürəkkəb danışıqlar, marjanın qorunması, gizli iqtisadi ehtiyacların aşkarlanması və müştəri saxlanması.','AI ilə fərdiləşdirilmiş təkliflər, itki proqnozu və insan + AI satış huniləri.']},
+            marketing:{ru:['Ручной таргетинг, SEO-тексты «для галочки», базовый дизайн и механический постинг.','Юнит-экономика, глубокие интервью с клиентами, репутация и кросс-функциональная стратегия.','Управление AI-агентами, first-party данные и интерактивный контент.'],en:['Manual broad targeting, checkbox SEO copy, basic design and mechanical posting.','Unit economics, deep customer research, reputation and cross-functional strategy.','AI-agent orchestration, first-party data and interactive content.'],kk:['Қолмен таргеттеу, формалды SEO мәтіндері, базалық дизайн және механикалық жариялау.','Unit-экономика, терең клиенттік зерттеу, бедел және кросс-функционалды стратегия.','AI-агенттерін басқару, first-party деректері және интерактивті контент.'],az:['Manual geniş hədəfləmə, formal SEO mətnləri, əsas dizayn və mexaniki paylaşım.','Unit iqtisadiyyatı, dərin müştəri araşdırması, reputasiya və funksiyalararası strategiya.','AI agentlərinin idarə edilməsi, first-party məlumatları və interaktiv kontent.']},
+            it:{ru:['Шаблонный код, ручное тестирование, базовая вёрстка и простые дашборды.','Архитектура, понимание бизнес-домена, безопасность, производительность и техдолг.','AI-оркестрация, проверка AI-результатов и MLOps.'],en:['Boilerplate code, manual QA, basic layouts and simple dashboards.','Architecture, business-domain expertise, security, performance and technical debt.','AI orchestration, AI-output validation and MLOps.'],kk:['Шаблондық код, қолмен тестілеу, базалық беттеу және қарапайым дашбордтар.','Архитектура, бизнес-доменді түсіну, қауіпсіздік, өнімділік және техникалық қарыз.','AI-оркестрациясы, AI нәтижелерін тексеру және MLOps.'],az:['Şablon kod, manual QA, əsas layout və sadə dashboardlar.','Arxitektura, biznes domeni, təhlükəsizlik, performans və texniki borc.','AI orkestrasiya, AI nəticələrinin yoxlanması və MLOps.']},
+            hr:{ru:['Массовый скрининг резюме, первичные интервью, документы и рутинная координация.','Проектирование ролей, производительная мощность команд, внутренняя мобильность и удержание.','Алгоритмическая справедливость, предиктивная аналитика текучести и рабочие места человек + AI.'],en:['Mass CV screening, first interviews, paperwork and routine coordination.','Role design, productive team capacity, internal mobility and retention.','Algorithmic fairness, predictive attrition analytics and human + AI job design.'],kk:['Резюмелерді жаппай скринингтеу, алғашқы сұхбаттар, құжаттар және күнделікті үйлестіру.','Рөлдерді жобалау, команданың өндірістік қуаты, ішкі мобильдік және ұстап қалу.','Алгоритмдік әділдік, кетуді болжау аналитикасы және адам + AI жұмыс орындарын жобалау.'],az:['Kütləvi CV skrininqi, ilkin müsahibələr, sənədləşmə və rutin koordinasiya.','Rolların dizaynı, komandanın məhsuldar gücü, daxili mobillik və saxlanma.','Alqoritmik ədalət, işçi dövriyyəsinin proqnoz analitikası və insan + AI iş yerləri.']},
+            finance:{ru:['Ручной ввод документов, сведение таблиц и бюджетирование «от достигнутого».','Сценарное моделирование, управление денежным потоком и ROI людей и технологий.','Аудит алгоритмических финансовых решений, токенизированные активы и ESG.'],en:['Manual document entry, spreadsheet consolidation and incremental budgeting.','Scenario modelling, cash-flow decisions and ROI of people and technology.','Algorithmic finance audit, tokenized assets and ESG-finance integration.'],kk:['Құжаттарды қолмен енгізу, кестелерді біріктіру және өткенге сүйенген бюджеттеу.','Сценарийлік модельдеу, ақша ағынын басқару және адамдар мен технологиялардың ROI.','Алгоритмдік қаржылық шешімдер аудиті, токенделген активтер және ESG.'],az:['Sənədlərin əl ilə daxil edilməsi, cədvəllərin birləşdirilməsi və keçmişə əsaslanan büdcələmə.','Ssenari modelləşdirməsi, pul axınının idarəsi və insan və texnologiyaların ROI-si.','Alqoritmik maliyyə qərarlarının auditi, tokenləşdirilmiş aktivlər və ESG.']}
+          } as const;
+          export default function GrowthMatrix({lang,role}:Props){const t=copy[lang];const initial=useMemo(()=>{const r=role.toLowerCase();return r.match(/маркет|market|маркетинг|marketinq/)?'marketing':r.match(/разраб|developer|әзір|it|inkişaf/)?'it':r.match(/hr|персон|адам|insan/)?'hr':r.match(/финанс|finance|қаржы|maliyy/)?'finance':'sales';},[role]);const [selected,setSelected]=useState<keyof typeof data>(initial);const m=data[selected];const labels=[t.red,t.green,t.blue];return <section className="mt-6 rounded-2xl border border-slate-200 p-5 sm:p-7"><h2 className="text-2xl font-bold">{t.title}</h2><p className="mt-2 leading-7 text-slate-600">{t.intro}</p><div className="mt-5"><div className="mb-2 text-sm font-semibold">{t.choose}</div><div className="flex flex-wrap gap-2">{(['sales','marketing','it','hr','finance'] as const).map(k=><button key={k} type="button" onClick={()=>setSelected(k)} className={`rounded-full border px-4 py-2 text-sm font-semibold ${selected===k?'bg-[#000052] text-white':'bg-white'}`}>{t[k]}</button>)}</div></div><div className="mt-5 grid gap-3 md:grid-cols-3">{m[lang].map((text,i)=><div key={i} className="rounded-xl border border-slate-200 p-4"><div className="text-sm font-bold">{labels[i]}</div><p className="mt-2 text-sm leading-6 text-slate-600">{text}</p></div>)}</div></section>}
+          EOF
+      - run: npm run check
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - run: |
+          rm -f .github/workflows/fix-b2c.yml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add src/pages/public/MarketValueCalculatorPage.tsx src/components/b2c/GrowthMatrix.tsx .github/workflows/fix-b2c.yml
+          git commit -m "fix: complete B2C calculator localization ratio matrix and auth"
+          git push
