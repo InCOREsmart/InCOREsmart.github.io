@@ -1,0 +1,45 @@
+name: Fix B2C now
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch B2C source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s=p.read_text()
+          s=s.replace("const money=(n:number,lang:Lang='ru')=>{ const locale=lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ'; const currency=lang==='ru'?'RUB':lang==='en'?'USD':lang==='kk'?'KZT':'AZN'; return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(Math.round(n)); };", "const money=(n:number,lang:Lang='ru')=>{ const locale=lang==='ru'?'ru-RU':lang==='en'?'en-US':lang==='kk'?'kk-KZ':'az-AZ'; const currency=lang==='ru'?'RUB':lang==='en'?'USD':lang==='kk'?'KZT':'AZN'; return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(Math.round(n)); };\nconst currencyLabel=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';")
+          s=s.replace("salaryTitle:'Твоя зарплата на руки ({currency}/мес)'", "salaryTitle:'Твоя зарплата на руки ({currency}/мес)'")
+          s=s.replace("salaryTitle:'Your net salary ({currency}/month)'", "salaryTitle:'Your net salary ({currency}/month)'")
+          s=s.replace("salaryTitle:'Қолыңа алатын жалақы ({currency}/айына)'", "salaryTitle:'Қолыңа алатын жалақы ({currency}/айына)'")
+          s=s.replace("salaryTitle:'Əlinə keçən maaş ({currency}/aylıq)'", "salaryTitle:'Əlinə keçən maaş ({currency}/aylıq)'")
+          s=s.replace("<SalaryStep t={t} value={salary} set={set}/>", "<SalaryStep t={t} value={salary} set={set} lang={lang}/>")
+          s=s.replace("function SalaryStep({t,value,set}:any){return <div><h2 className=\"text-2xl font-bold\">{t.salaryTitle}</h2>", "function SalaryStep({t,value,set,lang}:{t:any;value:number;set:(v:any)=>void;lang:Lang}){return <div><h2 className=\"text-2xl font-bold\">{t.salaryTitle.replace('{currency}',currencyLabel(lang))}</h2>")
+          s=s.replace("ratioHint:'0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'", "ratioHint:'{ratio} означает: полная стоимость для компании составляет {percent}% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'")
+          s=s.replace("ratioHint:'For example, 0.48 means the full company cost is 48% of your calculated market capacity. A lower ratio means a larger gap in favor of created capacity.'", "ratioHint:'{ratio} means the full company cost is {percent}% of your calculated market capacity. A lower ratio means a larger gap in favor of created capacity.'")
+          s=s.replace("ratioHint:'0,48 компанияның толық шығыны есептелген нарықтық қуаттың 48%-ына тең екенін білдіреді. Көрсеткіш төмен болған сайын, жасайтын қуаттың пайдасына айырмашылық үлкен.'", "ratioHint:'{ratio} компанияның толық шығыны есептелген нарықтық қуаттың {percent}%-ына тең екенін білдіреді. Көрсеткіш төмен болған сайын, жасайтын қуаттың пайдасына айырмашылық үлкен.'")
+          s=s.replace("ratioHint:'0,48 şirkətin tam xərcinin hesablanan bazar gücünün 48%-i olduğunu göstərir. Göstərici nə qədər aşağıdırsa, yaratdığın gücün xeyrinə fərq bir o qədər böyükdür.'", "ratioHint:'{ratio} şirkətin tam xərcinin hesablanan bazar gücünün {percent}%-i olduğunu göstərir. Göstərici nə qədər aşağıdırsa, yaratdığın gücün xeyrinə fərq bir o qədər böyükdür.'")
+          s=s.replace("<Metric title={t.ratioTitle} value={metrics.ratio.toFixed(2)} hint={t.ratioHint}/>", "<Metric title={t.ratioTitle} value={metrics.ratio.toFixed(2)} hint={t.ratioHint.replace('{ratio}',metrics.ratio.toFixed(2)).replace('{percent}',(metrics.ratio*100).toFixed(0))}/>")
+          p.write_text(s)
+          PY
+      - name: Validate
+        run: npm install && npm run check && npm run build
+      - name: Commit source fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/public/MarketValueCalculatorPage.tsx .github/workflows/fix-b2c-now.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: finalize B2C currency and dynamic ratio'
+          git rm .github/workflows/fix-b2c-now.yml
+          git commit -m 'chore: remove one-time B2C patch workflow'
+          git push
