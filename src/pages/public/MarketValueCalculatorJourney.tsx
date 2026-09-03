@@ -37,7 +37,7 @@ export function MarketValueCalculatorJourney() {
   const handleExit = async () => {
     try { await signOut(); } finally {
       localStorage.removeItem('incore-b2c-calculator');
-      window.location.replace('/#/register');
+      window.location.replace('/#/market-value');
     }
   };
 
@@ -74,7 +74,6 @@ export function MarketValueCalculatorJourney() {
       </button>
     </div>
 
-    {/* В калькуляторе есть старая верхняя матрица. Оставляем только нижнюю MarketValueGrowthMatrix. */}
     <style>{`[data-market-value-calculator] section[aria-label*="2026"]{display:none!important;}`}</style>
     <div data-market-value-calculator>
       <MarketValueCalculatorPage />
