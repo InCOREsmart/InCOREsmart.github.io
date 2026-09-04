@@ -24,6 +24,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const determineRole = async (u: User): Promise<UserRole> => {
     const meta = (u.user_metadata?.role as string | undefined)?.toLowerCase();
+    const profileType = (u.user_metadata?.profile_type as string | undefined)?.toLowerCase();
+    if (profileType === 'b2c_calculator') return 'guest';
     if (meta === 'guest') return 'guest';
     if (meta === 'agent' || meta === 'ceo') return meta;
     const { data: c } = await supabase.from('companies').select('id').eq('user_id', u.id).maybeSingle();
@@ -64,7 +66,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const meta = (s.user.user_metadata?.role as string | undefined)?.toLowerCase();
-      if (meta === 'guest' || meta === 'agent' || meta === 'ceo') {
+      const profileType = (s.user.user_metadata?.profile_type as string | undefined)?.toLowerCase();
+      if (profileType === 'b2c_calculator' || meta === 'guest') {
+        setRole('guest');
+        setLoading(false);
+        return;
+      }
+      if (meta === 'agent' || meta === 'ceo') {
         setRole(meta);
         setLoading(false);
         return;
