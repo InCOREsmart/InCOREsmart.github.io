@@ -1,0 +1,50 @@
+name: Fix B2C login routing
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, 'B2C LOGIN FIX') }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch B2C login intent
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          entry = Path('src/pages/public/MarketValueEntryPage.tsx')
+          s = entry.read_text()
+          old = "const go = (path: string) => {\n    window.location.replace(`${window.location.origin}${window.location.pathname}#${path}`);\n  };"
+          new = "const go = (path: string) => {\n    if (path === '/login') localStorage.setItem('incore-b2c-login-intent', '1');\n    window.location.replace(`${window.location.origin}${window.location.pathname}#${path}`);\n  };"
+          if old in s:
+              entry.write_text(s.replace(old, new, 1))
+
+          login = Path('src/pages/auth/LoginPage.tsx')
+          s = login.read_text()
+          old_effect = "if (!loading && user && role) {\n      navigate(role === 'guest' ? '/market-value' : '/' + role, { replace: true });\n    }"
+          new_effect = "if (!loading && user && role) {\n      const b2cIntent = localStorage.getItem('incore-b2c-login-intent') === '1';\n      if (b2cIntent || role === 'guest') {\n        localStorage.removeItem('incore-b2c-login-intent');\n        navigate('/market-value', { replace: true });\n      } else {\n        navigate('/' + role, { replace: true });\n      }\n    }"
+          if old_effect in s:
+              s = s.replace(old_effect, new_effect, 1)
+          old_login = "const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });\n      if (signInError) {"
+          new_login = "const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });\n      if (signInError) {"
+          login.write_text(s)
+          PY
+      - name: Validate and build
+        run: |
+          npm install
+          npm run check
+          npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Commit B2C login fix
+        run: |
+          git config user.name 'InCORE'
+          git config user.email 'tihonova02@gmail.com'
+          git add src/pages/public/MarketValueEntryPage.tsx src/pages/auth/LoginPage.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: B2C LOGIN FIX routing'
+          git push
