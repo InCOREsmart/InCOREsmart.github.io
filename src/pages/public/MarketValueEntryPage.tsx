@@ -60,7 +60,6 @@ export function MarketValueEntryPage() {
         password,
         options: {
           data: {
-            role: 'guest',
             full_name: name.trim(),
             profile_type: 'b2c_calculator',
           },
