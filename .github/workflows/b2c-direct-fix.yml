@@ -6,41 +6,41 @@ permissions:
   contents: write
 jobs:
   repair:
+    if: ${{ !contains(github.event.head_commit.message, 'B2C REPAIR') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.x'
-      - name: Patch calculator
-        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+          node-version: 22
+      - name: Remove duplicate generated declarations
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('src/pages/public/MarketValueCalculatorPage.tsx')
-          s=p.read_text()
-          s=s.replace("const money=(n:number,lang:Lang='ru')=>", "const currencySymbol=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';\nconst money=(n:number,lang:Lang='ru')=>")
-          s=s.replace("{t.salaryTitle}", "{t.salaryTitle.replace('{currency}', currencySymbol(lang))}")
-          s=s.replace("{money(fullCost(value))}", "{money(fullCost(value),lang)}")
-          s=s.replace("ratioHint:'0,48 означает: полная стоимость для компании составляет 48% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'", "ratioHint:'{ratio} означает: полная стоимость для компании составляет {percent}% от рассчитанной рыночной мощности. Чем ниже показатель, тем больше разрыв в пользу создаваемой мощности.'")
-          s=s.replace("hint={t.ratioHint}", "hint={t.ratioHint.replace('{ratio}',metrics.ratio.toFixed(2)).replace('{percent}',Math.round(metrics.ratio*100).toString())}")
-          s=s.replace("For example, 0.48 means", "The current ratio shows")
-          s=s.replace("0,48 компанияның", "{ratio} компанияның")
-          s=s.replace("0,48 şirkətin", "{ratio} şirkətin")
+          p = Path('src/pages/public/MarketValueCalculatorPage.tsx')
+          s = p.read_text()
+          declaration = "const currencySymbol=(lang:Lang)=>lang==='ru'?'₽':lang==='en'?'$':lang==='kk'?'₸':'₼';"
+          first = s.find(declaration)
+          if first >= 0:
+              second = s.find(declaration, first + len(declaration))
+              while second >= 0:
+                  s = s[:second] + s[second + len(declaration):]
+                  second = s.find(declaration, first + len(declaration))
           p.write_text(s)
           PY
-      - name: Validate
-        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+      - name: Validate and build
         run: |
           npm install
           npm run check
           npm run build
-      - name: Commit repair
-        if: ${{ !contains(github.event.head_commit.message, 'B2C DIRECT FIX') }}
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Commit repaired source
         run: |
           git config user.name 'InCORE'
           git config user.email 'tihonova02@gmail.com'
-          git add src/pages/public/MarketValueCalculatorPage.tsx src/components/b2c/GrowthMatrix.tsx
+          git add src/pages/public/MarketValueCalculatorPage.tsx
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: B2C calculator production'
+          git commit -m 'fix: B2C REPAIR build'
           git push
