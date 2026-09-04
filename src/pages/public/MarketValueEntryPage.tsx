@@ -36,7 +36,7 @@ export function MarketValueEntryPage() {
   const c = copy[lang];
   const go = (path: string) => {
     if (path === '/login') localStorage.setItem('incore-b2c-login-intent', '1');
-    window.location.replace(`${window.location.origin}${window.location.pathname}#${path}`);
+    window.location.replace(`${window.location.origin}/#${path}`);
   };
 
   const submit = async (e: FormEvent) => {
@@ -72,7 +72,7 @@ export function MarketValueEntryPage() {
 
       setRegisteredEmail(normalizedEmail);
       if (data.session) {
-        window.location.replace(`${window.location.origin}${window.location.pathname}#/market-value`);
+        window.location.replace(`${window.location.origin}/#/market-value`);
         return;
       }
 
