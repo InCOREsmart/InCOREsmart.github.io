@@ -16,7 +16,13 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!loading && user && role) {
-      navigate(role === 'guest' ? '/market-value' : '/' + role, { replace: true });
+      const b2cIntent = localStorage.getItem('incore-b2c-login-intent') === '1';
+      if (b2cIntent || role === 'guest') {
+        localStorage.removeItem('incore-b2c-login-intent');
+        navigate('/market-value', { replace: true });
+      } else {
+        navigate('/' + role, { replace: true });
+      }
     }
   }, [user, role, loading, navigate]);
 

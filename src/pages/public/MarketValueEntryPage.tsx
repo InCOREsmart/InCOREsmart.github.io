@@ -35,6 +35,7 @@ export function MarketValueEntryPage() {
 
   const c = copy[lang];
   const go = (path: string) => {
+    if (path === '/login') localStorage.setItem('incore-b2c-login-intent', '1');
     window.location.replace(`${window.location.origin}${window.location.pathname}#${path}`);
   };
 
