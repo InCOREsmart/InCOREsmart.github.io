@@ -1,10 +1,9 @@
 import type { TFunction } from 'i18next';
 import type { HrCalculatorInput, HrCalculatorResult } from './hrCalculator';
 
-type Props = { input: HrCalculatorInput; result: HrCalculatorResult; t: TFunction; money: (value: number) => string };
+type Props = { input: HrCalculatorInput; result: HrCalculatorResult; reduction: number; t: TFunction; money: (value: number) => string };
 
-export function HrEconomicOpportunityPanel({ input, result, t, money }: Props) {
-  const reduction = 25;
+export function HrEconomicOpportunityPanel({ input, result, reduction, t, money }: Props) {
   const scenarioDepartures = Math.max(0, input.departuresPerYear * (1 - reduction / 100));
   const annualOpportunity = Math.min(result.totalLoss, Math.max(0, result.lossPerDeparture * (input.departuresPerYear - scenarioDepartures)));
 
