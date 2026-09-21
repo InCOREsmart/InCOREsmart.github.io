@@ -35,7 +35,7 @@ export function HrLossCalculatorPage() {
   const benchmarkBar = Math.min(100, Math.max(0, (benchmarkRatio / 250) * 100));
   const update = (key: keyof HrCalculatorInput) => (value: number) => setInput((current) => ({ ...current, [key]: value }));
   const lossRows = [
-    { title: t('hrCalculator.loss.recruitment.title'), amount: result.recruitmentCost, formula: t('hrCalculator.loss.recruitment.detail') },
+    { title: t('hrCalculator.loss.recruitment.title'), amount: result.recruitmentCost, formula: `${money(result.costPerHire, language)} ${t('hrCalculator.loss.recruitment.detail')}` },
     { title: t('hrCalculator.loss.adaptation.title'), amount: result.adaptationSalary, formula: t('hrCalculator.loss.adaptation.detail') },
     { title: t('hrCalculator.loss.revenue.title'), amount: result.lostRevenue, formula: t('hrCalculator.loss.revenue.detail') },
   ];
