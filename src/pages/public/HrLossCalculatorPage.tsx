@@ -15,7 +15,7 @@ function InputField({ label, hint, value, onChange, step = 1, min = 0 }: { label
   return <label className="block"><span className="block text-sm font-semibold text-slate-800">{label}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{hint}</span><input type="number" min={min} step={step} value={value} onChange={(e) => onChange(Math.max(min, Number(e.target.value)))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-900 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" /></label>;
 }
 function Metric({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div><div className="mt-2 text-xl font-black tracking-tight text-slate-900">{value}</div>{detail && <div className="mt-1 text-xs leading-5 text-slate-500">{detail}</div>}</div>;
+  return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-xs font-semibold tracking-wide text-slate-500">{label}</div><div className="mt-2 text-xl font-black tracking-tight text-slate-900">{value}</div>{detail && <div className="mt-1 text-xs leading-5 text-slate-500">{detail}</div>}</div>;
 }
 
 export function HrLossCalculatorPage() {
