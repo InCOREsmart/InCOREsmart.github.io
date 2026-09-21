@@ -636,7 +636,7 @@ footer { min-width: 0; max-width: 100%; }
   position: absolute;
   right: 1.5rem;
   bottom: .75rem;
-  font: 500 6rem/1 Georgia, serif;
+  font: 500 6rem/1 "Instrument Serif", Georgia, serif;
   color: rgba(255,255,255,.055);
   pointer-events: none;
 }
@@ -726,7 +726,11 @@ footer { min-width: 0; max-width: 100%; }
   border-radius: 14px !important;
 }
 
-.hr-calculator h2 {
+.hr-calculator h1,
+.hr-calculator h2,
+.hr-calculator h3,
+.hr-calculator h4 {
+  font-family: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: -.025em;
 }
 
@@ -734,11 +738,12 @@ footer { min-width: 0; max-width: 100%; }
   font-weight: 750;
 }
 
+/* Instrument Serif is reserved for numbers and the hero title, not section headings. */
 .hr-calculator .text-2xl.font-black,
 .hr-calculator .text-xl.font-black {
-  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
-  font-weight: 500;
-  letter-spacing: -.03em;
+  font-family: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 750;
+  letter-spacing: -.025em;
 }
 
 .hr-calculator footer {
