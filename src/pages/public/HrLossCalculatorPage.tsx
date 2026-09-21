@@ -31,7 +31,7 @@ export function HrLossCalculatorPage() {
   const replacementCost = result.lossPerDeparture;
   const rampUpLoss = result.adaptationSalary + result.lostRevenue;
   const annualSalaryForDepartures = Math.max(0, input.departuresPerYear * input.averageSalary);
-  const benchmarkRatio = annualSalaryForDepartures > 0 ? (replacementCost / annualSalaryForDepartures) * 100 : 0;
+  const benchmarkRatio = input.averageSalary > 0 ? (replacementCost / (input.averageSalary * 12)) * 100 : 0;
   const benchmarkStatus = benchmarkRatio < 50 ? 'below' : benchmarkRatio <= 200 ? 'within' : 'above';
   const benchmarkBar = Math.min(100, Math.max(0, (benchmarkRatio / 250) * 100));
   const update = (key: keyof HrCalculatorInput) => (value: number) => setInput((current) => ({ ...current, [key]: value }));
