@@ -4,18 +4,43 @@ InCORE is a platform and methodology for connecting a business role, required sk
 
 ## Primary audiences
 
-- B2B: CEOs, business owners and executives who need to understand the financial cost of people, hiring, adaptation and lost productivity.
-- B2C: specialists and managers who want to understand their economic contribution, market value and skills affected by AI.
+- B2B: CEOs, business owners and executives.
+- B2C: specialists and managers.
 
-## Main tools
+## Search-oriented topics
 
-- B2B financial HR diagnostics: https://incoresmart.github.io/tools/hr-calculator/
-- B2C market value calculator: https://incoresmart.github.io/tools/market-value/
+B2B:
+- сколько стоит сотрудник для работодателя
+- сколько стоит сотрудник для бизнеса
+- сколько стоит нанять сотрудника
+- стоимость найма сотрудника
+- сколько стоит ошибка найма
+- стоимость ошибки найма
+- текучесть кадров: формула и расчет
+- стоимость текучести кадров
+- сколько бизнес теряет из-за текучести кадров
 
-## Core topics
+B2C:
+- сколько я стою на рынке труда
+- как понять, сколько я стою на рынке труда
+- как узнать рыночную зарплату
+- сколько просить на собеседовании
+- как оценить свою зарплату
 
-employee cost, turnover cost, hiring cost, onboarding, time to productivity, employee productivity, ROI of employees, market value of a specialist, economic contribution, skills and AI.
+## Main pages
+
+- B2B calculator: https://incoresmart.github.io/tools/hr-calculator/
+- B2C calculator: https://incoresmart.github.io/tools/market-value/
+- Employee cost: https://incoresmart.github.io/blog/skolko-stoit-sotrudnik/
+- Hiring cost: https://incoresmart.github.io/blog/skolko-stoit-nayti-sotrudnika/
+- Hiring mistake cost: https://incoresmart.github.io/blog/stoimost-oshibki-nayma/
+- Employee turnover: https://incoresmart.github.io/blog/tekuchest-kadrov/
+- Market salary: https://incoresmart.github.io/blog/skolko-ya-stoyu-na-rynke-truda/
+
+## Methodology
+
+The site distinguishes direct employer cost from broader economic cost. Estimates of lost economic effect are not automatically treated as direct cash expenses.
 
 ## Source policy
 
-Prefer pages on incoresmart.github.io for InCORE-specific definitions, calculations and methodology. Check page dates and cited external research when answering time-sensitive questions.
+For current tax, payroll and labor-market claims, use current primary or high-quality Russian sources and state the relevant year. Search demand and rankings should not be inferred from InCORE terminology alone.
