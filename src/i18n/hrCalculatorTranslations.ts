@@ -2,7 +2,7 @@ export const hrCalculatorTranslations = {
   ru: {
     hrCalculator: {
       badge: 'InCORE · Диагностика кадрового разрыва',
-      title: 'Сколько бизнес теряет из-за текучести и долгого выхода сотрудников на результат?',
+      title: 'Узнать, где компания теряет деньги',
       subtitle: 'За 5 минут рассчитайте стоимость найма, адаптации и недополученной выручки. Затем увидите, сколько производительной мощности бизнеса теряется каждый год.',
       reset: 'Сбросить',
       company: { title: 'Данные компании', subtitle: '7 показателей, чтобы перевести кадровый разрыв в деньги и производительную мощность' },
@@ -28,7 +28,7 @@ export const hrCalculatorTranslations = {
   en: {
     hrCalculator: {
       badge: 'InCORE · Workforce gap diagnosis',
-      title: 'How much does your business lose to turnover and slow time-to-productivity?',
+      title: 'Find where your company is losing money',
       subtitle: 'In 5 minutes, calculate hiring cost, ramp-up cost and lost revenue. Then see how much productive capacity your business loses each year.',
       reset: 'Reset',
       company: { title: 'Company data', subtitle: '7 indicators to translate the people gap into money and productive capacity' },
@@ -46,7 +46,7 @@ export const hrCalculatorTranslations = {
   kk: {
     hrCalculator: {
       badge: 'InCORE · Кадрлық алшақтық диагностикасы',
-      title: 'Компания кадр ауысымы мен нәтижеге баяу шығудан қанша жоғалтады?',
+      title: 'Компания ақша қай жерде жоғалтып жатқанын біліңіз',
       subtitle: '5 минутта найм, бейімделу және алынбаған түсім құнын есептеңіз. Содан кейін бизнес жыл сайын қанша өндірістік қуат жоғалтатынын көріңіз.',
       reset: 'Қалпына келтіру',
       company: { title: 'Компания деректері', subtitle: 'Кадрлық алшақтықты ақша мен өндірістік қуатқа аудару үшін 7 көрсеткіш' },
@@ -64,7 +64,7 @@ export const hrCalculatorTranslations = {
   az: {
     hrCalculator: {
       badge: 'InCORE · Kadr boşluğu diaqnostikası',
-      title: 'Biznes işçi axını və nəticəyə gec çıxış səbəbindən nə qədər itirir?',
+      title: 'Şirkətin pul itirdiyi yerləri öyrənin',
       subtitle: '5 dəqiqəyə işə qəbul, adaptasiya və itirilmiş gəlirin dəyərini hesablayın. Sonra biznesin ildə nə qədər məhsuldar güc itirdiyini görün.',
       reset: 'Sıfırla',
       company: { title: 'Şirkət məlumatları', subtitle: 'Kadr boşluğunu pul və məhsuldar gücə çevirmək üçün 7 göstərici' },
