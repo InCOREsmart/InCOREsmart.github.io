@@ -460,7 +460,7 @@ footer { min-width: 0; max-width: 100%; }
     var(--hr-paper) !important;
   background-size: 32px 32px !important;
   color: var(--hr-ink) !important;
-  font-family: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
 }
 
 .hr-calculator > div {
@@ -729,19 +729,18 @@ footer { min-width: 0; max-width: 100%; }
 .hr-calculator h1,
 .hr-calculator h2,
 .hr-calculator h3,
-.hr-calculator h4 {
-  font-family: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  letter-spacing: -.025em;
+.hr-calculator h4,
+.hr-calculator .text-2xl,
+.hr-calculator .text-xl {
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: -.02em;
 }
 
-.hr-calculator .font-black {
-  font-weight: 750;
-}
-
-/* Instrument Serif is reserved for numbers and the hero title, not section headings. */
+/* All calculator headings use one editorial display face. */
 .hr-calculator .text-2xl.font-black,
 .hr-calculator .text-xl.font-black {
-  font-family: "Geist", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
   font-weight: 750;
   letter-spacing: -.025em;
 }
@@ -791,4 +790,13 @@ footer { min-width: 0; max-width: 100%; }
 @keyframes hrReveal {
   from { opacity: .01; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* Section headings: consistent editorial display treatment, uppercase only for block titles. */
+.hr-calculator h2,
+.hr-calculator h3,
+.hr-calculator .hr-block-title {
+  text-transform: uppercase;
+  letter-spacing: .035em;
 }
