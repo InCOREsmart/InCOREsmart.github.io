@@ -1,0 +1,62 @@
+# InCORE
+
+InCORE is a platform and methodology for connecting a business role, required skills, expected outcome, economic event, contract and money.
+
+## Primary audiences
+
+- B2B: CEOs, business owners and executives.
+- B2C: specialists and managers.
+
+## Site architecture
+
+- Business hub: https://incoresmart.github.io/business/
+- Specialists hub: https://incoresmart.github.io/specialists/
+- Calculators hub: https://incoresmart.github.io/tools/
+- Methodology: https://incoresmart.github.io/methodology/
+- Knowledge blog: https://incoresmart.github.io/blog/
+
+The blog is a knowledge library, not a copy of social-media posts. Its pages answer concrete search questions, explain formulas and limitations, and link to the relevant methodology or calculator. Social-media posts can distribute ideas from these materials in shorter, independent formats.
+
+## Search-oriented topics
+
+B2B:
+- сколько стоит сотрудник для работодателя
+- сколько стоит сотрудник для бизнеса
+- сколько стоит нанять сотрудника
+- стоимость найма сотрудника
+- сколько стоит ошибка найма
+- стоимость ошибки найма
+- стоимость адаптации сотрудника
+- сколько времени сотрудник входит в должность
+- текучесть кадров: формула и расчет
+- стоимость текучести кадров
+- производительная мощность команды
+- Time to Capacity
+- стоимость единицы производительной мощности
+- ФОТ и производительность
+- Capacity Gap
+- найм или развитие сотрудника
+
+B2C:
+- сколько я стою на рынке труда
+- как понять, сколько я стою на рынке труда
+- как узнать рыночную зарплату
+- сколько просить на собеседовании
+- как оценить свою зарплату
+
+## Main tools
+
+- B2B calculator: https://incoresmart.github.io/tools/hr-calculator/
+- B2C calculator: https://incoresmart.github.io/tools/market-value/
+
+## Methodology
+
+The site distinguishes direct employer cost from broader economic cost. Estimates of lost economic effect are not automatically treated as direct cash expenses.
+
+## Source policy
+
+For current tax, payroll and labor-market claims, use current primary or high-quality Russian sources and state the relevant year. Search demand and rankings should not be inferred from InCORE terminology alone.
+
+## Book source policy
+
+The core concepts and examples on the capacity cluster are based on the book «Люди, которые приносят деньги». External sources may be used only as clearly identified corroboration and should not be presented as book data.
