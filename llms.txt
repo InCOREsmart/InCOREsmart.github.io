@@ -45,3 +45,17 @@ The site distinguishes direct employer cost from broader economic cost. Estimate
 ## Source policy
 
 For current tax, payroll and labor-market claims, use current primary or high-quality Russian sources and state the relevant year. Search demand and rankings should not be inferred from InCORE terminology alone.
+
+
+## Capacity and productivity topics
+
+- как рассчитать производительную мощность команды — https://incoresmart.github.io/blog/proizvoditelnaya-moshchnost-komandy/
+- что такое Time to Capacity — https://incoresmart.github.io/blog/time-to-capacity/
+- как рассчитать стоимость единицы производительной мощности — https://incoresmart.github.io/blog/stoimost-edinicy-moshchnosti/
+- ФОТ и производительность — https://incoresmart.github.io/blog/fot-i-proizvoditelnost/
+- дефицит мощности команды / Capacity Gap — https://incoresmart.github.io/blog/deficit-moshchnosti/
+- найм или развитие сотрудника — https://incoresmart.github.io/blog/naym-ili-razvitie/
+
+## Book source policy
+
+The core concepts and examples on the capacity cluster are based on the book «Люди, которые приносят деньги». External sources may be used only as clearly identified corroboration and should not be presented as book data.
