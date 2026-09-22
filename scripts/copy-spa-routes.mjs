@@ -1,4 +1,4 @@
-import { cp, mkdir } from 'node:fs/promises';
+import { access, cp, mkdir } from 'node:fs/promises';
 
 const staticRoutes = [
   'about',
@@ -17,13 +17,13 @@ for (const file of ['404.html', 'robots.txt', 'sitemap.xml', 'llms.txt']) {
   await cp(file, 'dist/' + file);
 }
 
-// Vite builds the calculator pages as real HTML entry points.
-// Do not replace them with the SPA shell, otherwise the SEO metadata is lost.
+// Vite builds calculator pages as real HTML entry points.
+// Keep that HTML intact so title, description, canonical and structured data survive.
 for (const route of ['hr-calculator', 'market-value']) {
   const target = 'dist/tools/' + route + '/index.html';
   await mkdir('dist/tools/' + route, { recursive: true });
   try {
-    await cp(target, target);
+    await access(target);
   } catch {
     await cp('dist/index.html', target);
   }
