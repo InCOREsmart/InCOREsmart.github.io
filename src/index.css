@@ -793,7 +793,7 @@ footer { min-width: 0; max-width: 100%; }
 }
 
 
-/* All calculator block headings use one consistent uppercase treatment. */
+/* Calculator headings keep natural sentence case. */
 .hr-calculator h1,
 .hr-calculator h2,
 .hr-calculator h3,
@@ -801,6 +801,6 @@ footer { min-width: 0; max-width: 100%; }
 .hr-calculator h5,
 .hr-calculator h6,
 .hr-calculator .hr-block-title {
-  text-transform: uppercase;
-  letter-spacing: .035em;
+  text-transform: none;
+  letter-spacing: -.02em;
 }
