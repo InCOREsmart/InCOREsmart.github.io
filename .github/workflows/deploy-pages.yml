@@ -1,1 +1,72 @@
-name: Build and deploy GitHub Pages\n\non:\n  push:\n    branches:\n      - main\n  workflow_dispatch:\n\npermissions:\n  contents: write\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout main\n        uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n\n      - name: Setup Node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: npm\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Build\n        run: npm run build\n\n      - name: Publish dist to gh-pages\n        run: |\n          git config user.name "github-actions[bot]"\n          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"\n          git fetch origin gh-pages\n          git worktree add --detach /tmp/gh-pages origin/gh-pages\n          rm -rf /tmp/gh-pages/*\n          cp -R dist/. /tmp/gh-pages/\n          cd /tmp/gh-pages\n          touch .nojekyll\n          git add -A\n          git commit -m "Deploy ${GITHUB_SHA}" || exit 0\n          git push origin HEAD:gh-pages\n
+name: Build and deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish dist to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages
+          git worktree add --detach /tmp/gh-pages origin/gh-pages
+          rm -rf /tmp/gh-pages/*
+          cp -R dist/. /tmp/gh-pages/
+          cd /tmp/gh-pages
+          touch .nojekyll
+          git add -A
+          git commit -m "Deploy ${GITHUB_SHA}" || exit 0
+          git push origin HEAD:gh-pages
