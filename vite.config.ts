@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   build: {
-    rolldownOptions: {
+    rollupOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         marketValue: resolve(import.meta.dirname, 'tools/market-value/index.html'),
