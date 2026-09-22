@@ -7,6 +7,16 @@ InCORE is a platform and methodology for connecting a business role, required sk
 - B2B: CEOs, business owners and executives.
 - B2C: specialists and managers.
 
+## Site architecture
+
+- Business hub: https://incoresmart.github.io/business/
+- Specialists hub: https://incoresmart.github.io/specialists/
+- Calculators hub: https://incoresmart.github.io/tools/
+- Methodology: https://incoresmart.github.io/methodology/
+- Knowledge blog: https://incoresmart.github.io/blog/
+
+The blog is a knowledge library, not a copy of social-media posts. Its pages answer concrete search questions, explain formulas and limitations, and link to the relevant methodology or calculator. Social-media posts can distribute ideas from these materials in shorter, independent formats.
+
 ## Search-oriented topics
 
 B2B:
@@ -16,9 +26,16 @@ B2B:
 - стоимость найма сотрудника
 - сколько стоит ошибка найма
 - стоимость ошибки найма
+- стоимость адаптации сотрудника
+- сколько времени сотрудник входит в должность
 - текучесть кадров: формула и расчет
 - стоимость текучести кадров
-- сколько бизнес теряет из-за текучести кадров
+- производительная мощность команды
+- Time to Capacity
+- стоимость единицы производительной мощности
+- ФОТ и производительность
+- Capacity Gap
+- найм или развитие сотрудника
 
 B2C:
 - сколько я стою на рынке труда
@@ -27,16 +44,10 @@ B2C:
 - сколько просить на собеседовании
 - как оценить свою зарплату
 
-## Main pages
+## Main tools
 
 - B2B calculator: https://incoresmart.github.io/tools/hr-calculator/
-- Calculators hub: https://incoresmart.github.io/tools/
 - B2C calculator: https://incoresmart.github.io/tools/market-value/
-- Employee cost: https://incoresmart.github.io/blog/skolko-stoit-sotrudnik/
-- Hiring cost: https://incoresmart.github.io/blog/skolko-stoit-nayti-sotrudnika/
-- Hiring mistake cost: https://incoresmart.github.io/blog/stoimost-oshibki-nayma/
-- Employee turnover: https://incoresmart.github.io/blog/tekuchest-kadrov/
-- Market salary: https://incoresmart.github.io/blog/skolko-ya-stoyu-na-rynke-truda/
 
 ## Methodology
 
@@ -45,16 +56,6 @@ The site distinguishes direct employer cost from broader economic cost. Estimate
 ## Source policy
 
 For current tax, payroll and labor-market claims, use current primary or high-quality Russian sources and state the relevant year. Search demand and rankings should not be inferred from InCORE terminology alone.
-
-
-## Capacity and productivity topics
-
-- как рассчитать производительную мощность команды — https://incoresmart.github.io/blog/proizvoditelnaya-moshchnost-komandy/
-- что такое Time to Capacity — https://incoresmart.github.io/blog/time-to-capacity/
-- как рассчитать стоимость единицы производительной мощности — https://incoresmart.github.io/blog/stoimost-edinicy-moshchnosti/
-- ФОТ и производительность — https://incoresmart.github.io/blog/fot-i-proizvoditelnost/
-- дефицит мощности команды / Capacity Gap — https://incoresmart.github.io/blog/deficit-moshchnosti/
-- найм или развитие сотрудника — https://incoresmart.github.io/blog/naym-ili-razvitie/
 
 ## Book source policy
 
