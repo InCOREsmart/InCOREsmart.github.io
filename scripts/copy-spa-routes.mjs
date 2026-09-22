@@ -10,14 +10,21 @@ const staticRoutes = [
 ];
 
 for (const route of staticRoutes) {
-  await cp(route, `dist/${route}`, { recursive: true });
+  await cp(route, 'dist/' + route, { recursive: true });
 }
 
 for (const file of ['404.html', 'robots.txt', 'sitemap.xml', 'llms.txt']) {
-  await cp(file, `dist/${file}`);
+  await cp(file, 'dist/' + file);
 }
 
+// Vite builds the calculator pages as real HTML entry points.
+// Do not replace them with the SPA shell, otherwise the SEO metadata is lost.
 for (const route of ['hr-calculator', 'market-value']) {
-  await mkdir(`dist/tools/${route}`, { recursive: true });
-  await cp('dist/index.html', `dist/tools/${route}/index.html`);
+  const target = 'dist/tools/' + route + '/index.html';
+  await mkdir('dist/tools/' + route, { recursive: true });
+  try {
+    await cp(target, target);
+  } catch {
+    await cp('dist/index.html', target);
+  }
 }
