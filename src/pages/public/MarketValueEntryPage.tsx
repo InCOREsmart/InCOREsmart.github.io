@@ -7,10 +7,10 @@ import { Mail, User, Lock } from 'lucide-react';
 type Lang = 'ru' | 'en' | 'kk' | 'az';
 
 const copy = {
-  ru: { title: 'Регистрация в калькуляторе', subtitle: 'Сначала создадим твой профиль. После регистрации откроется расчёт рыночной стоимости.', name: 'Имя', email: 'Email', password: 'Пароль', button: 'Зарегистрироваться', login: 'Уже есть профиль? Войти', error: 'Не удалось зарегистрировать профиль.', short: 'Пароль должен содержать минимум 6 символов.', success: 'Профиль создан. Проверь почту и подтверди email, затем войди в калькулятор.', resend: 'Отправить письмо подтверждения ещё раз', resent: 'Письмо подтверждения отправлено повторно.', required: 'Заполни все поля.' },
-  en: { title: 'Calculator registration', subtitle: 'First, let’s create your profile. After registration, the market value calculator will open.', name: 'Name', email: 'Email', password: 'Password', button: 'Create profile', login: 'Already have a profile? Sign in', error: 'Could not create the profile.', short: 'Password must contain at least 6 characters.', success: 'Your profile was created. Check your email, confirm the address, then sign in to the calculator.', resend: 'Resend confirmation email', resent: 'The confirmation email was sent again.', required: 'Please fill in all fields.' },
-  kk: { title: 'Калькуляторға тіркелу', subtitle: 'Алдымен профиліңді жасаймыз. Тіркелгеннен кейін нарықтық құн калькуляторы ашылады.', name: 'Аты', email: 'Email', password: 'Құпиясөз', button: 'Профиль жасау', login: 'Профиль бар ма? Кіру', error: 'Профильді жасау мүмкін болмады.', short: 'Құпиясөз кемінде 6 таңбадан тұруы керек.', success: 'Профиль жасалды. Поштаңды тексеріп, email-ді раста, содан кейін калькуляторға кір.', resend: 'Растау хатын қайта жіберу', resent: 'Растау хаты қайта жіберілді.', required: 'Барлық жолды толтыр.' },
-  az: { title: 'Kalkulyatorda qeydiyyat', subtitle: 'Əvvəlcə profilini yaradaq. Qeydiyyatdan sonra bazar dəyəri kalkulyatoru açılacaq.', name: 'Ad', email: 'Email', password: 'Şifrə', button: 'Profil yarat', login: 'Artıq profilin var? Daxil ol', error: 'Profil yaratmaq mümkün olmadı.', short: 'Şifrə ən azı 6 simvol olmalıdır.', success: 'Profil yaradıldı. Email-i yoxla və ünvanı təsdiqlə, sonra kalkulyatora daxil ol.', resend: 'Təsdiq məktubunu yenidən göndər', resent: 'Təsdiq məktubu yenidən göndərildi.', required: 'Bütün sahələri doldur.' },
+  ru: { telegram: 'Telegram', telegramHint: 'Username строго через @', telegramInvalid: 'Укажите Telegram в формате @username.', title: 'Регистрация в калькуляторе', subtitle: 'Сначала создадим твой профиль. После регистрации откроется расчёт рыночной стоимости.', name: 'Имя', email: 'Email', password: 'Пароль', button: 'Зарегистрироваться', login: 'Уже есть профиль? Войти', error: 'Не удалось зарегистрировать профиль.', short: 'Пароль должен содержать минимум 6 символов.', success: 'Профиль создан. Проверь почту и подтверди email, затем войди в калькулятор.', resend: 'Отправить письмо подтверждения ещё раз', resent: 'Письмо подтверждения отправлено повторно.', required: 'Заполни все поля.' },
+  en: { telegram: 'Telegram', telegramHint: 'Username with @', telegramInvalid: 'Enter Telegram as @username.', title: 'Calculator registration', subtitle: 'First, let’s create your profile. After registration, the market value calculator will open.', name: 'Name', email: 'Email', password: 'Password', button: 'Create profile', login: 'Already have a profile? Sign in', error: 'Could not create the profile.', short: 'Password must contain at least 6 characters.', success: 'Your profile was created. Check your email, confirm the address, then sign in to the calculator.', resend: 'Resend confirmation email', resent: 'The confirmation email was sent again.', required: 'Please fill in all fields.' },
+  kk: { telegram: 'Telegram', telegramHint: 'Username-ді @ арқылы енгізіңіз', telegramInvalid: 'Telegram-ды @username форматында енгізіңіз.', title: 'Калькуляторға тіркелу', subtitle: 'Алдымен профиліңді жасаймыз. Тіркелгеннен кейін нарықтық құн калькуляторы ашылады.', name: 'Аты', email: 'Email', password: 'Құпиясөз', button: 'Профиль жасау', login: 'Профиль бар ма? Кіру', error: 'Профильді жасау мүмкін болмады.', short: 'Құпиясөз кемінде 6 таңбадан тұруы керек.', success: 'Профиль жасалды. Поштаңды тексеріп, email-ді раста, содан кейін калькуляторға кір.', resend: 'Растау хатын қайта жіберу', resent: 'Растау хаты қайта жіберілді.', required: 'Барлық жолды толтыр.' },
+  az: { telegram: 'Telegram', telegramHint: 'Username @ ilə', telegramInvalid: 'Telegram-ı @username formatında daxil edin.', title: 'Kalkulyatorda qeydiyyat', subtitle: 'Əvvəlcə profilini yaradaq. Qeydiyyatdan sonra bazar dəyəri kalkulyatoru açılacaq.', name: 'Ad', email: 'Email', password: 'Şifrə', button: 'Profil yarat', login: 'Artıq profilin var? Daxil ol', error: 'Profil yaratmaq mümkün olmadı.', short: 'Şifrə ən azı 6 simvol olmalıdır.', success: 'Profil yaradıldı. Email-i yoxla və ünvanı təsdiqlə, sonra kalkulyatora daxil ol.', resend: 'Təsdiq məktubunu yenidən göndər', resent: 'Təsdiq məktubu yenidən göndərildi.', required: 'Bütün sahələri doldur.' },
 } as const;
 
 export function MarketValueEntryPage() {
@@ -18,6 +18,7 @@ export function MarketValueEntryPage() {
   const [lang, setLang] = useState<Lang>('ru');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [telegram, setTelegram] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
@@ -42,9 +43,14 @@ export function MarketValueEntryPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage('');
-    if (!name.trim() || !email.trim() || !password) {
+    if (!name.trim() || !email.trim() || !telegram.trim() || !password) {
       setMessageType('error');
       setMessage(c.required);
+      return;
+    }
+    if (!/^@[A-Za-z0-9_]{5,32}$/.test(telegram.trim())) {
+      setMessageType('error');
+      setMessage(c.telegramInvalid);
       return;
     }
     if (password.length < 6) {
@@ -63,6 +69,7 @@ export function MarketValueEntryPage() {
           data: {
             full_name: name.trim(),
             profile_type: 'b2c_calculator',
+            telegram: telegram.trim(),
           },
         },
       });
@@ -116,6 +123,10 @@ export function MarketValueEntryPage() {
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm font-medium text-[#000052]">{c.name}
           <div className="relative mt-1"><User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input required value={name} onChange={e => setName(e.target.value)} className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
+        </label>
+        <label className="block text-sm font-medium text-[#000052]">{c.telegram}
+          <span className="ml-2 text-xs font-normal text-gray-400">{c.telegramHint}</span>
+          <div className="relative mt-1"><input type="text" required value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="@username" pattern="@[A-Za-z0-9_]{5,32}" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
         </label>
         <label className="block text-sm font-medium text-[#000052]">{c.email}
           <div className="relative mt-1"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
