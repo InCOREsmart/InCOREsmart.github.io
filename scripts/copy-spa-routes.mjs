@@ -5,13 +5,18 @@ const staticRoutes = [
   'business',
   'specialists',
   'methodology',
-  'blog',
-  'tools'
+  'blog'
 ];
 
 for (const route of staticRoutes) {
   await cp(route, 'dist/' + route, { recursive: true });
 }
+
+// tools/index.html is a static landing page, while the two calculator
+// pages are Vite HTML entry points. Copy only the landing page here so
+// the built calculator HTML is not overwritten by its source file.
+await mkdir('dist/tools', { recursive: true });
+await cp('tools/index.html', 'dist/tools/index.html');
 
 for (const file of ['404.html', 'robots.txt', 'sitemap.xml', 'llms.txt']) {
   await cp(file, 'dist/' + file);
