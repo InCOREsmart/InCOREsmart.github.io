@@ -30,6 +30,7 @@ B2C:
 ## Main pages
 
 - B2B calculator: https://incoresmart.github.io/tools/hr-calculator/
+- Calculators hub: https://incoresmart.github.io/tools/
 - B2C calculator: https://incoresmart.github.io/tools/market-value/
 - Employee cost: https://incoresmart.github.io/blog/skolko-stoit-sotrudnik/
 - Hiring cost: https://incoresmart.github.io/blog/skolko-stoit-nayti-sotrudnika/
