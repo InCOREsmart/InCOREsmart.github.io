@@ -2,16 +2,16 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { MarketValueCalculatorJourney } from './MarketValueCalculatorJourney';
-import { Mail, User, Lock, FileText, Shield, Fingerprint } from 'lucide-react';
+import { Mail, User, Lock, FileText, Shield } from 'lucide-react';
 import { logAcceptance, getActiveDocuments, AcceptanceData } from '../../lib/legal';
 
 type Lang = 'ru' | 'en' | 'kk' | 'az';
 
 const copy = {
-  ru: { telegram: 'Telegram', telegramHint: 'Username строго через @', telegramInvalid: 'Укажите Telegram в формате @username.', title: 'Регистрация в калькуляторе', subtitle: 'Сначала создадим твой профиль. После регистрации откроется расчёт рыночной стоимости.', name: 'Имя', email: 'Email', password: 'Пароль', button: 'Зарегистрироваться', login: 'Уже есть профиль? Войти', error: 'Не удалось зарегистрировать профиль.', short: 'Пароль должен содержать минимум 6 символов.', success: 'Профиль создан. Проверь почту и подтверди email, затем войди в калькулятор.', resend: 'Отправить письмо подтверждения ещё раз', resent: 'Письмо подтверждения отправлено повторно.', required: 'Заполни все поля.', consentTitle: 'Согласия', consentTos: 'Я принимаю Условия использования', consentPrivacy: 'Я принимаю Политику конфиденциальности', consentPd: 'Я даю согласие на обработку персональных данных', consentBio: 'Я даю согласие на обработку биометрических данных', consentBioNote: 'Биометрическое согласие не требуется для регистрации.', viewDocument: 'Документ', consentRequired: 'Для регистрации необходимо принять обязательные согласия.' },
-  en: { telegram: 'Telegram', telegramHint: 'Username with @', telegramInvalid: 'Enter Telegram as @username.', title: 'Calculator registration', subtitle: 'First, let’s create your profile. After registration, the market value calculator will open.', name: 'Name', email: 'Email', password: 'Password', button: 'Create profile', login: 'Already have a profile? Sign in', error: 'Could not create the profile.', short: 'Password must contain at least 6 characters.', success: 'Your profile was created. Check your email, confirm the address, then sign in to the calculator.', resend: 'Resend confirmation email', resent: 'The confirmation email was sent again.', required: 'Please fill in all fields.', consentTitle: 'Consents', consentTos: 'I accept the Terms of Use', consentPrivacy: 'I accept the Privacy Policy', consentPd: 'I consent to personal data processing', consentBio: 'I consent to biometric data processing', consentBioNote: 'Biometric consent is not required for registration.', viewDocument: 'Document', consentRequired: 'Required consents must be accepted.' },
-  kk: { telegram: 'Telegram', telegramHint: 'Username-ді @ арқылы енгізіңіз', telegramInvalid: 'Telegram-ды @username форматында енгізіңіз.', title: 'Калькуляторға тіркелу', subtitle: 'Алдымен профиліңді жасаймыз. Тіркелгеннен кейін нарықтық құн калькуляторы ашылады.', name: 'Аты', email: 'Email', password: 'Құпиясөз', button: 'Профиль жасау', login: 'Профиль бар ма? Кіру', error: 'Профильді жасау мүмкін болмады.', short: 'Құпиясөз кемінде 6 таңбадан тұруы керек.', success: 'Профиль жасалды. Поштаңды тексеріп, email-ді раста, содан кейін калькуляторға кір.', resend: 'Растау хатын қайта жіберу', resent: 'Растау хаты қайта жіберілді.', required: 'Барлық жолды толтыр.', consentTitle: 'Келісімдер', consentTos: 'Пайдалану шарттарын қабылдаймын', consentPrivacy: 'Құпиялылық саясатын қабылдаймын', consentPd: 'Жеке деректерді өңдеуге келісемін', consentBio: 'Биометриялық деректерді өңдеуге келісемін', consentBioNote: 'Биометриялық келісім тіркелу үшін міндетті емес.', viewDocument: 'Құжат', consentRequired: 'Міндетті келісімдерді қабылдау қажет.' },
-  az: { telegram: 'Telegram', telegramHint: 'Username @ ilə', telegramInvalid: 'Telegram-ı @username formatında daxil edin.', title: 'Kalkulyatorda qeydiyyat', subtitle: 'Əvvəlcə profilini yaradaq. Qeydiyyatdan sonra bazar dəyəri kalkulyatoru açılacaq.', name: 'Ad', email: 'Email', password: 'Şifrə', button: 'Profil yarat', login: 'Artıq profilin var? Daxil ol', error: 'Profil yaratmaq mümkün olmadı.', short: 'Şifrə ən azı 6 simvol olmalıdır.', success: 'Profil yaradıldı. Email-i yoxla və ünvanı təsdiqlə, sonra kalkulyatora daxil ol.', resend: 'Təsdiq məktubunu yenidən göndər', resent: 'Təsdiq məktubu yenidən göndərildi.', required: 'Bütün sahələri doldur.', consentTitle: 'Razılıqlar', consentTos: 'İstifadə şərtlərini qəbul edirəm', consentPrivacy: 'Məxfilik siyasətini qəbul edirəm', consentPd: 'Şəxsi məlumatların işlənməsinə razıyam', consentBio: 'Biometrik məlumatların işlənməsinə razıyam', consentBioNote: 'Biometrik razılıq qeydiyyat üçün məcburi deyil.', viewDocument: 'Sənəd', consentRequired: 'Məcburi razılıqlar qəbul edilməlidir.' },
+  ru: { telegram: 'Telegram', phone: 'Телефон', contactTypeTelegram: 'Telegram', contactTypePhone: 'Телефон', telegramInvalid: 'Введите Telegram в формате @username.', phoneInvalid: 'Введите телефон в международном формате, начиная с +.', title: 'Регистрация в калькуляторе', subtitle: 'Сначала создадим твой профиль. После регистрации откроется расчёт рыночной стоимости.', name: 'Имя', email: 'Email', password: 'Пароль', button: 'Зарегистрироваться', login: 'Уже есть профиль? Войти', error: 'Не удалось зарегистрировать профиль.', short: 'Пароль должен содержать минимум 6 символов.', success: 'Профиль создан. Проверь почту и подтверди email, затем войди в калькулятор.', resend: 'Отправить письмо подтверждения ещё раз', resent: 'Письмо подтверждения отправлено повторно.', required: 'Заполни все поля.', consentTitle: 'Согласия', consentTos: 'Я принимаю Условия использования', consentPrivacy: 'Я принимаю Политику конфиденциальности', consentPd: 'Я даю согласие на обработку персональных данных', viewDocument: 'Документ', consentRequired: 'Для регистрации необходимо принять все обязательные согласия.' },
+  en: { telegram: 'Telegram', phone: 'Phone', contactTypeTelegram: 'Telegram', contactTypePhone: 'Phone', telegramInvalid: 'Enter Telegram as @username.', phoneInvalid: 'Enter the phone number in international format starting with +.', title: 'Calculator registration', subtitle: 'First, let’s create your profile. After registration, the market value calculator will open.', name: 'Name', email: 'Email', password: 'Password', button: 'Create profile', login: 'Already have a profile? Sign in', error: 'Could not create the profile.', short: 'Password must contain at least 6 characters.', success: 'Your profile was created. Check your email, confirm the address, then sign in to the calculator.', resend: 'Resend confirmation email', resent: 'The confirmation email was sent again.', required: 'Please fill in all fields.', consentTitle: 'Consents', consentTos: 'I accept the Terms of Use', consentPrivacy: 'I accept the Privacy Policy', consentPd: 'I consent to personal data processing', viewDocument: 'Document', consentRequired: 'All required consents must be accepted.' },
+  kk: { telegram: 'Telegram', phone: 'Телефон', contactTypeTelegram: 'Telegram', contactTypePhone: 'Телефон', telegramInvalid: 'Telegram-ды @username форматында енгізіңіз.', phoneInvalid: '+ таңбасынан басталатын халықаралық телефон нөмірін енгізіңіз.', title: 'Калькуляторға тіркелу', subtitle: 'Алдымен профиліңді жасаймыз. Тіркелгеннен кейін нарықтық құн калькуляторы ашылады.', name: 'Аты', email: 'Email', password: 'Құпиясөз', button: 'Профиль жасау', login: 'Профиль бар ма? Кіру', error: 'Профильді жасау мүмкін болмады.', short: 'Құпиясөз кемінде 6 таңбадан тұруы керек.', success: 'Профиль жасалды. Поштаңды тексеріп, email-ді раста, содан кейін калькуляторға кір.', resend: 'Растау хатын қайта жіберу', resent: 'Растау хаты қайта жіберілді.', required: 'Барлық жолды толтыр.', consentTitle: 'Келісімдер', consentTos: 'Пайдалану шарттарын қабылдаймын', consentPrivacy: 'Құпиялылық саясатын қабылдаймын', consentPd: 'Жеке деректерді өңдеуге келісемін', viewDocument: 'Құжат', consentRequired: 'Барлық міндетті келісімдерді қабылдау қажет.' },
+  az: { telegram: 'Telegram', phone: 'Telefon', contactTypeTelegram: 'Telegram', contactTypePhone: 'Telefon', telegramInvalid: 'Telegram-ı @username formatında daxil edin.', phoneInvalid: '+ işarəsi ilə başlayan beynəlxalq telefon nömrəsi daxil edin.', title: 'Kalkulyatorda qeydiyyat', subtitle: 'Əvvəlcə profilini yaradaq. Qeydiyyatdan sonra bazar dəyəri kalkulyatoru açılacaq.', name: 'Ad', email: 'Email', password: 'Şifrə', button: 'Profil yarat', login: 'Artıq profilin var? Daxil ol', error: 'Profil yaratmaq mümkün olmadı.', short: 'Şifrə ən azı 6 simvol olmalıdır.', success: 'Profil yaradıldı. Email-i yoxla və ünvanı təsdiqlə, sonra kalkulyatora daxil ol.', resend: 'Təsdiq məktubunu yenidən göndər', resent: 'Təsdiq məktubu yenidən göndərildi.', required: 'Bütün sahələri doldur.', consentTitle: 'Razılıqlar', consentTos: 'İstifadə şərtlərini qəbul edirəm', consentPrivacy: 'Məxfilik siyasətini qəbul edirəm', consentPd: 'Şəxsi məlumatların işlənməsinə razıyam', viewDocument: 'Sənəd', consentRequired: 'Bütün məcburi razılıqlar qəbul edilməlidir.' },
 } as const;
 
 export function MarketValueEntryPage() {
@@ -20,13 +20,15 @@ export function MarketValueEntryPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [telegram, setTelegram] = useState('');
+  const [phone, setPhone] = useState('');
+  const [contactType, setContactType] = useState<'telegram' | 'phone'>('telegram');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'error' | 'success'>('error');
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [consentTos, setConsentTos] = useState(false), [consentPrivacy, setConsentPrivacy] = useState(false), [consentPd, setConsentPd] = useState(false), [consentBio, setConsentBio] = useState(false);
+  const [consentTos, setConsentTos] = useState(false), [consentPrivacy, setConsentPrivacy] = useState(false), [consentPd, setConsentPd] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('incore-lang') as Lang | null;
@@ -45,15 +47,20 @@ export function MarketValueEntryPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage('');
-    if (!name.trim() || !email.trim() || !telegram.trim() || !password) {
+    if (!name.trim() || !email.trim() || !password || (contactType === 'telegram' ? !telegram.trim() : !phone.trim())) {
       setMessageType('error');
       setMessage(c.required);
       return;
     }
     if (!consentTos || !consentPrivacy || !consentPd) { setMessageType('error'); setMessage(c.consentRequired); return; }
-    if (!/^@[A-Za-z0-9_]{5,32}$/.test(telegram.trim())) {
+    if (contactType === 'telegram' && !/^@[A-Za-z0-9_]{5,32}$/.test(telegram.trim())) {
       setMessageType('error');
       setMessage(c.telegramInvalid);
+      return;
+    }
+    if (contactType === 'phone' && !/^\\+[1-9]\\d{6,14}$/.test(phone.replace(/[\\s().-]/g, ''))) {
+      setMessageType('error');
+      setMessage(c.phoneInvalid);
       return;
     }
     if (password.length < 6) {
@@ -72,7 +79,9 @@ export function MarketValueEntryPage() {
           data: {
             full_name: name.trim(),
             profile_type: 'b2c_calculator',
-            telegram: telegram.trim(),
+            telegram: contactType === 'telegram' ? telegram.trim() : null,
+            phone: contactType === 'phone' ? phone.trim() : null,
+            contact_type: contactType,
           },
         },
       });
@@ -82,7 +91,6 @@ export function MarketValueEntryPage() {
       const docs = await getActiveDocuments(lang);
       const requiredTypes = ['tos', 'privacy_policy', 'consent_pd'] as const;
       const acceptances: AcceptanceData[] = requiredTypes.map(document_type => { const d = docs.find(x => x.document_type === document_type); return { document_type, document_id: d?.id, document_version: d?.version, document_hash: d?.sha256_hash, acceptance_method: 'registration' }; });
-      if (consentBio) { const d = docs.find(x => x.document_type === 'consent_bio'); if (d) acceptances.push({ document_type: 'consent_bio', document_id: d.id, document_version: d.version, document_hash: d.sha256_hash, acceptance_method: 'registration' }); }
       await logAcceptance(data.user.id, acceptances);
 
       setRegisteredEmail(normalizedEmail);
@@ -132,17 +140,28 @@ export function MarketValueEntryPage() {
         <label className="block text-sm font-medium text-[#000052]">{c.name}
           <div className="relative mt-1"><User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input required value={name} onChange={e => setName(e.target.value)} className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
         </label>
-        <label className="block text-sm font-medium text-[#000052]">{c.telegram}
-          <span className="ml-2 text-xs font-normal text-gray-400">{c.telegramHint}</span>
-          <div className="relative mt-1"><input type="text" required value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="@username" pattern="@[A-Za-z0-9_]{5,32}" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
-        </label>
+        <div>
+          <div className="flex gap-2 mb-2">
+            <button type="button" onClick={() => setContactType('telegram')} className={`flex-1 py-2 rounded-lg text-sm font-semibold ${contactType === 'telegram' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-gray-600'}`}>{c.contactTypeTelegram}</button>
+            <button type="button" onClick={() => setContactType('phone')} className={`flex-1 py-2 rounded-lg text-sm font-semibold ${contactType === 'phone' ? 'bg-[#000052] text-white' : 'bg-gray-100 text-gray-600'}`}>{c.contactTypePhone}</button>
+          </div>
+          {contactType === 'telegram' ? (
+            <label className="block text-sm font-medium text-[#000052]">{c.telegram}
+              <div className="relative mt-1"><input type="text" required value={telegram} onChange={e => { const v = e.target.value; setTelegram(v ? (v.startsWith('@') ? v : '@' + v) : ''); }} placeholder="@username" pattern="@[A-Za-z0-9_]{5,32}" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
+            </label>
+          ) : (
+            <label className="block text-sm font-medium text-[#000052]">{c.phone}
+              <div className="relative mt-1"><input type="tel" required value={phone} onChange={e => { let v = e.target.value.replace(/[^0-9+\\s().-]/g, ''); if (v && !v.startsWith('+')) v = '+' + v; setPhone(v); }} placeholder="+7 999 123-45-67" pattern="\\+[1-9][0-9\\s().-]{6,20}" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
+            </label>
+          )}
+        </div>
         <label className="block text-sm font-medium text-[#000052]">{c.email}
           <div className="relative mt-1"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
         </label>
         <label className="block text-sm font-medium text-[#000052]">{c.password}
           <div className="relative mt-1"><Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-[#000052]" /></div>
         </label>
-        <div className="bg-gray-50 rounded-xl p-4 space-y-3"><div className="flex items-center gap-2 text-[#000052] font-medium text-sm"><Shield size={16} className="text-[#B8860B]"/>{c.consentTitle}</div><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" checked={consentTos} onChange={e=>setConsentTos(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentTos} <a href="/docs/\${lang}/tos_v1.0.pdf" target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" checked={consentPrivacy} onChange={e=>setConsentPrivacy(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentPrivacy} <a href="/docs/\${lang}/privacy_v1.0.pdf" target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" checked={consentPd} onChange={e=>setConsentPd(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentPd} <a href="/docs/\${lang}/consent_pd_v1.0.pdf" target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" checked={consentBio} onChange={e=>setConsentBio(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentBio} <a href="/docs/\${lang}/consent_bio_v1.0.pdf" target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a></span></label><p className="text-xs text-gray-500"><Fingerprint size={12} className="inline"/> {c.consentBioNote}</p></div>
+        <div className="bg-gray-50 rounded-xl p-4 space-y-3"><div className="flex items-center gap-2 text-[#000052] font-medium text-sm"><Shield size={16} className="text-[#B8860B]"/>{c.consentTitle}</div><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" required checked={consentTos} onChange={e=>setConsentTos(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentTos} <a href={`/docs/${lang}/tos_v1.0.pdf`} target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" required checked={consentPrivacy} onChange={e=>setConsentPrivacy(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentPrivacy} <a href={`/docs/${lang}/privacy_v1.0.pdf`} target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label><label className="flex items-start gap-3 text-sm text-gray-600"><input type="checkbox" required checked={consentPd} onChange={e=>setConsentPd(e.target.checked)} className="mt-1 w-4 h-4"/><span>{c.consentPd} <a href={`/docs/${lang}/consent_pd_v1.0.pdf`} target="_blank" rel="noopener noreferrer" className="text-[#B8860B]"><FileText size={12} className="inline"/> {c.viewDocument}</a> <span className="text-red-500">*</span></span></label></div>
         {message && <div className={`rounded-xl border px-4 py-3 text-sm ${messageType === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>{message}</div>}
         <button type="submit" disabled={busy || resending || !consentTos || !consentPrivacy || !consentPd} className="w-full bg-[#000052] text-white py-3.5 rounded-xl font-semibold disabled:opacity-50">{busy ? '...' : c.button}</button>
       </form>
