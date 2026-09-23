@@ -173,3 +173,20 @@ main .divider img{
   border-radius:50%!important;
   background:var(--incore-navy)!important;
 }
+
+body>header p{margin:0!important}
+body>header a[href="/"]{
+  display:block;
+  width:190px;
+  height:54px;
+  flex:0 0 190px;
+  font-size:0!important;
+  line-height:0;
+  background:url("./incore-logo.png") center/contain no-repeat;
+  text-decoration:none;
+}
+body>header a[href="/"] img{display:none!important}
+body>header:not(.top)>p{margin:0!important}
+@media(max-width:760px){
+  body>header a[href="/"]{width:160px;height:48px;flex-basis:160px}
+}
