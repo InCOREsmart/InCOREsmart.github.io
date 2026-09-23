@@ -190,3 +190,68 @@ body>header:not(.top)>p{margin:0!important}
 @media(max-width:760px){
   body>header a[href="/"]{width:160px;height:48px;flex-basis:160px}
 }
+
+.team{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:28px!important;
+  margin:28px 0 54px!important;
+}
+.team .person{
+  display:grid!important;
+  grid-template-columns:minmax(280px,360px) 1fr!important;
+  gap:42px!important;
+  align-items:center!important;
+  padding:34px!important;
+  background:#fff!important;
+  border:1px solid var(--incore-line)!important;
+  border-radius:24px!important;
+  box-shadow:0 12px 34px rgba(7,19,63,.055)!important;
+}
+.team .person-photo{
+  height:330px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  background:#fff!important;
+  border-radius:18px!important;
+}
+.team .person-photo img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:0!important;
+  background:#fff!important;
+  border:0!important;
+  border-radius:18px!important;
+}
+.team .person-copy h3{
+  margin:4px 0 18px!important;
+  font-size:30px!important;
+  line-height:1.1!important;
+  color:var(--incore-navy)!important;
+}
+.team .person-copy .role{
+  margin:0 0 8px!important;
+  color:var(--incore-blue)!important;
+  font-size:14px!important;
+  font-weight:800!important;
+  letter-spacing:.04em!important;
+  text-transform:uppercase!important;
+}
+.team .person-copy p:not(.role){
+  margin:0 0 15px!important;
+}
+@media(max-width:820px){
+  .team .person{
+    grid-template-columns:1fr!important;
+    gap:24px!important;
+    padding:24px!important;
+  }
+  .team .person-photo{
+    height:320px!important;
+  }
+}
