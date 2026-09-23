@@ -43,7 +43,7 @@ body>p:first-child a[href="/"]{
   flex:0 0 190px;
   font-size:0!important;
   line-height:0;
-  background:url("/incore-logo.png") center/contain no-repeat;
+  background:url("./incore-logo.png") center/contain no-repeat;
   text-decoration:none;
 }
 body>header{
@@ -121,7 +121,7 @@ main>p:last-child{margin-bottom:0}
   width:24px;
   height:24px;
   border-radius:50%;
-  background:var(--incore-navy) url("/incore-icon.png") center/54px auto no-repeat;
+  background:var(--incore-navy) url("./incore-icon.png") center/54px auto no-repeat;
 }
 @media(max-width:760px){
   body>p:first-child{min-height:84px;padding:14px 20px!important;gap:16px;flex-wrap:wrap}
