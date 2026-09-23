@@ -134,3 +134,42 @@ main>p:last-child{margin-bottom:0}
   h1{font-size:38px!important}
   h2{font-size:28px!important;margin-top:38px!important}
 }
+
+main .person{
+  display:flex;
+  flex-direction:column;
+}
+main .person img{
+  width:100%!important;
+  height:300px!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:10px!important;
+  background:#f7f8fc!important;
+  border:1px solid var(--incore-line)!important;
+  border-radius:18px!important;
+}
+main .divider{
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  margin:38px 0 24px!important;
+  color:var(--incore-navy)!important;
+  font-size:18px!important;
+  font-weight:800!important;
+}
+main .divider:before,main .divider:after{
+  content:""!important;
+  height:1px!important;
+  background:var(--incore-line)!important;
+  flex:1!important;
+}
+main .divider img{
+  width:30px!important;
+  height:30px!important;
+  flex:0 0 30px!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  border-radius:50%!important;
+  background:var(--incore-navy)!important;
+}
