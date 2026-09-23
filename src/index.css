@@ -826,3 +826,8 @@ footer { min-width: 0; max-width: 100%; }
   background-size: 32px 32px !important;
   border-bottom-color: rgba(21, 23, 19, 0.08) !important;
 }
+
+/* Homepage uses the transparent logo uploaded to /public/logo.png. */
+.incore-calculator-header img[src*="incore-logo.png"] {
+  content: url('/logo.png') !important;
+}
