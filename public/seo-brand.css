@@ -125,11 +125,11 @@ main>p:last-child{margin-bottom:0}
 }
 @media(max-width:760px){
   body>p:first-child{min-height:84px;padding:14px 20px!important;gap:16px;flex-wrap:wrap}
-  body>p:first-child a[href="/"]{width:160px;height:48px;flex-basis:160px}
+  body>p:first-child a[href="/"]{width:150px;height:48px;flex-basis:150px}
   body>header{padding:14px 20px!important}
   body>header.top{min-height:84px;align-items:flex-start;flex-direction:column}
   body>header.top .nav{margin-left:0;display:flex;flex-wrap:wrap;gap:12px 18px}
-  body>header.top .logo,body>header a[href="/"] img{width:160px!important;max-width:160px!important}
+  body>header.top .logo,body>header a[href="/"] img{width:150px!important;max-width:150px!important}
   main{width:min(100% - 24px,1180px);margin:18px auto 40px!important;padding:30px 22px!important;border-radius:20px}
   h1{font-size:38px!important}
   h2{font-size:28px!important;margin-top:38px!important}
@@ -188,7 +188,7 @@ body>header a[href="/"]{
 body>header a[href="/"] img{display:none!important}
 body>header:not(.top)>p{margin:0!important}
 @media(max-width:760px){
-  body>header a[href="/"]{width:160px;height:48px;flex-basis:160px}
+  body>header a[href="/"]{width:150px;height:48px;flex-basis:150px}
 }
 
 .team{
