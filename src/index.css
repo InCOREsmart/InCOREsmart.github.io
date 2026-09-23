@@ -804,3 +804,15 @@ footer { min-width: 0; max-width: 100%; }
   text-transform: uppercase;
   letter-spacing: .035em;
 }
+
+
+/* Public SEO pages use the same visible paper/grid background as the HR calculator. */
+.incore-calculator-bg {
+  background-color: #f4f2ec !important;
+  background-image:
+    linear-gradient(rgba(21, 23, 19, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 23, 19, 0.035) 1px, transparent 1px) !important;
+  background-size: 32px 32px !important;
+}
+.incore-calculator-bg > section,
+.incore-calculator-bg > footer { background-color: transparent !important; }
