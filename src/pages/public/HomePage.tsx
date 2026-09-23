@@ -72,7 +72,7 @@ export function HomePage() {
                 <span className="text-xs font-extrabold uppercase tracking-wider text-[#1727a8]">{item.tag}</span>
                 <h3 className="mt-3 text-2xl font-black">{item.title}</h3>
                 <p className="mt-3 max-w-xl text-slate-600">{item.text}</p>
-                <Link to={item.href} className="mt-6 inline-flex rounded-xl bg-[#07133f] px-5 py-3 font-bold text-white">Открыть →</a>
+                <a href={staticHref(item.href)} className="mt-6 inline-flex rounded-xl bg-[#07133f] px-5 py-3 font-bold text-white">Открыть →</a>
               </div>
             ))}
           </div>
