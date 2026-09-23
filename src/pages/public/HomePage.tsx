@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+const staticHref = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`;
 
 const sections = [
   { title: 'Для бизнеса', text: 'Стоимость сотрудника, найма, адаптации, текучести и недополученного результата.', href: '/business/' },
@@ -25,13 +25,13 @@ export function HomePage() {
     <main className="min-h-screen bg-white text-[#07133f]">
       <header className="border-b border-slate-100">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-          <Link to="/" className="text-2xl font-black tracking-tight">InCORE</Link>
+          <a href={staticHref("/")} className="text-2xl font-black tracking-tight">InCORE</a>
           <nav className="hidden gap-6 text-sm font-semibold text-slate-600 md:flex">
-            <Link to="/business/">Для бизнеса</Link>
-            <Link to="/specialists/">Для специалистов</Link>
-            <Link to="/tools/">Калькуляторы</Link>
-            <Link to="/methodology/">Методология</Link>
-            <Link to="/blog/">Блог</Link>
+            <a href={staticHref("/business/")}>Для бизнеса</a>
+            <a href={staticHref("/specialists/")}>Для специалистов</a>
+            <a href={staticHref("/tools/")}>Калькуляторы</a>
+            <a href={staticHref("/methodology/")}>Методология</a>
+            <a href={staticHref("/blog/")}>Блог</a>
           </nav>
         </div>
       </header>
@@ -42,8 +42,8 @@ export function HomePage() {
           <h1 className="max-w-4xl text-5xl font-black leading-[1.03] tracking-[-0.04em] md:text-7xl">Команда должна создавать результат, а не просто занимать должности</h1>
           <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-600 md:text-xl">InCORE связывает роль человека, необходимые навыки, измеримый результат и экономический эффект. Чтобы бизнес видел не только ФОТ, но и то, что получает за эти деньги.</p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Link to="/business/" className="rounded-xl bg-[#07133f] px-5 py-3.5 font-bold text-white">Для бизнеса</Link>
-            <Link to="/specialists/" className="rounded-xl border border-slate-200 bg-white px-5 py-3.5 font-bold">Для специалистов</Link>
+            <a href={staticHref("/business/")} className="rounded-xl bg-[#07133f] px-5 py-3.5 font-bold text-white">Для бизнеса</a>
+            <a href={staticHref("/specialists/")} className="rounded-xl border border-slate-200 bg-white px-5 py-3.5 font-bold">Для специалистов</a>
           </div>
         </div>
       </section>
@@ -53,11 +53,11 @@ export function HomePage() {
         <p className="mt-4 max-w-2xl text-slate-600">Экономическую ценность роли удобнее разбирать через то, что она должна создавать, какие навыки для этого нужны и какой экономический эффект возникает.</p>
         <div className="mt-9 grid gap-5 md:grid-cols-3">
           {sections.map((item) => (
-            <Link key={item.href} to={item.href} className="rounded-2xl border border-slate-200 p-7 transition hover:-translate-y-0.5 hover:shadow-sm">
+            <a key={item.href} href={staticHref(item.href)} className="rounded-2xl border border-slate-200 p-7 transition hover:-translate-y-0.5 hover:shadow-sm">
               <h3 className="text-xl font-extrabold">{item.title}</h3>
               <p className="mt-3 text-slate-600">{item.text}</p>
               <span className="mt-6 inline-block font-bold text-[#1727a8]">Подробнее →</span>
-            </Link>
+            </a>
           ))}
         </div>
       </section>
@@ -72,7 +72,7 @@ export function HomePage() {
                 <span className="text-xs font-extrabold uppercase tracking-wider text-[#1727a8]">{item.tag}</span>
                 <h3 className="mt-3 text-2xl font-black">{item.title}</h3>
                 <p className="mt-3 max-w-xl text-slate-600">{item.text}</p>
-                <Link to={item.href} className="mt-6 inline-flex rounded-xl bg-[#07133f] px-5 py-3 font-bold text-white">Открыть →</Link>
+                <Link to={item.href} className="mt-6 inline-flex rounded-xl bg-[#07133f] px-5 py-3 font-bold text-white">Открыть →</a>
               </div>
             ))}
           </div>
@@ -83,7 +83,7 @@ export function HomePage() {
         <h2 className="text-3xl font-black tracking-tight md:text-4xl">Роль → Навык → Результат → Экономическое событие → Деньги</h2>
         <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">Это рабочая модель для тех случаев, где результат можно определить, наблюдать и связать с экономическим эффектом. Не попытка превратить любого человека в одну цифру.</p>
         <div className="mt-8">
-          <Link to="/methodology/" className="font-bold text-[#1727a8]">Читать методологию →</Link>
+          <a href={staticHref("/methodology/")} className="font-bold text-[#1727a8]">Читать методологию →</a>
         </div>
       </section>
 
@@ -104,7 +104,7 @@ export function HomePage() {
               <p className="mt-3 text-slate-600">Отвечает за вывод модуля оплат InCORE на рынок, переговоры с потенциальными клиентами и поиск инвестиций для запуска пилота.</p>
             </div>
           </div>
-          <div className="mt-6"><Link to="/about/" className="font-bold text-[#1727a8]">Подробнее о команде и подходе →</Link></div>
+          <div className="mt-6"><a href={staticHref("/about/")} className="font-bold text-[#1727a8]">Подробнее о команде и подходе →</a></div>
         </div>
       </section>
 
@@ -115,11 +115,11 @@ export function HomePage() {
               <h2 className="text-3xl font-black tracking-tight md:text-4xl">Материалы по теме</h2>
               <p className="mt-3 text-slate-600">Ответы на конкретные вопросы, а не коллекция SEO-слов в человеческом обличье.</p>
             </div>
-            <Link to="/blog/" className="font-bold text-[#1727a8]">Весь блог →</Link>
+            <a href={staticHref("/blog/")} className="font-bold text-[#1727a8]">Весь блог →</a>
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {articles.map(([title, href]) => (
-              <Link key={href} to={href} className="rounded-xl border border-slate-200 p-5 font-semibold hover:bg-slate-50">{title} <span className="text-[#1727a8]">→</span></Link>
+              <a key={href} href={staticHref(href)} className="rounded-xl border border-slate-200 p-5 font-semibold hover:bg-slate-50">{title} <span className="text-[#1727a8]">→</span></a>
             ))}
           </div>
         </div>
@@ -127,12 +127,12 @@ export function HomePage() {
 
       <footer className="border-t border-slate-100">
         <div className="mx-auto flex max-w-6xl flex-wrap gap-5 px-5 py-8 text-sm text-slate-500">
-          <Link to="/about/">Что такое InCORE</Link>
-          <Link to="/business/">Для бизнеса</Link>
-          <Link to="/specialists/">Для специалистов</Link>
-          <Link to="/tools/">Калькуляторы</Link>
-          <Link to="/methodology/">Методология</Link>
-          <Link to="/blog/">Блог</Link>
+          <a href={staticHref("/about/")}>Что такое InCORE</a>
+          <a href={staticHref("/business/")}>Для бизнеса</a>
+          <a href={staticHref("/specialists/")}>Для специалистов</a>
+          <a href={staticHref("/tools/")}>Калькуляторы</a>
+          <a href={staticHref("/methodology/")}>Методология</a>
+          <a href={staticHref("/blog/")}>Блог</a>
         </div>
       </footer>
     </main>
