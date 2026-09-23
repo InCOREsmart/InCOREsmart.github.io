@@ -25,7 +25,7 @@ export function HomePage() {
     <main className="min-h-screen bg-white text-[#07133f]">
       <header className="border-b border-slate-100">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-          <a href={staticHref("/")} className="flex items-center"><img src={`${import.meta.env.BASE_URL}incore-logo.png`} alt="InCORE" className="h-9 w-auto" /></a>
+          <a href={staticHref("/")} className="flex items-center"><img src={`${import.meta.env.BASE_URL}incore-logo.png`} alt="InCORE" className="h-14 w-auto max-w-[190px] object-contain" /></a>
           <nav className="hidden gap-6 text-sm font-semibold text-slate-600 md:flex">
             <a href={staticHref("/business/")}>Для бизнеса</a>
             <a href={staticHref("/specialists/")}>Для специалистов</a>
