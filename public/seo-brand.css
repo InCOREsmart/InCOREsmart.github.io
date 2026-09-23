@@ -238,3 +238,10 @@ main>p:last-child{margin-bottom:0}
   .team .person{padding:24px!important}
   .team .person-photo{width:120px!important;height:120px!important;margin-left:20px!important}
 }
+
+/* Use the transparent logo uploaded to the repository. */
+body>header.top .logo,
+body>header.top a[href="/"] img,
+.incore-calculator-header img[src*="incore-logo.png"] {
+  content: url('/logo.png') !important;
+}
