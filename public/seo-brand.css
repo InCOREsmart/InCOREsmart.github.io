@@ -198,10 +198,9 @@ body>header:not(.top)>p{margin:0!important}
   margin:28px 0 54px!important;
 }
 .team .person{
-  display:grid!important;
-  grid-template-columns:minmax(280px,360px) 1fr!important;
-  gap:42px!important;
-  align-items:center!important;
+  display:block!important;
+  position:relative!important;
+  overflow:hidden!important;
   padding:34px!important;
   background:#fff!important;
   border:1px solid var(--incore-line)!important;
@@ -209,13 +208,18 @@ body>header:not(.top)>p{margin:0!important}
   box-shadow:0 12px 34px rgba(7,19,63,.055)!important;
 }
 .team .person-photo{
-  height:330px!important;
+  float:right!important;
+  width:17%!important;
+  aspect-ratio:1/1!important;
+  margin:0 0 20px 32px!important;
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
   overflow:hidden!important;
   background:#fff!important;
-  border-radius:18px!important;
+  border:1px solid var(--incore-line)!important;
+  border-radius:50%!important;
+  shape-outside:circle(50%)!important;
 }
 .team .person-photo img{
   display:block!important;
@@ -226,7 +230,10 @@ body>header:not(.top)>p{margin:0!important}
   padding:0!important;
   background:#fff!important;
   border:0!important;
-  border-radius:18px!important;
+  border-radius:50%!important;
+}
+.team .person-copy{
+  display:block!important;
 }
 .team .person-copy h3{
   margin:4px 0 18px!important;
@@ -245,13 +252,18 @@ body>header:not(.top)>p{margin:0!important}
 .team .person-copy p:not(.role){
   margin:0 0 15px!important;
 }
+.team .person:after{
+  content:""!important;
+  display:block!important;
+  clear:both!important;
+}
 @media(max-width:820px){
   .team .person{
-    grid-template-columns:1fr!important;
-    gap:24px!important;
     padding:24px!important;
   }
   .team .person-photo{
-    height:320px!important;
+    width:24%!important;
+    margin:0 0 16px 22px!important;
   }
+}
 }
