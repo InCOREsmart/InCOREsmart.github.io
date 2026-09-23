@@ -38,9 +38,9 @@ body>p:first-child{
 }
 body>p:first-child a[href="/"]{
   display:block;
-  width:190px;
-  height:54px;
-  flex:0 0 190px;
+  width:150px;
+  height:48px;
+  flex:0 0 150px;
   font-size:0!important;
   line-height:0;
   background:url("./incore-logo.png") center/contain no-repeat;
@@ -56,8 +56,8 @@ body>header.top{
 }
 body>header.top .logo,
 body>header a[href="/"] img{
-  width:190px!important;
-  max-width:190px!important;
+  width:150px!important;
+  max-width:150px!important;
   height:auto!important;
 }
 body>header.top .nav{
@@ -177,9 +177,9 @@ main .divider img{
 body>header p{margin:0!important}
 body>header a[href="/"]{
   display:block;
-  width:190px;
-  height:54px;
-  flex:0 0 190px;
+  width:150px;
+  height:48px;
+  flex:0 0 150px;
   font-size:0!important;
   line-height:0;
   background:url("./incore-logo.png") center/contain no-repeat;
