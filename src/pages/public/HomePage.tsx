@@ -22,7 +22,7 @@ const articles = [
 
 export function HomePage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-[#07133f]">
+    <main className="min-h-screen text-[#07133f] incore-calculator-bg">
       <header className="min-h-24 border-b border-slate-100">
         <div className="mx-auto flex min-h-24 max-w-[1180px] items-center justify-between px-6">
           <a href={staticHref("/")} className="flex items-center"><img src={`${import.meta.env.BASE_URL}incore-logo.png`} alt="InCORE" className="w-[150px] max-w-[150px] h-auto object-contain" /></a>
@@ -36,7 +36,7 @@ export function HomePage() {
         </div>
       </header>
 
-      <section className="bg-gradient-to-b from-[#f7f8ff] to-white">
+      <section>
         <div className="mx-auto max-w-6xl px-5 py-20 md:py-28">
           <p className="mb-5 inline-flex rounded-full bg-[#e9edff] px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-[#1727a8]">Экономика результата</p>
           <h1 className="max-w-4xl text-5xl font-black leading-[1.03] tracking-[-0.04em] md:text-7xl">Команда должна создавать результат, а не просто занимать должности</h1>
@@ -62,7 +62,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#f6f8ff]">
+      <section>
         <div className="mx-auto max-w-6xl px-5 py-20">
           <h2 className="text-3xl font-black tracking-tight md:text-4xl">Инструменты</h2>
           <p className="mt-4 text-slate-600">Два разных вопроса. Поэтому два разных расчёта.</p>
