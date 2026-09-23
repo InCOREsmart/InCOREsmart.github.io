@@ -1,0 +1,136 @@
+:root{
+  --incore-navy:#07133f;
+  --incore-blue:#1727a8;
+  --incore-gold:#c79a18;
+  --incore-bg:#f5f7fc;
+  --incore-line:#e2e6f0;
+  --incore-muted:#667085;
+  --incore-card:#ffffff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  background:var(--incore-bg)!important;
+  color:var(--incore-navy)!important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  line-height:1.7!important;
+}
+body>p:first-child,
+body>header{
+  width:100%;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  background:#fff;
+  border-bottom:1px solid var(--incore-line);
+}
+body>p:first-child{
+  min-height:96px;
+  padding:20px max(24px,calc((100vw - 1180px)/2))!important;
+  display:flex;
+  align-items:center;
+  gap:28px;
+  font-size:14px!important;
+  font-weight:650;
+}
+body>p:first-child a[href="/"]{
+  display:block;
+  width:190px;
+  height:54px;
+  flex:0 0 190px;
+  font-size:0!important;
+  line-height:0;
+  background:url("/incore-logo.png") center/contain no-repeat;
+  text-decoration:none;
+}
+body>header{
+  padding:20px max(24px,calc((100vw - 1180px)/2))!important;
+}
+body>header.top{
+  min-height:96px;
+  display:flex;
+  align-items:center;
+}
+body>header.top .logo,
+body>header a[href="/"] img{
+  width:190px!important;
+  max-width:190px!important;
+  height:auto!important;
+}
+body>header.top .nav{
+  margin-left:auto;
+  display:flex;
+  gap:24px;
+  font-weight:650;
+  color:#475467;
+}
+main{
+  width:min(1180px,calc(100% - 40px));
+  margin:42px auto 80px!important;
+  padding:54px 64px!important;
+  background:var(--incore-card);
+  border:1px solid var(--incore-line);
+  border-radius:28px;
+  box-shadow:0 14px 45px rgba(7,19,63,.06);
+}
+h1{
+  max-width:950px;
+  margin:0 0 24px!important;
+  font-size:clamp(38px,5vw,64px)!important;
+  line-height:1.04!important;
+  letter-spacing:-.045em;
+  font-weight:850!important;
+}
+h2{
+  margin:52px 0 16px!important;
+  font-size:clamp(26px,3vw,36px)!important;
+  line-height:1.12!important;
+  letter-spacing:-.025em;
+  font-weight:800!important;
+}
+h3{font-weight:800!important}
+p{color:#344054}
+a{color:var(--incore-blue)!important;text-decoration:none;font-weight:650}
+a:hover{text-decoration:underline}
+.answer{
+  margin:0 0 34px!important;
+  padding:24px 28px!important;
+  background:linear-gradient(135deg,#f0f3ff,#fbfcff)!important;
+  border:1px solid #dce2ff!important;
+  border-left:4px solid var(--incore-blue);
+  border-radius:18px!important;
+  color:#24345d;
+}
+main>ul,main>ol{padding-left:24px}
+main li{margin:12px 0}
+main ul li::marker{color:var(--incore-gold)}
+main>ul>li,main>ol>li{
+  padding:4px 0;
+}
+main>p:last-child{margin-bottom:0}
+.incore-list{list-style:none!important;padding-left:0!important}
+.incore-list li{position:relative;padding-left:38px}
+.incore-list li:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:.55em;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--incore-navy) url("/incore-icon.png") center/54px auto no-repeat;
+}
+@media(max-width:760px){
+  body>p:first-child{min-height:84px;padding:14px 20px!important;gap:16px;flex-wrap:wrap}
+  body>p:first-child a[href="/"]{width:160px;height:48px;flex-basis:160px}
+  body>header{padding:14px 20px!important}
+  body>header.top{min-height:84px;align-items:flex-start;flex-direction:column}
+  body>header.top .nav{margin-left:0;display:flex;flex-wrap:wrap;gap:12px 18px}
+  body>header.top .logo,body>header a[href="/"] img{width:160px!important;max-width:160px!important}
+  main{width:min(100% - 24px,1180px);margin:18px auto 40px!important;padding:30px 22px!important;border-radius:20px}
+  h1{font-size:38px!important}
+  h2{font-size:28px!important;margin-top:38px!important}
+}
