@@ -87,7 +87,28 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="border-t border-slate-100">
+      
+      <section className="bg-[#f6f8ff]">
+        <div className="mx-auto max-w-6xl px-5 py-20">
+          <h2 className="text-3xl font-black tracking-tight md:text-4xl">Люди, которые делают InCORE</h2>
+          <p className="mt-4 max-w-3xl text-slate-600">За продуктом стоят две разные зоны ответственности: методология и продуктовая логика со стороны Натальи Киселевой, коммерциализация и вывод модуля оплат на рынок со стороны Александра Соломатина.</p>
+          <div className="mt-9 grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
+              <h3 className="text-xl font-extrabold">Наталья Киселева</h3>
+              <p className="mt-2 font-semibold text-[#1727a8]">Основатель и автор методологии</p>
+              <p className="mt-3 text-slate-600">ExHRD EdTech. Развивает InCORE как систему оценки производительной мощности бизнеса через человеческий капитал.</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-7">
+              <h3 className="text-xl font-extrabold">Александр Соломатин</h3>
+              <p className="mt-2 font-semibold text-[#1727a8]">Партнёр проекта, коммерциализация и инвестиции</p>
+              <p className="mt-3 text-slate-600">Отвечает за вывод модуля оплат InCORE на рынок, переговоры с потенциальными клиентами и поиск инвестиций для запуска пилота.</p>
+            </div>
+          </div>
+          <div className="mt-6"><Link to="/about/" className="font-bold text-[#1727a8]">Подробнее о команде и подходе →</Link></div>
+        </div>
+      </section>
+
+<section className="border-t border-slate-100">
         <div className="mx-auto max-w-6xl px-5 py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
