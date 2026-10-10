@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const pageMetadata = {
   'hr-calculator': {
@@ -16,24 +16,24 @@ const pageMetadata = {
 };
 
 function upsertMeta(html, name, content) {
-  const tag = `<meta name="${name}" content="${content}" />`;
-  const pattern = new RegExp(`<meta\\s+name=["']${name}["'][^>]*>`, 'i');
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', `    ${tag}\\n  </head>`);
+  const tag = \`<meta name="\${name}" content="\${content}" />\`;
+  const pattern = new RegExp(\`<meta\\s+name=["']\${name}["'][^>]*>\`, 'i');
+  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', \`    \${tag}\\n  </head>\`);
 }
 
 function upsertCanonical(html, href) {
-  const tag = `<link rel="canonical" href="${href}" />`;
+  const tag = \`<link rel="canonical" href="\${href}" />\`;
   const pattern = /<link\\s+rel=["']canonical["'][^>]*>/i;
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', `    ${tag}\\n  </head>`);
+  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', \`    \${tag}\\n  </head>\`);
 }
 
 const template = await readFile('dist/index.html', 'utf8');
 
 for (const [route, metadata] of Object.entries(pageMetadata)) {
-  await mkdir(`dist/${route}`, { recursive: true });
-  let html = template.replace(/<title>[\\s\\S]*?<\\/title>/i, `<title>${metadata.title}</title>`);
+  await mkdir(\`dist/\${route}\`, { recursive: true });
+  let html = template.replace(/<title>[\\s\\S]*?<\\/title>/i, \`<title>\${metadata.title}</title>\`);
   html = upsertMeta(html, 'description', metadata.description);
   html = upsertMeta(html, 'robots', metadata.robots);
   html = upsertCanonical(html, metadata.canonical);
-  await writeFile(`dist/${route}/index.html`, html);
+  await writeFile(\`dist/\${route}/index.html\`, html);
 }
