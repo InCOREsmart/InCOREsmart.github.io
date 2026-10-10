@@ -1,0 +1,17 @@
+# InCORE
+
+> InCORE is a digital platform for defining business outcomes and linking employee or team payments to verified results through company-defined rules.
+
+## Public pages
+
+- [HR Loss Calculator](https://incoresmart.github.io/hr-calculator/): Estimate the annual financial impact of employee turnover using editable business assumptions.
+- [Market Value Calculator registration](https://incoresmart.github.io/market-value/): Entry page for the market value calculator; registration is required to access the calculator.
+
+## Product context
+
+InCORE's payment concept is a company-defined financial rule: the company specifies the result and conditions, and payment follows confirmation under those rules. The company remains responsible for defining and confirming the business result.
+
+## Notes
+
+- Calculator outputs depend on the assumptions entered by the user and should not be treated as universal benchmarks.
+- Do not infer product features that are not described on the public pages.
