@@ -6,12 +6,25 @@ const pageMetadata = {
     description: 'Рассчитайте финансовые потери бизнеса из-за текучести персонала: затраты на замену, адаптацию и недополученную выручку. Настройте расчёт под свою компанию.',
     robots: 'index,follow',
     canonical: 'https://incoresmart.github.io/hr-calculator/',
+    fallback: `<main lang="ru">
+      <h1>Калькулятор потерь бизнеса от текучести персонала</h1>
+      <p>Оцените финансовые последствия увольнений с учётом затрат на подбор, оплаты труда в период адаптации и недополученной выручки до выхода сотрудника на продуктивность.</p>
+      <h2>Что учитывает расчёт</h2>
+      <ul>
+        <li>Количество увольнений за год и стоимость подбора замены.</li>
+        <li>Среднюю зарплату сотрудника и длительность адаптации.</li>
+        <li>Выручку на одного сотрудника и потери продуктивности.</li>
+        <li>Размер HR-команды и её пропускную способность по найму.</li>
+      </ul>
+      <p>Все исходные значения можно изменить в интерактивном калькуляторе. Итог зависит от введённых данных и не является универсальным отраслевым нормативом.</p>
+    </main>`,
   },
   'market-value': {
     title: 'Калькулятор рыночной стоимости специалиста | InCORE',
-    description: 'Регистрация для доступа к калькулятору рыночной стоимости специалиста InCORE.',
+    description: 'Страница регистрации для доступа к калькулятору рыночной стоимости специалиста InCORE.',
     robots: 'noindex,follow',
     canonical: 'https://incoresmart.github.io/market-value/',
+    fallback: '',
   },
 };
 
@@ -26,5 +39,8 @@ for (const [route, metadata] of Object.entries(pageMetadata)) {
   html = html.replace(defaultDescription, `<meta name="description" content="${metadata.description}" />`);
   html = html.replace(defaultRobots, `<meta name="robots" content="${metadata.robots}" />`);
   html = html.replace('</head>', `    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
+  if (metadata.fallback) {
+    html = html.replace('<div id="root"></div>', `<div id="root">${metadata.fallback}</div>`);
+  }
   await writeFile(`dist/${route}/index.html`, html);
 }
