@@ -16,6 +16,36 @@ const pageMetadata = {
       "operatingSystem": "Web",
       "inLanguage": "ru"
     },
+    faqSchema: {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Какие расходы учитывает калькулятор потерь от текучести персонала?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Расчёт складывает оценочную стоимость подбора замены, зарплату сотрудника за период адаптации и оценку недополученной выручки за это время."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Можно ли использовать результат как отраслевой норматив?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Нет. Это оценочная модель, результат которой зависит от введённых значений и допущений калькулятора."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Какие данные нужны для расчёта?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Средняя зарплата, число увольнений за год, длительность адаптации, выручка на сотрудника, размер HR-команды, зарплата HR и среднее количество наймов на одного HR в месяц."
+          }
+        }
+      ]
+    },
     fallback: `<main lang="ru">
       <h1>Калькулятор потерь бизнеса от текучести персонала</h1>
       <p>Оцените финансовые последствия увольнений с учётом затрат на подбор, оплаты труда в период адаптации и недополученной выручки до выхода сотрудника на продуктивность.</p>
@@ -27,6 +57,13 @@ const pageMetadata = {
         <li>Размер HR-команды и её пропускную способность по найму.</li>
       </ul>
       <p>Все исходные значения можно изменить в интерактивном калькуляторе. Итог зависит от введённых данных и не является универсальным отраслевым нормативом.</p>
+      <h2>Частые вопросы</h2>
+      <h3>Какие расходы учитывает калькулятор?</h3>
+      <p>Расчёт складывает оценочную стоимость подбора замены, зарплату сотрудника за период адаптации и оценку недополученной выручки за это время.</p>
+      <h3>Можно ли использовать результат как отраслевой норматив?</h3>
+      <p>Нет. Это оценочная модель, результат которой зависит от введённых вами значений и заложенных в калькулятор допущений.</p>
+      <h3>Какие данные нужны для расчёта?</h3>
+      <p>Средняя зарплата, число увольнений за год, длительность адаптации, выручка на сотрудника, размер HR-команды, зарплата HR и среднее количество наймов на одного HR в месяц.</p>
     </main>`,
   },
   'market-value': {
@@ -48,10 +85,12 @@ for (const [route, metadata] of Object.entries(pageMetadata)) {
   let html = template.replace(defaultTitle, `<title>${metadata.title}</title>`);
   html = html.replace(defaultDescription, `<meta name="description" content="${metadata.description}" />`);
   html = html.replace(defaultRobots, `<meta name="robots" content="${metadata.robots}" />`);
-  const structuredData = metadata.schema
-    ? `    <script type="application/ld+json">${JSON.stringify(metadata.schema)}</script>\n`
-    : '';
-  html = html.replace('</head>', `${structuredData}    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
+  const structuredData = [metadata.schema, metadata.faqSchema]
+    .filter(Boolean)
+    .map((schema) => `    <script type="application/ld+json">${JSON.stringify(schema)}</script>`)
+    .join('\n');
+  const structuredDataMarkup = structuredData ? `${structuredData}\n` : '';
+  html = html.replace('</head>', `${structuredDataMarkup}    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
   if (metadata.fallback) {
     html = html.replace('<div id="root"></div>', `<div id="root">${metadata.fallback}</div>`);
   }
