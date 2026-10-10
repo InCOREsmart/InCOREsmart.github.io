@@ -15,25 +15,16 @@ const pageMetadata = {
   },
 };
 
-function upsertMeta(html, name, content) {
-  const tag = \`<meta name="\${name}" content="\${content}" />\`;
-  const pattern = new RegExp(\`<meta\\s+name=["']\${name}["'][^>]*>\`, 'i');
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', \`    \${tag}\\n  </head>\`);
-}
-
-function upsertCanonical(html, href) {
-  const tag = \`<link rel="canonical" href="\${href}" />\`;
-  const pattern = /<link\\s+rel=["']canonical["'][^>]*>/i;
-  return pattern.test(html) ? html.replace(pattern, tag) : html.replace('</head>', \`    \${tag}\\n  </head>\`);
-}
-
 const template = await readFile('dist/index.html', 'utf8');
+const defaultTitle = '<title>InCORE — система выплат за подтверждённый результат</title>';
+const defaultDescription = '<meta name="description" content="InCORE — цифровая платформа, связывающая выплаты сотрудникам и командам с заранее определённым и подтверждённым результатом." />';
+const defaultRobots = '<meta name="robots" content="noindex,follow" />';
 
 for (const [route, metadata] of Object.entries(pageMetadata)) {
-  await mkdir(\`dist/\${route}\`, { recursive: true });
-  let html = template.replace(/<title>[\\s\\S]*?<\\/title>/i, \`<title>\${metadata.title}</title>\`);
-  html = upsertMeta(html, 'description', metadata.description);
-  html = upsertMeta(html, 'robots', metadata.robots);
-  html = upsertCanonical(html, metadata.canonical);
-  await writeFile(\`dist/\${route}/index.html\`, html);
+  await mkdir(`dist/${route}`, { recursive: true });
+  let html = template.replace(defaultTitle, `<title>${metadata.title}</title>`);
+  html = html.replace(defaultDescription, `<meta name="description" content="${metadata.description}" />`);
+  html = html.replace(defaultRobots, `<meta name="robots" content="${metadata.robots}" />`);
+  html = html.replace('</head>', `    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
+  await writeFile(`dist/${route}/index.html`, html);
 }
