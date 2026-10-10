@@ -6,6 +6,16 @@ const pageMetadata = {
     description: 'Рассчитайте финансовые потери бизнеса из-за текучести персонала: затраты на замену, адаптацию и недополученную выручку. Настройте расчёт под свою компанию.',
     robots: 'index,follow',
     canonical: 'https://incoresmart.github.io/hr-calculator/',
+    schema: {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Калькулятор потерь от текучести персонала InCORE",
+      "url": "https://incoresmart.github.io/hr-calculator/",
+      "description": "Интерактивный калькулятор для оценки финансовых потерь бизнеса от текучести персонала с учётом затрат на подбор, адаптацию и недополученную выручку.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "ru"
+    },
     fallback: `<main lang="ru">
       <h1>Калькулятор потерь бизнеса от текучести персонала</h1>
       <p>Оцените финансовые последствия увольнений с учётом затрат на подбор, оплаты труда в период адаптации и недополученной выручки до выхода сотрудника на продуктивность.</p>
@@ -38,7 +48,10 @@ for (const [route, metadata] of Object.entries(pageMetadata)) {
   let html = template.replace(defaultTitle, `<title>${metadata.title}</title>`);
   html = html.replace(defaultDescription, `<meta name="description" content="${metadata.description}" />`);
   html = html.replace(defaultRobots, `<meta name="robots" content="${metadata.robots}" />`);
-  html = html.replace('</head>', `    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
+  const structuredData = metadata.schema
+    ? `    <script type="application/ld+json">${JSON.stringify(metadata.schema)}</script>\n`
+    : '';
+  html = html.replace('</head>', `${structuredData}    <link rel="canonical" href="${metadata.canonical}" />\n  </head>`);
   if (metadata.fallback) {
     html = html.replace('<div id="root"></div>', `<div id="root">${metadata.fallback}</div>`);
   }
