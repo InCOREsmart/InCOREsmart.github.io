@@ -5,7 +5,29 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 type Solution = 'develop_team' | 'redeploy' | 'hire' | 'contractor' | 'automate' | 'redesign_process';
-type Alternative = {\n  id?: string;\n  goal_id: string;\n  company_id: string;\n  user_id: string;\n  solution_key: Solution;\n  one_time_cost: number;\n  monthly_cost: number;\n  expected_monthly_value: number;\n  confidence_pct: number;\n  time_to_effect_months: number;\n  comparison_horizon_months: number;\n  risk_reserve: number;\n  expected_benefit?: number;\n  total_cost?: number;\n  net_value?: number;\n  roi_pct?: number | null;\n  notes: string;\n};\n\ntype AlternativeDraft = { one_time_cost: string; monthly_cost: string; expected_monthly_value: string; confidence_pct: string; time_to_effect_months: string; comparison_horizon_months: string; risk_reserve: string; notes: string };\n\ntype GoalRecord = {
+type Alternative = {
+  id?: string;
+  goal_id: string;
+  company_id: string;
+  user_id: string;
+  solution_key: Solution;
+  one_time_cost: number;
+  monthly_cost: number;
+  expected_monthly_value: number;
+  confidence_pct: number;
+  time_to_effect_months: number;
+  comparison_horizon_months: number;
+  risk_reserve: number;
+  expected_benefit?: number;
+  total_cost?: number;
+  net_value?: number;
+  roi_pct?: number | null;
+  notes: string;
+};
+
+type AlternativeDraft = { one_time_cost: string; monthly_cost: string; expected_monthly_value: string; confidence_pct: string; time_to_effect_months: string; comparison_horizon_months: string; risk_reserve: string; notes: string };
+
+type GoalRecord = {
   id: string;
   goal_title: string;
   business_outcome: string;
@@ -34,7 +56,10 @@ const solutions: Array<{ value: Solution; label: string; detail: string }> = [
   { value: 'redesign_process', label: 'Изменить процесс', detail: 'Ограничение вызвано способом организации работы.' },
 ];
 
-const blankAlternative = (): AlternativeDraft => ({ one_time_cost: '', monthly_cost: '', expected_monthly_value: '', confidence_pct: '50', time_to_effect_months: '0', comparison_horizon_months: '12', risk_reserve: '', notes: '' });\nconst initialAlternatives = (): Record<Solution, AlternativeDraft> => ({ develop_team: blankAlternative(), redeploy: blankAlternative(), hire: blankAlternative(), contractor: blankAlternative(), automate: blankAlternative(), redesign_process: blankAlternative() });\n\nconst initial = {
+const blankAlternative = (): AlternativeDraft => ({ one_time_cost: '', monthly_cost: '', expected_monthly_value: '', confidence_pct: '50', time_to_effect_months: '0', comparison_horizon_months: '12', risk_reserve: '', notes: '' });
+const initialAlternatives = (): Record<Solution, AlternativeDraft> => ({ develop_team: blankAlternative(), redeploy: blankAlternative(), hire: blankAlternative(), contractor: blankAlternative(), automate: blankAlternative(), redesign_process: blankAlternative() });
+
+const initial = {
   goal_title: '',
   business_outcome: '',
   metric_name: '',
@@ -55,7 +80,10 @@ export function BusinessGoalDiagnosisPage() {
   const [companyId, setCompanyId] = useState('');
   const [form, setForm] = useState(initial);
   const [record, setRecord] = useState<GoalRecord | null>(null);
-  const [solution, setSolution] = useState<Solution | ''>('');\n  const [alternatives, setAlternatives] = useState<Record<Solution, AlternativeDraft>>(initialAlternatives);\n  const [savedAlternatives, setSavedAlternatives] = useState<Alternative[]>([]);\n  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [solution, setSolution] = useState<Solution | ''>('');
+  const [alternatives, setAlternatives] = useState<Record<Solution, AlternativeDraft>>(initialAlternatives);
+  const [savedAlternatives, setSavedAlternatives] = useState<Alternative[]>([]);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
   const [recent, setRecent] = useState<GoalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,7 +118,18 @@ export function BusinessGoalDiagnosisPage() {
     return () => { active = false; };
   }, [user]);
 
-  const setField = (key: keyof typeof initial, value: string) => setForm(prev => ({ ...prev, [key]: value }));\n  const setAlternativeField = (key: Solution, field: keyof AlternativeDraft, value: string) => { setAlternatives(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } })); setSavedAlternatives(prev => prev.filter(item => item.solution_key !== key)); };\n\n  const loadAlternatives = async (goalId: string) => {\n    const { data, error: alternativesError } = await supabase.from('business_goal_alternatives').select('*').eq('goal_id', goalId).order('net_value', { ascending: false });\n    if (alternativesError) throw alternativesError;\n    const rows = (data ?? []) as Alternative[];\n    setSavedAlternatives(rows);\n    const next = initialAlternatives();\n    for (const row of rows) next[row.solution_key] = { one_time_cost: String(row.one_time_cost), monthly_cost: String(row.monthly_cost), expected_monthly_value: String(row.expected_monthly_value), confidence_pct: String(row.confidence_pct), time_to_effect_months: String(row.time_to_effect_months), comparison_horizon_months: String(row.comparison_horizon_months), risk_reserve: String(row.risk_reserve), notes: row.notes ?? '' };\n    setAlternatives(next);\n  };
+  const setField = (key: keyof typeof initial, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const setAlternativeField = (key: Solution, field: keyof AlternativeDraft, value: string) => { setAlternatives(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } })); setSavedAlternatives(prev => prev.filter(item => item.solution_key !== key)); };
+
+  const loadAlternatives = async (goalId: string) => {
+    const { data, error: alternativesError } = await supabase.from('business_goal_alternatives').select('*').eq('goal_id', goalId).order('net_value', { ascending: false });
+    if (alternativesError) throw alternativesError;
+    const rows = (data ?? []) as Alternative[];
+    setSavedAlternatives(rows);
+    const next = initialAlternatives();
+    for (const row of rows) next[row.solution_key] = { one_time_cost: String(row.one_time_cost), monthly_cost: String(row.monthly_cost), expected_monthly_value: String(row.expected_monthly_value), confidence_pct: String(row.confidence_pct), time_to_effect_months: String(row.time_to_effect_months), comparison_horizon_months: String(row.comparison_horizon_months), risk_reserve: String(row.risk_reserve), notes: row.notes ?? '' };
+    setAlternatives(next);
+  };
 
   const saveGoal = async (event: FormEvent) => {
     event.preventDefault();
@@ -134,7 +173,9 @@ export function BusinessGoalDiagnosisPage() {
       if (insertError) throw insertError;
       const saved = data as GoalRecord;
       setRecord(saved);
-      setRecent(prev => [saved, ...prev.filter(item => item.id !== saved.id)].slice(0, 10));\n      setSavedAlternatives([]);\n      setAlternatives(initialAlternatives());
+      setRecent(prev => [saved, ...prev.filter(item => item.id !== saved.id)].slice(0, 10));
+      setSavedAlternatives([]);
+      setAlternatives(initialAlternatives());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось сохранить бизнес-цель.');
     } finally {
@@ -147,7 +188,8 @@ export function BusinessGoalDiagnosisPage() {
     setSaving(true);
     setError('');
     try {
-      if (savedAlternatives.length !== solutions.length) { setError('Сначала сохраните расчёт для всех шести альтернатив. Иначе это не сравнение, а гадание с таблицей.'); setSaving(false); return; }\n      const status = solution === 'hire' ? 'ready_for_role' : 'solution_selected';
+      if (savedAlternatives.length !== solutions.length) { setError('Сначала сохраните расчёт для всех шести альтернатив. Иначе это не сравнение, а гадание с таблицей.'); setSaving(false); return; }
+      const status = solution === 'hire' ? 'ready_for_role' : 'solution_selected';
       const { data, error: updateError } = await supabase.from('business_goal_diagnostics')
         .update({ chosen_solution: solution, status })
         .eq('id', record.id).eq('company_id', companyId).select('*').single();
@@ -162,8 +204,28 @@ export function BusinessGoalDiagnosisPage() {
     }
   };
 
-  const saveComparison = async () => {\n    if (!record || !companyId || !user) return;\n    setComparisonLoading(true); setError('');\n    try {\n      const rows = solutions.map(item => {\n        const draft = alternatives[item.value];\n        const requiredFields: Array<keyof AlternativeDraft> = ['one_time_cost','monthly_cost','expected_monthly_value','confidence_pct','time_to_effect_months','comparison_horizon_months','risk_reserve'];\n        for (const field of requiredFields) if (draft[field].trim() === '' || !Number.isFinite(Number(draft[field]))) throw new Error('Заполните числовые поля во всех шести вариантах.');\n        const oneTime = Number(draft.one_time_cost), monthly = Number(draft.monthly_cost), expected = Number(draft.expected_monthly_value), confidence = Number(draft.confidence_pct), delay = Number(draft.time_to_effect_months), horizon = Number(draft.comparison_horizon_months), reserve = Number(draft.risk_reserve);\n        if (oneTime < 0 || monthly < 0 || confidence < 0 || confidence > 100 || delay < 0 || delay > 60 || !Number.isInteger(delay) || horizon < 1 || horizon > 60 || !Number.isInteger(horizon) || reserve < 0) throw new Error('Проверьте стоимость, вероятность 0–100%, срок эффекта 0–60 месяцев, горизонт 1–60 месяцев и резерв риска.');\n        return { goal_id: record.id, company_id: companyId, user_id: user.id, solution_key: item.value, one_time_cost: oneTime, monthly_cost: monthly, expected_monthly_value: expected, confidence_pct: confidence, time_to_effect_months: delay, comparison_horizon_months: horizon, risk_reserve: reserve, notes: draft.notes.trim() };\n      });\n      if (new Set(rows.map(row => row.comparison_horizon_months)).size !== 1) throw new Error('У всех вариантов должен быть одинаковый горизонт расчёта.');
-      const { error: upsertError } = await supabase.from('business_goal_alternatives').upsert(rows, { onConflict: 'goal_id,solution_key' });\n      if (upsertError) throw upsertError;\n      const { error: statusError } = await supabase.from('business_goal_diagnostics').update({ status: 'comparing' }).eq('id', record.id).eq('company_id', companyId);\n      if (statusError) throw statusError;\n      await loadAlternatives(record.id);\n    } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось сохранить сравнение.'); } finally { setComparisonLoading(false); }\n  };\n\n  const startNew = () => { setRecord(null); setSolution(''); setForm(initial); setAlternatives(initialAlternatives()); setSavedAlternatives([]); setError(''); };
+  const saveComparison = async () => {
+    if (!record || !companyId || !user) return;
+    setComparisonLoading(true); setError('');
+    try {
+      const rows = solutions.map(item => {
+        const draft = alternatives[item.value];
+        const requiredFields: Array<keyof AlternativeDraft> = ['one_time_cost','monthly_cost','expected_monthly_value','confidence_pct','time_to_effect_months','comparison_horizon_months','risk_reserve'];
+        for (const field of requiredFields) if (draft[field].trim() === '' || !Number.isFinite(Number(draft[field]))) throw new Error('Заполните числовые поля во всех шести вариантах.');
+        const oneTime = Number(draft.one_time_cost), monthly = Number(draft.monthly_cost), expected = Number(draft.expected_monthly_value), confidence = Number(draft.confidence_pct), delay = Number(draft.time_to_effect_months), horizon = Number(draft.comparison_horizon_months), reserve = Number(draft.risk_reserve);
+        if (oneTime < 0 || monthly < 0 || confidence < 0 || confidence > 100 || delay < 0 || delay > 60 || !Number.isInteger(delay) || horizon < 1 || horizon > 60 || !Number.isInteger(horizon) || reserve < 0) throw new Error('Проверьте стоимость, вероятность 0–100%, срок эффекта 0–60 месяцев, горизонт 1–60 месяцев и резерв риска.');
+        return { goal_id: record.id, company_id: companyId, user_id: user.id, solution_key: item.value, one_time_cost: oneTime, monthly_cost: monthly, expected_monthly_value: expected, confidence_pct: confidence, time_to_effect_months: delay, comparison_horizon_months: horizon, risk_reserve: reserve, notes: draft.notes.trim() };
+      });
+      if (new Set(rows.map(row => row.comparison_horizon_months)).size !== 1) throw new Error('У всех вариантов должен быть одинаковый горизонт расчёта.');
+      const { error: upsertError } = await supabase.from('business_goal_alternatives').upsert(rows, { onConflict: 'goal_id,solution_key' });
+      if (upsertError) throw upsertError;
+      const { error: statusError } = await supabase.from('business_goal_diagnostics').update({ status: 'comparing' }).eq('id', record.id).eq('company_id', companyId);
+      if (statusError) throw statusError;
+      await loadAlternatives(record.id);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось сохранить сравнение.'); } finally { setComparisonLoading(false); }
+  };
+
+  const startNew = () => { setRecord(null); setSolution(''); setForm(initial); setAlternatives(initialAlternatives()); setSavedAlternatives([]); setError(''); };
 
   if (loading) return <div className="mx-auto max-w-4xl p-8 text-sm text-gray-500">Загружаем рабочее пространство…</div>;
 
@@ -232,7 +294,22 @@ export function BusinessGoalDiagnosisPage() {
       ) : (
         <section className="space-y-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-8">
           <div className="rounded-xl bg-emerald-50 p-4"><p className="text-sm font-semibold text-emerald-800">Бизнес-цель сохранена</p><h2 className="mt-1 text-xl font-bold text-[#000052]">{record.goal_title}</h2><p className="mt-2 text-sm leading-6 text-gray-700">{record.metric_name}: {record.baseline_value} → {record.target_value} {record.unit}</p><p className="mt-1 text-sm text-gray-600">Ограничение: {record.constraint_description}</p>{record.capacity_gap !== null && <p className="mt-2 text-sm font-semibold text-[#000052]">Расчётный дефицит мощности: {record.capacity_gap} за указанный период. Это индикатор, а не доказательство причины.</p>}</div>
-          <div className="rounded-xl border border-gray-200 p-4 md:p-5">\n            <div className="flex items-start gap-3"><Calculator className="mt-1 h-6 w-6 text-[#B8860B]" /><div><h2 className="font-bold text-[#000052]">3. Сравните экономику шести вариантов</h2><p className="mt-1 text-sm leading-6 text-gray-600">Для каждого варианта оцените разовые затраты, ежемесячную стоимость, ожидаемый ежемесячный эффект, вероятность достижения, задержку до эффекта и резерв риска. Используйте один горизонт расчёта и одну валюту. Это оценка по вашим предположениям, а не обещание результата.</p></div></div>\n            <div className="mt-4 grid gap-4">\n              {solutions.map(item => { const draft = alternatives[item.value]; const saved = savedAlternatives.find(row => row.solution_key === item.value); return <div key={item.value} className="rounded-xl border border-gray-200 p-4">\n                <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-[#000052]">{item.label}</h3><p className="text-sm text-gray-500">{item.detail}</p></div>{saved && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">Расчёт сохранён</span>}</div>\n                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">\n                  {[['one_time_cost','Разовые затраты'],['monthly_cost','Затраты в месяц'],['expected_monthly_value','Эффект в месяц'],['confidence_pct','Вероятность эффекта, %'],['time_to_effect_months','Месяцев до эффекта'],['comparison_horizon_months','Горизонт, месяцев'],['risk_reserve','Резерв риска']].map(([field,label]) => <label key={field} className="text-xs font-semibold text-gray-600">{label}<input type="number" min={field==='expected_monthly_value' ? undefined : 0} max={field==='confidence_pct' ? 100 : field==='time_to_effect_months' ? 60 : field==='comparison_horizon_months' ? 60 : undefined} step="any" required value={draft[field as keyof AlternativeDraft]} onChange={e => setAlternativeField(item.value, field as keyof AlternativeDraft, e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>)}\n                  <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Основание оценки / допущения<textarea rows={2} maxLength={3000} value={draft.notes} onChange={e => setAlternativeField(item.value,'notes',e.target.value)} placeholder="Источники данных, ограничения и риски" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>\n                </div>\n                {saved && <div className="mt-3 grid gap-2 rounded-lg bg-[#F7F8FC] p-3 text-sm sm:grid-cols-3"><p>Ожидаемая выгода: <strong>{Number(saved.expected_benefit ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Общие затраты: <strong>{Number(saved.total_cost ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Чистый эффект: <strong>{Number(saved.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>ROI: <strong>{saved.roi_pct == null ? 'не рассчитывается при нулевых затратах' : `${Number(saved.roi_pct).toFixed(1)}%`}</strong></p></div>}\n              </div>; })}\n            </div>\n            <button type="button" onClick={saveComparison} disabled={comparisonLoading || !record} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#000052] px-5 py-3 font-semibold text-[#000052] disabled:opacity-50"><CircleDollarSign className="h-4 w-4" />{comparisonLoading ? 'Сохраняем расчёты…' : 'Сохранить и пересчитать все варианты'}</button>\n            {savedAlternatives.length === solutions.length && <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Сравнение рассчитано.</strong> Чистый эффект учитывает вероятность достижения результата и задержку до его появления, затем вычитает затраты и резерв риска. Рейтинг не заменяет управленческую оценку качества исходных данных.</div>}\n          </div>\n          <div><h2 className="text-lg font-bold text-[#000052]">4. Выберите способ получить мощность</h2><p className="mt-1 text-sm leading-6 text-gray-600">Выбор доступен после сохранения расчёта всех шести вариантов. InCORE не выбирает победителя автоматически: стоимость не отменяет ограничений процесса, качества доказательств и риска исполнения.</p></div>
+          <div className="rounded-xl border border-gray-200 p-4 md:p-5">
+            <div className="flex items-start gap-3"><Calculator className="mt-1 h-6 w-6 text-[#B8860B]" /><div><h2 className="font-bold text-[#000052]">3. Сравните экономику шести вариантов</h2><p className="mt-1 text-sm leading-6 text-gray-600">Для каждого варианта оцените разовые затраты, ежемесячную стоимость, ожидаемый ежемесячный эффект, вероятность достижения, задержку до эффекта и резерв риска. Используйте один горизонт расчёта и одну валюту. Это оценка по вашим предположениям, а не обещание результата.</p></div></div>
+            <div className="mt-4 grid gap-4">
+              {solutions.map(item => { const draft = alternatives[item.value]; const saved = savedAlternatives.find(row => row.solution_key === item.value); return <div key={item.value} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-[#000052]">{item.label}</h3><p className="text-sm text-gray-500">{item.detail}</p></div>{saved && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">Расчёт сохранён</span>}</div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[['one_time_cost','Разовые затраты'],['monthly_cost','Затраты в месяц'],['expected_monthly_value','Эффект в месяц'],['confidence_pct','Вероятность эффекта, %'],['time_to_effect_months','Месяцев до эффекта'],['comparison_horizon_months','Горизонт, месяцев'],['risk_reserve','Резерв риска']].map(([field,label]) => <label key={field} className="text-xs font-semibold text-gray-600">{label}<input type="number" min={field==='expected_monthly_value' ? undefined : 0} max={field==='confidence_pct' ? 100 : field==='time_to_effect_months' ? 60 : field==='comparison_horizon_months' ? 60 : undefined} step="any" required value={draft[field as keyof AlternativeDraft]} onChange={e => setAlternativeField(item.value, field as keyof AlternativeDraft, e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>)}
+                  <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Основание оценки / допущения<textarea rows={2} maxLength={3000} value={draft.notes} onChange={e => setAlternativeField(item.value,'notes',e.target.value)} placeholder="Источники данных, ограничения и риски" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>
+                </div>
+                {saved && <div className="mt-3 grid gap-2 rounded-lg bg-[#F7F8FC] p-3 text-sm sm:grid-cols-3"><p>Ожидаемая выгода: <strong>{Number(saved.expected_benefit ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Общие затраты: <strong>{Number(saved.total_cost ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Чистый эффект: <strong>{Number(saved.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>ROI: <strong>{saved.roi_pct == null ? 'не рассчитывается при нулевых затратах' : `${Number(saved.roi_pct).toFixed(1)}%`}</strong></p></div>}
+              </div>; })}
+            </div>
+            <button type="button" onClick={saveComparison} disabled={comparisonLoading || !record} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#000052] px-5 py-3 font-semibold text-[#000052] disabled:opacity-50"><CircleDollarSign className="h-4 w-4" />{comparisonLoading ? 'Сохраняем расчёты…' : 'Сохранить и пересчитать все варианты'}</button>
+            {savedAlternatives.length === solutions.length && <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Сравнение рассчитано.</strong> Чистый эффект учитывает вероятность достижения результата и задержку до его появления, затем вычитает затраты и резерв риска. Рейтинг не заменяет управленческую оценку качества исходных данных.</div>}
+          </div>
+          <div><h2 className="text-lg font-bold text-[#000052]">4. Выберите способ получить мощность</h2><p className="mt-1 text-sm leading-6 text-gray-600">Выбор доступен после сохранения расчёта всех шести вариантов. InCORE не выбирает победителя автоматически: стоимость не отменяет ограничений процесса, качества доказательств и риска исполнения.</p></div>
           <div className="grid gap-3 md:grid-cols-2">
             {solutions.map(item => <label key={item.value} className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${solution === item.value ? 'border-[#000052] bg-[#000052]/5 ring-1 ring-[#000052]' : 'border-gray-200 hover:border-gray-400'}`}>
               <input type="radio" name="solution" value={item.value} checked={solution === item.value} onChange={() => setSolution(item.value)} className="mt-1" />
