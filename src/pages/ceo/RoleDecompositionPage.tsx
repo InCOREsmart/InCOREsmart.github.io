@@ -399,7 +399,7 @@ export function RoleDecompositionPage() {
             </div>
             <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Индустрия</label><select value={input.industry} onChange={e => setInput({ ...input, industry: e.target.value })} className="w-full min-w-0 px-4 py-3 border border-gray-200 rounded-xl text-[#000052]">{INDUSTRIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
             {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</div>}
-            <button onClick={decompose} disabled={loading} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-50"><Sparkles className="w-5 h-5 shrink-0" />{loading ? 'AI анализирует роль...' : 'AI-декомпозировать роль'}</button>
+            <button onClick={decompose} disabled={loading || !businessGoalId || !businessGoal} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-50"><Sparkles className="w-5 h-5 shrink-0" />{loading ? 'AI анализирует роль...' : !businessGoalId || !businessGoal ? 'Сначала выберите внешний найм в диагностике цели' : 'AI-декомпозировать роль'}</button>
           </div>
         </div>
       )}
