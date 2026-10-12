@@ -13,7 +13,7 @@ const SECRET = Deno.env.get("HH_CLIENT_SECRET");
 const H = {
   "content-type": "application/json; charset=utf-8",
   "access-control-allow-origin": APP,
-  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",\n  "access-control-allow-methods": "GET, POST, OPTIONS",
 };
 const out = (x: unknown, s = 200) => new Response(JSON.stringify(x), { status: s, headers: H });
 
@@ -45,11 +45,14 @@ async function authenticatedCompany(req: Request): Promise<{ id: string; company
   return { id: user.id, companyId: companies[0].id };
 }
 
-async function token() {
-  const r = await db("hh_oauth_tokens?provider=eq.hh&select=*&order=updated_at.desc&limit=1");
-  const a = await r.json();
-  if (!r.ok || !a[0]) throw Error("HH is not connected");
-  let t = a[0];
+type CompanyOwner = { id: string; companyId: string };
+
+async function token(owner: CompanyOwner) {
+  const connectionPath = `hh_oauth_connections?provider=eq.hh&company_id=eq.${encodeURIComponent(owner.companyId)}&user_id=eq.${encodeURIComponent(owner.id)}&select=*&limit=1`;
+  const r = await db(connectionPath);
+  const rows = await r.json();
+  if (!r.ok || !Array.isArray(rows) || !rows[0]) throw Error("HH is not connected for this company");
+  let t = rows[0];
   if (t.expires_at && new Date(t.expires_at).getTime() - Date.now() < 120000 && t.refresh_token) {
     const rr = await fetch(HH_TOKEN_URL, {
       method: "POST",
@@ -57,9 +60,21 @@ async function token() {
       body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: t.refresh_token, client_id: CID!, client_secret: SECRET! }),
     });
     const n = await rr.json();
-    if (!rr.ok) throw Error(`HH token refresh failed: ${JSON.stringify(n)}`);
-    const row = { ...n, provider: "hh", expires_at: new Date(Date.now() + n.expires_in * 1000).toISOString(), updated_at: new Date().toISOString() };
-    await db("hh_oauth_tokens", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(row) });
+    if (!rr.ok || !n.access_token) throw Error("HH token refresh failed");
+    const row = {
+      access_token: n.access_token,
+      refresh_token: n.refresh_token || t.refresh_token,
+      expires_at: new Date(Date.now() + Number(n.expires_in || 0) * 1000).toISOString(),
+      token_type: n.token_type || t.token_type || null,
+      scope: n.scope || t.scope || null,
+      updated_at: new Date().toISOString(),
+    };
+    const saved = await db(`hh_oauth_connections?company_id=eq.${encodeURIComponent(owner.companyId)}&provider=eq.hh&user_id=eq.${encodeURIComponent(owner.id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(row),
+    });
+    if (!saved.ok) throw Error("Could not save refreshed HH connection");
     t = { ...t, ...row };
   }
   return t;
@@ -172,27 +187,72 @@ Deno.serve(async (req) => {
   const u = new URL(req.url);
   const a = u.searchParams.get("action");
   if (!CID || !SECRET) return out({ error: "HH OAuth secrets are not configured" }, 500);
+  let owner: CompanyOwner | null = null;
   if (a !== "health") {
-    const owner = await authenticatedCompany(req);
+    owner = await authenticatedCompany(req);
     if (!owner) return out({ error: "Authentication required for a company account" }, 401);
   }
   if (a === "authorize") {
-    const x = new URL(HH_AUTH); x.searchParams.set("response_type", "code"); x.searchParams.set("client_id", CID); x.searchParams.set("redirect_uri", APP); return Response.redirect(x.toString(), 302);
+    const state = crypto.randomUUID() + crypto.randomUUID().replaceAll("-", "");
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state));
+    const stateHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const saved = await db("hh_oauth_states", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ state_hash: stateHash, user_id: owner!.id, company_id: owner!.companyId, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() }),
+    });
+    if (!saved.ok) {
+      console.error("Could not persist HH OAuth state", saved.status);
+      return out({ error: "Could not start secure HH authorization" }, 500);
+    }
+    const x = new URL(HH_AUTH);
+    x.searchParams.set("response_type", "code");
+    x.searchParams.set("client_id", CID);
+    x.searchParams.set("redirect_uri", APP);
+    x.searchParams.set("state", state);
+    return out({ authorization_url: x.toString() });
   }
   if (a === "exchange") {
     const code = u.searchParams.get("code");
-    if (!code) return out({ error: "authorization code is required" }, 400);
+    const state = u.searchParams.get("state");
+    if (!code || !state || state.length > 256) return out({ error: "authorization code and state are required" }, 400);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state));
+    const stateHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    const now = new Date().toISOString();
+    const consumed = await db(`hh_oauth_states?state_hash=eq.${stateHash}&user_id=eq.${encodeURIComponent(owner!.id)}&company_id=eq.${encodeURIComponent(owner!.companyId)}&consumed_at=is.null&expires_at=gt.${encodeURIComponent(now)}&select=id`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ consumed_at: now }),
+    });
+    const consumedRows = await consumed.json().catch(() => []);
+    if (!consumed.ok || !Array.isArray(consumedRows) || consumedRows.length !== 1) return out({ error: "Invalid, expired, or already used OAuth state. Start HH connection again." }, 400);
     const r = await fetch(HH_TOKEN_URL, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "User-Agent": UA }, body: new URLSearchParams({ grant_type: "authorization_code", client_id: CID, client_secret: SECRET, code, redirect_uri: APP }) });
     const t = await r.json();
-    if (!r.ok) return out({ error: "HH token exchange failed", details: t }, 502);
-    const row = { ...t, provider: "hh", expires_at: new Date(Date.now() + t.expires_in * 1000).toISOString(), updated_at: new Date().toISOString() };
-    const s = await db("hh_oauth_tokens", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(row) });
-    if (!s.ok) return out({ error: "Token save failed", details: await s.text() }, 500);
+    if (!r.ok || !t.access_token) {
+      console.error("HH authorization-code exchange failed", r.status);
+      return out({ error: "HH token exchange failed. Start the connection again." }, 502);
+    }
+    const row = {
+      company_id: owner!.companyId,
+      user_id: owner!.id,
+      provider: "hh",
+      access_token: t.access_token,
+      refresh_token: t.refresh_token ?? null,
+      expires_at: new Date(Date.now() + Number(t.expires_in || 0) * 1000).toISOString(),
+      token_type: t.token_type ?? null,
+      scope: t.scope ?? null,
+      updated_at: new Date().toISOString(),
+    };
+    const s = await db("hh_oauth_connections?on_conflict=company_id,provider", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(row) });
+    if (!s.ok) {
+      console.error("Could not save company HH connection", s.status);
+      return out({ error: "Could not save HH connection" }, 500);
+    }
     return out({ success: true });
   }
   try {
-    if (a === "sync" || a === "vacancies") return out(await syncVacancies(u.searchParams));
-    if (a === "resumes") return out(await syncResumes(u.searchParams));
+    if (a === "sync" || a === "vacancies") return out(await syncVacancies(u.searchParams, owner!));
+    if (a === "resumes") return out(await syncResumes(u.searchParams, owner!));
     return out({ service: "InCORE HH Market", status: "ready", sources: { RU: "hh.ru", AZ: "hh1.az" }, endpoints: { ru_vacancies: "?action=vacancies&text=страховой%20агент&host=hh.ru", ru_resumes: "?action=resumes&text=страховой%20агент&host=hh.ru", az_vacancies: "?action=vacancies&text=страховой%20агент&host=hh1.az", az_resumes: "?action=resumes&text=страховой%20агент&host=hh1.az" } });
   } catch (e) {
     return out({ error: e instanceof Error ? e.message : String(e) }, 500);
