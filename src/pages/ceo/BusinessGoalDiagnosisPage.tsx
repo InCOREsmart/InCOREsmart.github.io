@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Save, Target, Calculator, CircleDollarSign } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Save, Target } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -263,7 +263,7 @@ export function BusinessGoalDiagnosisPage() {
             <label className="block text-sm font-semibold text-[#000052]">Показатель результата *
               <input required maxLength={120} value={form.metric_name} onChange={e => setField('metric_name', e.target.value)} placeholder="Выручка, маржа, скорость обработки" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
-            <label className="block text-sm font-semibold text-[#000052] md:col-span-2">Какой экономический или операционный эффект нужен? *
+            <label className="block text-sm font-semibold text-[#000052] md:col-span-2">Какой измеримый бизнес-результат нужен? *
               <textarea required rows={3} maxLength={4000} value={form.business_outcome} onChange={e => setField('business_outcome', e.target.value)} placeholder="Что должно измениться и почему это важно для бизнеса" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
             <label className="block text-sm font-semibold text-[#000052]">Текущее значение *
@@ -273,12 +273,7 @@ export function BusinessGoalDiagnosisPage() {
               <input required type="number" min="0" step="any" value={form.target_value} onChange={e => setField('target_value', e.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
             <label className="block text-sm font-semibold text-[#000052]">Единица измерения показателя *
-              <input required maxLength={40} value={form.unit} onChange={e => setField('unit', e.target.value)} placeholder="%, заказов в день, ₽/месяц" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
-            </label>
-            <label className="block text-sm font-semibold text-[#000052]">Валюта экономического расчёта *
-              <select required value={form.financial_unit} onChange={e => setField('financial_unit', e.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal">
-                <option value="₽">Российский рубль (₽)</option><option value="₸">Казахстанский тенге (₸)</option><option value="₼">Азербайджанский манат (₼)</option><option value="€">Евро (€)</option><option value="$">Доллар США ($)</option>
-              </select>
+              <input required maxLength={40} value={form.unit} onChange={e => setField('unit', e.target.value)} placeholder="%, заказов в день, часов на задачу" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
             <label className="block text-sm font-semibold text-[#000052]">Срок достижения цели
               <input type="date" value={form.target_date} onChange={e => setField('target_date', e.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
