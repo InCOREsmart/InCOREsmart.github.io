@@ -9,6 +9,9 @@ import { HHMarketCollectorPage } from './HHMarketCollectorPage';
 
 export function HHMarketPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [connecting, setConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState('');
   const navigate = useNavigate();
   return (
     <div className="space-y-6 min-w-0">
