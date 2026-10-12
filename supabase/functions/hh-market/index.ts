@@ -15,6 +15,7 @@ const H = {
   "access-control-allow-origin": APP,
   "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
   "access-control-allow-methods": "GET, POST, OPTIONS",
+  "cache-control": "no-store",
 };
 const out = (x: unknown, s = 200) => new Response(JSON.stringify(x), { status: s, headers: H });
 
