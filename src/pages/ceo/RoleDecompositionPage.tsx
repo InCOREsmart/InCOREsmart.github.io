@@ -325,11 +325,11 @@ export function RoleDecompositionPage() {
   };
 
   const save = async () => {
-    if (!result || !validation?.valid || !user) return;
+    if (!result || !validation?.valid || !user || (businessGoalId && !businessGoal) || loadingBusinessGoal) return;
     setSaving(true);
     setError('');
     try {
-      const { data, error: rpcError } = await supabase.rpc('save_role_decomposition', {
+      const roleArgs = {
         p_name: result.role.name,
         p_description: result.role.description,
         p_industry: result.role.industry,
@@ -338,7 +338,10 @@ export function RoleDecompositionPage() {
         p_source: isInsuranceDemo ? 'template' : 'ai',
         p_skills: result.skills,
         p_relations: result.skills_relations,
-      });
+      };
+      const { data, error: rpcError } = businessGoalId && businessGoal
+        ? await supabase.rpc('save_role_decomposition_for_goal', { ...roleArgs, p_goal_id: businessGoalId })
+        : await supabase.rpc('save_role_decomposition', roleArgs);
       if (rpcError) throw rpcError;
       if (!data) throw new Error('Роль не сохранена.');
       setResult(null);
