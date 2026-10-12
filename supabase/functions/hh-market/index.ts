@@ -148,7 +148,7 @@ async function syncVacancies(q: URLSearchParams, owner: CompanyOwner) {
 }
 
 async function syncResumes(q: URLSearchParams, owner: CompanyOwner) {
-  const t = await token();
+  const t = await token(owner);
   const config = sourceConfig(q);
   const first = await hh(`/resumes?${searchQuery(config, 0, true).toString()}`, t);
   const pages = Math.min(Number(first.pages || 1), 10);
