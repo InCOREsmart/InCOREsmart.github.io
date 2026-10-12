@@ -158,7 +158,7 @@ export function RoleDecompositionPage() {
         setBusinessGoal(goal);
         setInput(prev => ({
           ...prev,
-          description: prev.description.trim() ? prev.description : [
+          description: (prev.description ?? '').trim() ? prev.description : [
             goal.business_outcome,
             `Процесс: ${goal.process_description}`,
             `Ограничение / гипотеза: ${goal.constraint_description}`,
