@@ -119,7 +119,7 @@ export function BusinessGoalDiagnosisPage() {
   }, [user]);
 
   const setField = (key: keyof typeof initial, value: string) => setForm(prev => ({ ...prev, [key]: value }));
-  const setAlternativeField = (key: Solution, field: keyof AlternativeDraft, value: string) => { setAlternatives(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } })); setSavedAlternatives(prev => prev.filter(item => item.solution_key !== key)); };
+  const setAlternativeField = (key: Solution, field: keyof AlternativeDraft, value: string) => { setAlternatives(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } })); setSavedAlternatives(prev => prev.filter(item => item.solution_key !== key)); setSolution(''); };
 
   const loadAlternatives = async (goalId: string) => {
     const { data, error: alternativesError } = await supabase.from('business_goal_alternatives').select('*').eq('goal_id', goalId).order('net_value', { ascending: false });
@@ -221,6 +221,9 @@ export function BusinessGoalDiagnosisPage() {
       if (upsertError) throw upsertError;
       const { error: statusError } = await supabase.from('business_goal_diagnostics').update({ status: 'comparing' }).eq('id', record.id).eq('company_id', companyId);
       if (statusError) throw statusError;
+      setRecord(prev => prev && prev.id === record.id ? { ...prev, chosen_solution: null, status: 'comparing' } : prev);
+      setRecent(prev => prev.map(item => item.id === record.id ? { ...item, chosen_solution: null, status: 'comparing' } : item));
+      setSolution('');
       await loadAlternatives(record.id);
     } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось сохранить сравнение.'); } finally { setComparisonLoading(false); }
   };
