@@ -13,7 +13,8 @@ const SECRET = Deno.env.get("HH_CLIENT_SECRET");
 const H = {
   "content-type": "application/json; charset=utf-8",
   "access-control-allow-origin": APP,
-  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",\n  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
 };
 const out = (x: unknown, s = 200) => new Response(JSON.stringify(x), { status: s, headers: H });
 
