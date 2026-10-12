@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, FileText, Plus, RefreshCw, Save, Sparkles, Trash2, Upload, X } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { insuranceAgentDecomposition } from '../../data/insuranceAgentDecomposition';
@@ -325,7 +325,7 @@ export function RoleDecompositionPage() {
   };
 
   const save = async () => {
-    if (!result || !validation?.valid || !user || (businessGoalId && !businessGoal) || loadingBusinessGoal) return;
+    if (!result || !validation?.valid || !user || !businessGoalId || !businessGoal || loadingBusinessGoal) return;
     setSaving(true);
     setError('');
     try {
@@ -358,6 +358,11 @@ export function RoleDecompositionPage() {
 
   return (
     <div className="w-full min-w-0 p-4 md:p-8 space-y-6 max-w-7xl mx-auto overflow-x-hidden">
+      {!businessGoalId && <section className="rounded-2xl border border-[#B8860B]/30 bg-[#B8860B]/5 p-4 md:p-5">
+        <p className="font-bold text-[#000052]">Сначала бизнес-цель, затем роль</p>
+        <p className="mt-1 text-sm leading-6 text-gray-700">Новая модель роли сохраняется только как ответ на измеренный дефицит мощности и выбранное решение о внешнем найме.</p>
+        <Link to="/ceo/business-goals/new" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#000052] px-4 py-2.5 text-sm font-semibold text-white">Перейти к диагностике бизнес-цели <ArrowLeft className="h-4 w-4 rotate-180" /></Link>
+      </section>}
       {loadingBusinessGoal && <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Загружаем контекст бизнес-цели…</div>}
       {businessGoal && <section className="rounded-2xl border border-[#B8860B]/30 bg-[#B8860B]/5 p-4 md:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-[#8A6500]">Основание модели роли</p>
@@ -429,7 +434,7 @@ export function RoleDecompositionPage() {
           <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 min-w-0"><h3 className="font-bold text-[#000052] mb-3">Связи между навыками</h3><div className="space-y-2">{result.skills_relations.map((relation, index) => <div key={`${relation.skill_from}-${relation.skill_to}-${index}`} className="text-sm flex flex-wrap items-center gap-2 min-w-0"><span className="font-medium text-[#000052] break-words max-w-full">{relation.skill_from}</span><span className="shrink-0 px-2 py-1 bg-[#000052]/5 rounded-lg text-xs">{RELATION_LABELS[relation.relation_type]}</span><span className="font-medium text-[#000052] break-words max-w-full">{relation.skill_to}</span><span className="shrink-0 text-gray-400">{Math.round(relation.strength * 100)}%</span></div>)}</div></div>
 
           {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</div>}
-          <div className="flex flex-col md:flex-row gap-3"><button onClick={() => { setResult(null); setError(''); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-[#000052] rounded-xl font-semibold"><RefreshCw className="w-4 h-4 shrink-0" />Изменить входные данные</button><button onClick={save} disabled={!validation.valid || saving || loadingBusinessGoal || Boolean(businessGoalId && !businessGoal)} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold disabled:opacity-50"><Save className="w-4 h-4 shrink-0" />{saving ? 'Сохранение...' : 'Подтвердить и сохранить'}</button></div>
+          <div className="flex flex-col md:flex-row gap-3"><button onClick={() => { setResult(null); setError(''); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-[#000052] rounded-xl font-semibold"><RefreshCw className="w-4 h-4 shrink-0" />Изменить входные данные</button><button onClick={save} disabled={!validation.valid || saving || loadingBusinessGoal || !businessGoalId || !businessGoal} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold disabled:opacity-50"><Save className="w-4 h-4 shrink-0" />{saving ? 'Сохранение...' : 'Подтвердить и сохранить'}</button></div>
         </div>
       )}
 
