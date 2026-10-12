@@ -11,20 +11,20 @@ const steps = [
   {
     number: '02',
     icon: Search,
-    title: 'Разложите результат на работу и компетенции',
-    text: 'InCORE помогает определить необходимые функции, ожидаемые результаты, навыки и подтверждения способности выполнить работу.',
+    title: 'Найдите ограничение и дефицит мощности',
+    text: 'Разберите процесс и выясните, чего именно не хватает: спроса, пропускной способности, навыков, ясности роли или технологии. Не назначайте найм решением заранее.',
   },
   {
     number: '03',
     icon: CheckCircle2,
-    title: 'Подберите способ получить результат',
-    text: 'Определите, нужен ли новый исполнитель, какая роль необходима и как зафиксировать достижение бизнес-цели.',
+    title: 'Выберите экономически лучший способ',
+    text: 'Сравните развитие команды, внешний найм, подрядчика, автоматизацию и изменение процесса. К человеку и роли переходим только при подтверждённом дефиците мощности.',
   },
 ];
 
 const principles = [
   { icon: Target, title: 'Бизнес-цель вместо вакансии', text: 'Сначала определите, какой результат нужен бизнесу. Вакансия не является отправной точкой.' },
-  { icon: Users, title: 'Компетенции вместо интервью', text: 'Сопоставляйте требования с подтверждёнными навыками, опытом и результатами. Интервью не является обязательным этапом.' },
+  { icon: Users, title: 'Доказательства вместо интервью', text: 'Оценивайте способность создавать нужный результат по рабочим свидетельствам, истории результатов и релевантным навыкам. Интервью не является этапом процесса.' },
   { icon: WalletCards, title: 'Измеримый результат вместо активности', text: 'Экономика сервиса должна быть связана с созданной ценностью, а не с просмотрами резюме или количеством этапов.' },
 ];
 
@@ -86,8 +86,8 @@ export function HomePage() {
             <div className="space-y-3 py-5">
               {[
                 ['Рост выручки', 'Целевой бизнес-результат', '100%'],
-                ['Развитие продаж', 'Необходимая функция', '85%'],
-                ['Управление воронкой', 'Требуемая компетенция', '70%'],
+                ['Ограничение процесса', 'Диагностика причины', '85%'],
+                ['Дефицит мощности', 'Что мешает достичь цели', '70%'],
               ].map(([title, description, score]) => (
                 <div key={title} className="rounded-2xl border border-white/10 bg-black/15 p-4">
                   <div className="flex items-center justify-between gap-3">
@@ -103,7 +103,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-4">
               <ShieldCheck className="h-6 w-6 shrink-0 text-[#e0bd63]" />
-              <p className="text-sm leading-6 text-slate-200">Цепочка прозрачна: бизнес-цель → функции и результаты → компетенции → исполнитель. Карточка демонстрационная.</p>
+              <p className="text-sm leading-6 text-slate-200">Цепочка: бизнес-цель → процесс → ограничение → мощность → роль → навык → человек. Карточка демонстрационная.</p>
             </div>
             <p className="mt-3 text-xs text-slate-500">Иллюстрация интерфейса. Данные на карточке демонстрационные.</p>
           </div>
@@ -131,7 +131,7 @@ export function HomePage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#9a720b]">Процесс</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#000052] sm:text-4xl">От бизнес-цели к исполнителю в трёх шагах</h2>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#000052] sm:text-4xl">От бизнес-цели к нужной производительной мощности</h2>
           </div>
           <div className="mt-10 grid gap-5 lg:grid-cols-3">
             {steps.map(({ number, icon: Icon, title, text }) => (
@@ -151,9 +151,9 @@ export function HomePage() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
         <div className="overflow-hidden rounded-3xl bg-[#000052] px-6 py-10 text-white sm:px-10 sm:py-14 lg:flex lg:items-center lg:justify-between lg:gap-10">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e0bd63]">Начните с конкретной роли</p>
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e0bd63]">Сначала найдите ограничение</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Сначала результат. Потом необходимая работа.</h2>
-            <p className="mt-4 leading-7 text-slate-300">Опишите бизнес-цель, разложите её на необходимые результаты и компетенции, затем определите способ получить результат. InCORE строится вокруг ценности для бизнеса.</p>
+            <p className="mt-4 leading-7 text-slate-300">Опишите бизнес-цель, диагностируйте ограничение и сравните способы получить нужную мощность. Найм является одним из решений, а не стартовой точкой.</p>
           </div>
           <Link to="/register" className="mt-8 inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d4a017] px-6 py-4 font-semibold text-[#10103e] hover:bg-[#e5b52f] lg:mt-0">
             Запустить подбор <ArrowRight size={18} />
