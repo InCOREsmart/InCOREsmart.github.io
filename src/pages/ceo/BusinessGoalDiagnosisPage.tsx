@@ -194,7 +194,7 @@ export function BusinessGoalDiagnosisPage() {
     setError('');
     try {
       if (solution === 'hire' && (record.capacity_gap === null || record.capacity_gap <= 0)) { setError('Внешний найм доступен только при измеренном положительном дефиците мощности. Уточните текущую и требуемую мощность.'); setSaving(false); return; }
-      if (savedAlternatives.length !== solutions.length) { setError('Сначала сохраните расчёт для всех шести альтернатив. Иначе это не сравнение, а гадание с таблицей.'); setSaving(false); return; }
+      
       const status = solution === 'hire' ? 'ready_for_role' : 'solution_selected';
       const { data, error: updateError } = await supabase.from('business_goal_diagnostics')
         .update({ chosen_solution: solution, status })
@@ -249,7 +249,7 @@ export function BusinessGoalDiagnosisPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-[#B8860B]">InCORE · Диагностика мощности</p>
           <h1 className="mt-1 text-2xl font-bold text-[#000052] md:text-3xl">Начните с бизнес-цели</h1>
-          <p className="mt-2 max-w-3xl leading-7 text-gray-600">Сначала фиксируем результат, процесс и ограничение. Роль и человек появляются только после подтверждения дефицита производительной мощности.</p>
+          <p className="mt-2 max-w-3xl leading-7 text-gray-600">Фиксируем результат, процесс и ограничение. В текущей версии доступен только путь внешнего найма после подтверждения дефицита мощности.</p>
         </div>
       </div>
 
@@ -307,37 +307,22 @@ export function BusinessGoalDiagnosisPage() {
       ) : (
         <section className="space-y-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-8">
           <div className="rounded-xl bg-emerald-50 p-4"><p className="text-sm font-semibold text-emerald-800">Бизнес-цель сохранена</p><h2 className="mt-1 text-xl font-bold text-[#000052]">{record.goal_title}</h2><p className="mt-2 text-sm leading-6 text-gray-700">{record.metric_name}: {record.baseline_value} → {record.target_value} {record.unit}</p><p className="mt-1 text-sm text-gray-600">Ограничение: {record.constraint_description}</p>{record.capacity_gap !== null && <p className="mt-2 text-sm font-semibold text-[#000052]">Расчётный дефицит мощности: {record.capacity_gap} за указанный период. Это индикатор, а не доказательство причины.</p>}</div>
-          <div className="rounded-xl border border-gray-200 p-4 md:p-5">
-            <div className="flex items-start gap-3"><Calculator className="mt-1 h-6 w-6 text-[#B8860B]" /><div><h2 className="font-bold text-[#000052]">3. Сравните экономику шести вариантов</h2><p className="mt-1 text-sm leading-6 text-gray-600">Для каждого варианта оцените разовые затраты, ежемесячную стоимость, ожидаемый ежемесячный эффект, вероятность достижения, задержку до эффекта и резерв риска. Используйте один горизонт расчёта и одну валюту. Это оценка по вашим предположениям, а не обещание результата.</p></div></div>
-            <div className="mt-4 grid gap-4">
-              {solutions.map(item => { const draft = alternatives[item.value]; const saved = savedAlternatives.find(row => row.solution_key === item.value); return <div key={item.value} className="rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-semibold text-[#000052]">{item.label}</h3><p className="text-sm text-gray-500">{item.detail}</p></div>{saved && <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">Расчёт сохранён</span>}</div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {[['one_time_cost','Разовые затраты'],['monthly_cost','Затраты в месяц'],['expected_monthly_value','Эффект в месяц'],['confidence_pct','Вероятность эффекта, %'],['time_to_effect_months','Месяцев до эффекта'],['comparison_horizon_months','Горизонт, месяцев'],['risk_reserve','Резерв риска']].map(([field,label]) => <label key={field} className="text-xs font-semibold text-gray-600">{label}<input type="number" min={0} max={field==='confidence_pct' ? 100 : field==='time_to_effect_months' ? 60 : field==='comparison_horizon_months' ? 60 : undefined} step="any" required value={draft[field as keyof AlternativeDraft]} onChange={e => setAlternativeField(item.value, field as keyof AlternativeDraft, e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>)}
-                  <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Основание оценки / допущения<textarea rows={2} maxLength={3000} value={draft.notes} onChange={e => setAlternativeField(item.value,'notes',e.target.value)} placeholder="Источники данных, ограничения и риски" className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-normal text-[#000052]" /></label>
-                </div>
-                {saved && <div className="mt-3 grid gap-2 rounded-lg bg-[#F7F8FC] p-3 text-sm sm:grid-cols-3"><p>Ожидаемая выгода: <strong>{Number(saved.expected_benefit ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Общие затраты: <strong>{Number(saved.total_cost ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>Чистый эффект: <strong>{Number(saved.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit}</strong></p><p>ROI: <strong>{saved.roi_pct == null ? 'не рассчитывается при нулевых затратах' : `${Number(saved.roi_pct).toFixed(1)}%`}</strong></p></div>}
-              </div>; })}
-            </div>
-            <button type="button" onClick={saveComparison} disabled={comparisonLoading || !record} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#000052] px-5 py-3 font-semibold text-[#000052] disabled:opacity-50"><CircleDollarSign className="h-4 w-4" />{comparisonLoading ? 'Сохраняем расчёты…' : 'Сохранить и пересчитать все варианты'}</button>
-            {savedAlternatives.length === solutions.length && <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Сравнение рассчитано.</strong> Чистый эффект учитывает вероятность достижения результата и задержку до его появления, затем вычитает затраты и резерв риска. Рейтинг не заменяет управленческую оценку качества исходных данных.</div>}
+          <div className="rounded-xl border border-[#B8860B]/30 bg-[#B8860B]/5 p-4 md:p-5">
+            <div className="flex items-start gap-3"><Target className="mt-1 h-6 w-6 text-[#B8860B]" /><div><h2 className="font-bold text-[#000052]">3. Ветка внешнего найма</h2><p className="mt-1 text-sm leading-6 text-gray-600">В текущем MVP работодатель проходит только ветку найма. Пять альтернативных веток не показываются и будут добавлены позднее. Перед переходом к модели роли нужно подтвердить измеренный положительный дефицит мощности.</p></div></div>
           </div>
-          <div><h2 className="text-lg font-bold text-[#000052]">4. Выберите способ получить мощность</h2><p className="mt-1 text-sm leading-6 text-gray-600">Выбор доступен после сохранения расчёта всех шести вариантов. InCORE не выбирает победителя автоматически: стоимость не отменяет ограничений процесса, качества доказательств и риска исполнения.</p></div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {solutions.map(item => <label key={item.value} className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${solution === item.value ? 'border-[#000052] bg-[#000052]/5 ring-1 ring-[#000052]' : 'border-gray-200 hover:border-gray-400'}`}>
-              <input type="radio" name="solution" value={item.value} checked={solution === item.value} onChange={() => setSolution(item.value)} className="mt-1" />
-              <span><span className="block font-semibold text-[#000052]">{item.label}</span><span className="mt-1 block text-sm leading-5 text-gray-600">{item.detail}</span></span>
-            </label>)}
+          <div><h2 className="text-lg font-bold text-[#000052]">4. Выберите способ получить мощность</h2><p className="mt-1 text-sm leading-6 text-gray-600">На текущем этапе доступна только ветка внешнего найма. Остальные пять веток добавим позже.</p></div>
+          <div className="rounded-xl border border-gray-200 p-4">
+            <label className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${solution === 'hire' ? 'border-[#000052] bg-[#000052]/5 ring-1 ring-[#000052]' : 'border-gray-200 hover:border-gray-400'}`}>
+              <input type="radio" name="solution" value="hire" checked={solution === 'hire'} onChange={() => setSolution('hire')} className="mt-1" />
+              <span><span className="block font-semibold text-[#000052]">Внешний найм</span><span className="mt-1 block text-sm leading-5 text-gray-600">Нанять человека для закрытия подтверждённого дефицита производительной мощности.</span></span>
+            </label>
+            {(record.capacity_gap === null || record.capacity_gap <= 0) && <p className="mt-3 text-sm text-amber-800">Чтобы продолжить, укажите текущую и требуемую мощность так, чтобы дефицит был положительным.</p>}
           </div>
-          {solution && selectedAlternative && bestAlternative && <div className={`rounded-xl border p-4 text-sm leading-6 ${Number(selectedAlternative.net_value ?? 0) < 0 || (bestAlternative.solution_key !== solution && Number(bestAlternative.net_value ?? 0) > Number(selectedAlternative.net_value ?? 0)) ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
-            {Number(selectedAlternative.net_value ?? 0) < 0 && <p><strong>Проверьте выбранный вариант:</strong> расчётный чистый эффект отрицательный ({Number(selectedAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit}).</p>}
-            {bestAlternative.solution_key !== solution && Number(bestAlternative.net_value ?? 0) > Number(selectedAlternative.net_value ?? 0) && <p><strong>Есть экономически более сильная альтернатива по введённым данным:</strong> {solutions.find(item => item.value === bestAlternative.solution_key)?.label}, ожидаемый чистый эффект {Number(bestAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit} против {Number(selectedAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit} у выбранного варианта.</p>}
-            <p className="mt-1">Это предупреждение, не автоматический выбор: проверьте качество исходных оценок, ограничения процесса и риски исполнения.</p>
-          </div>}
+
           {record.chosen_solution && <p className="text-sm text-emerald-700">Сохранённый вариант: {solutions.find(item => item.value === record.chosen_solution)?.label}.</p>}
           {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button onClick={saveSolution} disabled={!solution || saving || savedAlternatives.length !== solutions.length} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#000052] px-5 py-3.5 font-semibold text-white disabled:opacity-50">{saving ? 'Сохраняем…' : 'Сохранить решение'} <ArrowRight className="h-4 w-4" /></button>
+            <button onClick={saveSolution} disabled={solution !== 'hire' || saving} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#000052] px-5 py-3.5 font-semibold text-white disabled:opacity-50">{saving ? 'Сохраняем…' : 'Подтвердить ветку найма'} <ArrowRight className="h-4 w-4" /></button>
             {record.chosen_solution === 'hire' && <button onClick={() => navigate(`/ceo/roles/decompose?businessGoalId=${encodeURIComponent(record.id)}`)} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#B8860B] px-5 py-3.5 font-semibold text-white">Перейти к модели роли <ArrowRight className="h-4 w-4" /></button>}
             <button onClick={startNew} className="rounded-xl border border-gray-200 px-5 py-3.5 font-semibold text-[#000052]">Новая цель</button>
           </div>
@@ -346,7 +331,7 @@ export function BusinessGoalDiagnosisPage() {
 
       <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
         <h2 className="font-bold text-[#000052]">Последние диагностики</h2>
-        {recent.length === 0 ? <p className="mt-2 text-sm text-gray-500">Сохранённых целей пока нет.</p> : <ul className="mt-3 divide-y divide-gray-100">{recent.map(item => <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#000052]">{item.goal_title}</p><p className="text-sm text-gray-500">{item.metric_name}: {item.baseline_value} → {item.target_value} {item.unit}</p><p className="text-xs text-gray-500">{item.chosen_solution ? solutions.find(s => s.value === item.chosen_solution)?.label : 'Решение не выбрано'}</p></div><button type="button" onClick={() => { setRecord(item); setSolution(item.chosen_solution ?? ''); setSavedAlternatives([]); setAlternatives(initialAlternatives()); setError(''); void loadAlternatives(item.id).catch(e => setError(e instanceof Error ? e.message : 'Не удалось загрузить сравнение вариантов.')); }} className="self-start rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-[#000052] hover:bg-gray-50">Открыть</button></li>)}</ul>}
+        {recent.length === 0 ? <p className="mt-2 text-sm text-gray-500">Сохранённых целей пока нет.</p> : <ul className="mt-3 divide-y divide-gray-100">{recent.map(item => <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#000052]">{item.goal_title}</p><p className="text-sm text-gray-500">{item.metric_name}: {item.baseline_value} → {item.target_value} {item.unit}</p><p className="text-xs text-gray-500">{item.chosen_solution ? solutions.find(s => s.value === item.chosen_solution)?.label : 'Решение не выбрано'}</p></div><button type="button" onClick={() => { setRecord(item); setSolution(item.chosen_solution ?? ''); setError(''); }} className="self-start rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-[#000052] hover:bg-gray-50">Открыть</button></li>)}</ul>}
       </section>
     </main>
   );
