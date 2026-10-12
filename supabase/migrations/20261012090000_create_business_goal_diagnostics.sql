@@ -228,6 +228,10 @@ begin
       raise exception 'Save all six alternatives with one shared comparison horizon before choosing a solution';
     end if;
 
+    if new.chosen_solution = 'hire' and coalesce(new.capacity_gap, 0) <= 0 then
+      raise exception 'External hire requires a measured positive capacity gap';
+    end if;
+
     if new.chosen_solution = 'hire' and new.status <> 'ready_for_role' then
       raise exception 'External hire selection must use ready_for_role status';
     end if;
