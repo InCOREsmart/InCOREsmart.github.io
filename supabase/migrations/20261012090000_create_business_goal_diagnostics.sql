@@ -191,6 +191,10 @@ create policy "business_goal_alternatives_delete_own"
       and c.user_id = (select auth.uid())
   ));
 
+create trigger business_goal_alternatives_updated_at
+before update on public.business_goal_alternatives
+for each row execute function public.set_business_goal_diagnostics_updated_at();
+
 grant select, insert, update, delete on public.business_goal_alternatives to authenticated;
 
 create table if not exists public.hh_oauth_states (
