@@ -68,7 +68,7 @@ export function BusinessGoalDiagnosisPage() {
           .from('companies').select('id').eq('user_id', user.id).maybeSingle();
         if (companyError) throw companyError;
         if (!company) {
-          if (active) { setError('Сначала заполните профиль компании.'); setLoading(false); }
+          if (active) navigate('/ceo/onboarding', { replace: true });
           return;
         }
         if (!active) return;
