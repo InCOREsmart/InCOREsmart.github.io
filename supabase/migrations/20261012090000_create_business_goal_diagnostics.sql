@@ -433,6 +433,9 @@ begin
       and g.user_id = auth.uid()
       and g.chosen_solution = 'hire'
       and g.status = 'ready_for_role'
+      and coalesce(g.capacity_gap, 0) > 0
+      and (select count(*) from public.business_goal_alternatives a where a.goal_id = g.id) = 6
+      and (select count(distinct a.comparison_horizon_months) from public.business_goal_alternatives a where a.goal_id = g.id) = 1
   ) then
     raise exception 'External hire must be selected in an owned business goal diagnosis first';
   end if;
