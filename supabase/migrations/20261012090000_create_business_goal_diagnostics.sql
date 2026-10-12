@@ -22,7 +22,8 @@ create table if not exists public.business_goal_diagnostics (
   chosen_solution text check (chosen_solution is null or chosen_solution in ('develop_team', 'redeploy', 'hire', 'contractor', 'automate', 'redesign_process')),
   status text not null default 'diagnosing' check (status in ('diagnosing', 'comparing', 'solution_selected', 'ready_for_role')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, company_id, user_id)
 );
 
 create index if not exists business_goal_diagnostics_company_created_idx
