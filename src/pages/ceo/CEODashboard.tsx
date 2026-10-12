@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -157,7 +158,7 @@ export function CEODashboard() {
   ];
 
   return <div className="w-full min-w-0 overflow-x-hidden p-4 md:p-6 space-y-6">
-    <div className="min-w-0"><h1 className="text-2xl md:text-3xl font-bold text-[#000052] break-words">{t('ui.financialCore')}</h1><p className="text-sm text-[#000052]/70 mt-1 break-words">{t('ui.financialOverview')}</p></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0"><div className="min-w-0"><h1 className="text-2xl md:text-3xl font-bold text-[#000052] break-words">{t('ui.financialCore')}</h1><p className="text-sm text-[#000052]/70 mt-1 break-words">{t('ui.financialOverview')}</p></div><Link to="/ceo/business-goals/new" className="inline-flex items-center justify-center rounded-xl bg-[#000052] px-4 py-3 text-sm font-semibold text-white hover:bg-[#14147a]">Начать с бизнес-цели</Link></div>
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 min-w-0">
       {cards.map(([title, value, Icon, bg, fg, hint]: any, index: number) => <div key={index} className={`${bg} ${fg} min-w-0 p-5 rounded-xl border border-[#000052]/10`}><div className="flex items-start justify-between gap-3 mb-3"><h3 className="min-w-0 text-sm font-medium opacity-80 flex items-center break-words">{title}<InfoTooltip>{hint}</InfoTooltip></h3><Icon className="w-5 h-5 opacity-80 shrink-0" /></div><p className="text-2xl font-bold break-words">{value}</p></div>)}
     </div>
