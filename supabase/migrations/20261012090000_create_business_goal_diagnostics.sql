@@ -218,6 +218,13 @@ declare
   v_alternative_count integer;
   v_horizon_count integer;
 begin
+  if tg_op = 'INSERT' then
+    if new.chosen_solution is not null or new.status <> 'diagnosing' then
+      raise exception 'New business goal diagnostics must start in diagnosing status without a selected solution';
+    end if;
+    return new;
+  end if;
+
   if new.chosen_solution is not null then
     select count(*), count(distinct comparison_horizon_months)
       into v_alternative_count, v_horizon_count
@@ -246,6 +253,10 @@ begin
   return new;
 end;
 $function$;
+
+create trigger business_goal_diagnosis_insert_guard
+before insert on public.business_goal_diagnostics
+for each row execute function public.enforce_business_goal_diagnosis_transition();
 
 create trigger business_goal_diagnosis_transition_guard
 before update of chosen_solution, status on public.business_goal_diagnostics
