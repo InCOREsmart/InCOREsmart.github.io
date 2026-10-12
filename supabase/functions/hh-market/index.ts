@@ -188,9 +188,10 @@ async function syncResumes(q: URLSearchParams, owner: CompanyOwner) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: H });
-  if (req.method !== "GET") return out({ error: "Method not allowed" }, 405);
   const u = new URL(req.url);
   const a = u.searchParams.get("action");
+  if (req.method !== "GET" && req.method !== "POST") return out({ error: "Method not allowed" }, 405);
+  if (req.method === "POST" && a !== "exchange") return out({ error: "POST is only supported for OAuth exchange" }, 405);
   if (!CID || !SECRET) return out({ error: "HH OAuth secrets are not configured" }, 500);
   let owner: CompanyOwner | null = null;
   if (a !== "health") {
@@ -218,9 +219,10 @@ Deno.serve(async (req) => {
     return out({ authorization_url: x.toString() });
   }
   if (a === "exchange") {
-    const code = u.searchParams.get("code");
-    const state = u.searchParams.get("state");
-    if (!code || !state || state.length > 256) return out({ error: "authorization code and state are required" }, 400);
+    const body = req.method === "POST" ? await req.json().catch(() => null) : null;
+    const code = req.method === "POST" ? body?.code : u.searchParams.get("code");
+    const state = req.method === "POST" ? body?.state : u.searchParams.get("state");
+    if (typeof code !== "string" || !code || typeof state !== "string" || !state || state.length > 256) return out({ error: "authorization code and state are required" }, 400);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(state));
     const stateHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
     const now = new Date().toISOString();
