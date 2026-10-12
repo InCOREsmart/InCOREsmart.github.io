@@ -256,6 +256,8 @@ begin
 
   v_goal_id := case when tg_op = 'DELETE' then old.goal_id else new.goal_id end;
 
+  delete from public.business_goal_role_links where goal_id = v_goal_id;
+
   update public.business_goal_diagnostics
   set chosen_solution = null, status = 'diagnosing'
   where id = v_goal_id and chosen_solution is not null;
