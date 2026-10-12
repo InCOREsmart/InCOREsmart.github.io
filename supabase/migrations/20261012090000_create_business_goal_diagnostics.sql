@@ -93,7 +93,7 @@ create table if not exists public.business_goal_alternatives (
   solution_key text not null check (solution_key in ('develop_team', 'redeploy', 'hire', 'contractor', 'automate', 'redesign_process')),
   one_time_cost numeric not null check (one_time_cost >= 0),
   monthly_cost numeric not null check (monthly_cost >= 0),
-  expected_monthly_value numeric not null,
+  expected_monthly_value numeric not null check (expected_monthly_value >= 0),
   confidence_pct numeric not null check (confidence_pct between 0 and 100),
   time_to_effect_months integer not null check (time_to_effect_months between 0 and 60),
   comparison_horizon_months integer not null check (comparison_horizon_months between 1 and 60),
