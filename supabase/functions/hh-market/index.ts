@@ -100,8 +100,8 @@ function searchQuery(config: ReturnType<typeof sourceConfig>, page: number, resu
   return params;
 }
 
-async function syncVacancies(q: URLSearchParams) {
-  const t = await token();
+async function syncVacancies(q: URLSearchParams, owner: CompanyOwner) {
+  const t = await token(owner);
   const config = sourceConfig(q);
   const first = await hh(`/vacancies?${searchQuery(config, 0).toString()}`, t);
   const pages = Math.min(Number(first.pages || 1), 20);
@@ -147,7 +147,7 @@ async function syncVacancies(q: URLSearchParams) {
   return { ok: true, kind: "vacancies", role_key: config.roleKey, country: config.country, host: config.host, found: first.found ?? items.length, saved: rows.length, pages, detailed_fetched: detailed, message: `Сохранены полные карточки вакансий HH (${config.country}, ${config.host}) с описаниями и навыками.` };
 }
 
-async function syncResumes(q: URLSearchParams) {
+async function syncResumes(q: URLSearchParams, owner: CompanyOwner) {
   const t = await token();
   const config = sourceConfig(q);
   const first = await hh(`/resumes?${searchQuery(config, 0, true).toString()}`, t);
