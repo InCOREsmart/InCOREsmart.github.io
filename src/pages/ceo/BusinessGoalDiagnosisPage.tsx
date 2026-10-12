@@ -56,7 +56,7 @@ const solutions: Array<{ value: Solution; label: string; detail: string }> = [
   { value: 'redesign_process', label: 'Изменить процесс', detail: 'Ограничение вызвано способом организации работы.' },
 ];
 
-const blankAlternative = (): AlternativeDraft => ({ one_time_cost: '', monthly_cost: '', expected_monthly_value: '', confidence_pct: '50', time_to_effect_months: '0', comparison_horizon_months: '12', risk_reserve: '', notes: '' });
+const blankAlternative = (): AlternativeDraft => ({ one_time_cost: '', monthly_cost: '', expected_monthly_value: '', confidence_pct: '', time_to_effect_months: '', comparison_horizon_months: '', risk_reserve: '', notes: '' });
 const initialAlternatives = (): Record<Solution, AlternativeDraft> => ({ develop_team: blankAlternative(), redeploy: blankAlternative(), hire: blankAlternative(), contractor: blankAlternative(), automate: blankAlternative(), redesign_process: blankAlternative() });
 
 const initial = {
