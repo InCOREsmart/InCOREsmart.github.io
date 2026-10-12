@@ -188,6 +188,7 @@ async function syncResumes(q: URLSearchParams, owner: CompanyOwner) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: H });
+  if (req.method !== "GET") return out({ error: "Method not allowed" }, 405);
   const u = new URL(req.url);
   const a = u.searchParams.get("action");
   if (!CID || !SECRET) return out({ error: "HH OAuth secrets are not configured" }, 500);
