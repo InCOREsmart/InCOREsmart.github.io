@@ -27,6 +27,7 @@ import { AgentContractDetailPage } from './pages/agent/AgentContractDetailPage';
 import { AgentPayoutsPage } from './pages/agent/AgentPayoutsPage';
 import { HrLossCalculatorPage } from './pages/public/HrLossCalculatorPage';
 import { HomePage } from './pages/public/HomePage';
+import { BusinessGoalDiagnosisPage } from './pages/ceo/BusinessGoalDiagnosisPage';
 import { MarketValueEntryPage } from './pages/public/MarketValueEntryPage';
 import { RoleSkillsProgressPanel } from './components/role/RoleSkillsProgressPanel';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
