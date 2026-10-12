@@ -66,4 +66,19 @@ create policy "business_goal_diagnostics_delete_own"
     where c.id = business_goal_diagnostics.company_id and c.user_id = (select auth.uid())
   ));
 
+create or replace function public.set_business_goal_diagnostics_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  new.updated_at = now();
+  return new;
+end;
+$;
+
+create trigger business_goal_diagnostics_updated_at
+before update on public.business_goal_diagnostics
+for each row execute function public.set_business_goal_diagnostics_updated_at();
+
 grant select, insert, update, delete on public.business_goal_diagnostics to authenticated;
