@@ -21,7 +21,7 @@ export function LoginPage() {
         localStorage.removeItem('incore-b2c-login-intent');
         navigate('/market-value', { replace: true });
       } else {
-        navigate(role === 'ceo' ? '/ceo/business-goals/new' : '/agent', { replace: true });
+        navigate('/' + role, { replace: true });
       }
     }
   }, [user, role, loading, navigate]);
