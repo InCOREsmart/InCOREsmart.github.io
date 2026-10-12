@@ -219,7 +219,8 @@ Deno.serve(async (req) => {
     return out({ authorization_url: x.toString() });
   }
   if (a === "exchange") {
-    const body = req.method === "POST" ? await req.json().catch(() => null) : null;
+    if (req.method !== "POST") return out({ error: "OAuth exchange requires POST" }, 405);
+    const body = await req.json().catch(() => null);
     const code = req.method === "POST" ? body?.code : u.searchParams.get("code");
     const state = req.method === "POST" ? body?.state : u.searchParams.get("state");
     if (typeof code !== "string" || !code || typeof state !== "string" || !state || state.length > 256) return out({ error: "authorization code and state are required" }, 400);
