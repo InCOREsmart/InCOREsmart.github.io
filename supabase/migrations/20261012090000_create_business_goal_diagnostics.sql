@@ -197,6 +197,18 @@ for each row execute function public.set_business_goal_diagnostics_updated_at();
 
 grant select, insert, update, delete on public.business_goal_alternatives to authenticated;
 
+create table if not exists public.business_goal_role_links (
+  id uuid primary key default gen_random_uuid(),
+  goal_id uuid not null,
+  role_id uuid not null references public.roles(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (goal_id, role_id),
+  constraint business_goal_role_link_goal_owner foreign key (goal_id, company_id, user_id)
+    references public.business_goal_diagnostics(id, company_id, user_id) on delete cascade
+);
+
 create or replace function public.enforce_business_goal_diagnosis_transition()
 returns trigger
 language plpgsql
@@ -316,17 +328,7 @@ before update on public.hh_oauth_connections
 for each row execute function public.set_business_goal_diagnostics_updated_at();
 
 
-create table if not exists public.business_goal_role_links (
-  id uuid primary key default gen_random_uuid(),
-  goal_id uuid not null,
-  role_id uuid not null references public.roles(id) on delete cascade,
-  company_id uuid not null references public.companies(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  unique (goal_id, role_id),
-  constraint business_goal_role_link_goal_owner foreign key (goal_id, company_id, user_id)
-    references public.business_goal_diagnostics(id, company_id, user_id) on delete cascade
-);
+
 
 create index if not exists business_goal_role_links_company_created_idx
   on public.business_goal_role_links(company_id, created_at desc);
