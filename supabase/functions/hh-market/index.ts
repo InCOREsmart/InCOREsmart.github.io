@@ -53,7 +53,9 @@ async function token(owner: CompanyOwner) {
   const rows = await r.json();
   if (!r.ok || !Array.isArray(rows) || !rows[0]) throw Error("HH is not connected for this company");
   let t = rows[0];
-  if (t.expires_at && new Date(t.expires_at).getTime() - Date.now() < 120000 && t.refresh_token) {
+  const expiresSoon = t.expires_at && new Date(t.expires_at).getTime() - Date.now() < 120000;
+  if (expiresSoon && !t.refresh_token) throw Error("HH connection expired. Reconnect HH.ru for this company.");
+  if (expiresSoon && t.refresh_token) {
     const rr = await fetch(HH_TOKEN_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", "User-Agent": UA },
@@ -83,7 +85,7 @@ async function token(owner: CompanyOwner) {
 async function hh(path: string, t: any) {
   const r = await fetch(`${HH_API}${path}`, { headers: { Authorization: `Bearer ${t.access_token}`, "HH-User-Agent": UA, Accept: "application/json" } });
   const d = await r.json();
-  if (!r.ok) throw Error(`HH request failed (${r.status}): ${JSON.stringify(d)}`);
+  if (!r.ok) throw Error(`HH request failed (${r.status})`);
   return d;
 }
 
