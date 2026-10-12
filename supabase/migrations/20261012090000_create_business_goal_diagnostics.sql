@@ -22,9 +22,7 @@ create table if not exists public.business_goal_diagnostics (
   chosen_solution text check (chosen_solution is null or chosen_solution in ('develop_team', 'redeploy', 'hire', 'contractor', 'automate', 'redesign_process')),
   status text not null default 'diagnosing' check (status in ('diagnosing', 'solution_selected', 'ready_for_role')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint business_goal_user_company_owner foreign key (company_id, user_id)
-    references public.companies(id, user_id) deferrable initially immediate
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists business_goal_diagnostics_company_created_idx
