@@ -234,6 +234,10 @@ export function BusinessGoalDiagnosisPage() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Не удалось сохранить сравнение.'); } finally { setComparisonLoading(false); }
   };
 
+  const selectedAlternative = savedAlternatives.find(item => item.solution_key === solution) ?? null;
+  const bestAlternative = savedAlternatives.reduce<Alternative | null>((best, item) =>
+    !best || Number(item.net_value ?? -Infinity) > Number(best.net_value ?? -Infinity) ? item : best, null);
+
   const startNew = () => { setRecord(null); setSolution(''); setForm(initial); setAlternatives(initialAlternatives()); setSavedAlternatives([]); setError(''); };
 
   if (loading) return <div className="mx-auto max-w-4xl p-8 text-sm text-gray-500">Загружаем рабочее пространство…</div>;
@@ -325,6 +329,11 @@ export function BusinessGoalDiagnosisPage() {
               <span><span className="block font-semibold text-[#000052]">{item.label}</span><span className="mt-1 block text-sm leading-5 text-gray-600">{item.detail}</span></span>
             </label>)}
           </div>
+          {solution && selectedAlternative && bestAlternative && <div className={`rounded-xl border p-4 text-sm leading-6 ${Number(selectedAlternative.net_value ?? 0) < 0 || (bestAlternative.solution_key !== solution && Number(bestAlternative.net_value ?? 0) > Number(selectedAlternative.net_value ?? 0)) ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
+            {Number(selectedAlternative.net_value ?? 0) < 0 && <p><strong>Проверьте выбранный вариант:</strong> расчётный чистый эффект отрицательный ({Number(selectedAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit}).</p>}
+            {bestAlternative.solution_key !== solution && Number(bestAlternative.net_value ?? 0) > Number(selectedAlternative.net_value ?? 0) && <p><strong>Есть экономически более сильная альтернатива по введённым данным:</strong> {solutions.find(item => item.value === bestAlternative.solution_key)?.label}, ожидаемый чистый эффект {Number(bestAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit} против {Number(selectedAlternative.net_value ?? 0).toLocaleString('ru-RU')} {record.financial_unit} у выбранного варианта.</p>}
+            <p className="mt-1">Это предупреждение, не автоматический выбор: проверьте качество исходных оценок, ограничения процесса и риски исполнения.</p>
+          </div>}
           {record.chosen_solution && <p className="text-sm text-emerald-700">Сохранённый вариант: {solutions.find(item => item.value === record.chosen_solution)?.label}.</p>}
           {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
