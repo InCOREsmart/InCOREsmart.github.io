@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, ClipboardList, Search, ShieldCheck, Target, Users, WalletCards } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardList, Search, ShieldCheck, Target, Users } from 'lucide-react';
 
 const steps = [
   {
@@ -17,15 +17,15 @@ const steps = [
   {
     number: '03',
     icon: CheckCircle2,
-    title: 'Выберите способ получить мощность',
-    text: 'Сравните развитие команды, внешний найм, подрядчика, автоматизацию и изменение процесса. Роль появляется только после подтверждения дефицита мощности и выбора внешнего найма.',
+    title: 'Подтвердите потребность во внешнем найме',
+    text: 'На первом этапе работодатель идёт только по ветке найма: подтверждает дефицит мощности, описывает роль и проверяемые навыки. Остальные пять вариантов появятся позднее.',
   },
 ];
 
 const principles = [
   { icon: Target, title: 'Бизнес-цель вместо вакансии', text: 'Сначала определите, какой результат нужен бизнесу. Вакансия не является отправной точкой.' },
   { icon: Users, title: 'Доказательства вместо интервью', text: 'Оценивайте способность создавать нужный результат по рабочим свидетельствам, истории результатов и релевантным навыкам. Интервью не является этапом процесса.' },
-  { icon: WalletCards, title: 'Измеримый результат вместо активности', text: 'Экономика сервиса должна быть связана с созданной ценностью, а не с просмотрами резюме или количеством этапов.' },
+  { icon: CheckCircle2, title: 'Одна ветка на старте', text: 'Работодатель проходит путь найма от бизнес-цели до роли и подтверждённых навыков. Другие пять веток не входят в текущий MVP.' },
 ];
 
 export function HomePage() {
@@ -61,7 +61,7 @@ export function HomePage() {
               Сначала определите, <span className="text-[#e0bd63]">какого результата не хватает бизнесу.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              InCORE связывает бизнес-цель с необходимой работой, компетенциями и исполнителем. Не вакансия ради откликов, а способ получить нужный бизнесу результат.
+              InCORE связывает бизнес-цель с необходимой работой, компетенциями и исполнителем. Не вакансия ради откликов, а найм под нужный бизнесу результат.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link to="/register" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d4a017] px-6 py-4 font-semibold text-[#10103e] shadow-lg hover:bg-[#e5b52f]">
@@ -71,7 +71,7 @@ export function HomePage() {
                 Как это работает
               </a>
             </div>
-            <p className="mt-4 text-xs leading-5 text-slate-400">Начните с одной бизнес-цели. Система найма строится вокруг результата.</p>
+            <p className="mt-4 text-xs leading-5 text-slate-400">Начните с одной бизнес-цели. Текущий MVP сфокусирован на найме; пять других веток отложены.</p>
           </div>
 
           <div className="rounded-3xl border border-white/15 bg-white/[0.07] p-4 shadow-2xl backdrop-blur sm:p-6">
@@ -152,8 +152,8 @@ export function HomePage() {
         <div className="overflow-hidden rounded-3xl bg-[#000052] px-6 py-10 text-white sm:px-10 sm:py-14 lg:flex lg:items-center lg:justify-between lg:gap-10">
           <div className="max-w-2xl">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e0bd63]">Сначала найдите ограничение</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Сначала результат. Потом необходимая работа.</h2>
-            <p className="mt-4 leading-7 text-slate-300">Опишите бизнес-цель, диагностируйте ограничение и сравните способы получить нужную мощность. Найм является одним из решений, а не стартовой точкой.</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Сначала результат. Затем роль и навыки для найма.</h2>
+            <p className="mt-4 leading-7 text-slate-300">Опишите бизнес-цель, диагностируйте ограничение и подтвердите дефицит мощности. На текущем этапе InCORE ведёт работодателя только по ветке найма.</p>
           </div>
           <Link to="/register" className="mt-8 inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d4a017] px-6 py-4 font-semibold text-[#10103e] hover:bg-[#e5b52f] lg:mt-0">
             Запустить подбор <ArrowRight size={18} />
