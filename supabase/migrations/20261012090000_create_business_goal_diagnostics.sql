@@ -405,6 +405,7 @@ create or replace function public.save_role_decomposition_for_goal(
 )
 returns uuid
 language plpgsql
+security definer
 set search_path = public
 as $function$
 declare
@@ -440,6 +441,13 @@ begin
     p_name, p_description, p_industry, p_category, p_region, p_source, p_skills, p_relations
   );
 
+  if not exists (
+    select 1 from public.roles r
+    where r.id = v_role_id and r.company_id = v_company_id
+  ) then
+    raise exception 'Saved role does not belong to the authenticated company';
+  end if;
+
   insert into public.business_goal_role_links(goal_id, role_id, company_id, user_id)
   values (p_goal_id, v_role_id, v_company_id, auth.uid());
 
@@ -449,3 +457,6 @@ $function$;
 
 revoke all on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) from public, anon;
 grant execute on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) to authenticated;
+
+revoke all on function public.save_role_decomposition(text, text, text, text, text, text, jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.save_role_decomposition(text, text, text, text, text, text, jsonb, jsonb) to service_role;
