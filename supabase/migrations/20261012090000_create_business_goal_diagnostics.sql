@@ -458,5 +458,7 @@ $function$;
 revoke all on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) from public, anon;
 grant execute on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) to authenticated;
 
+drop policy if exists "CEO inserts own roles" on public.roles;
+
 revoke all on function public.save_role_decomposition(text, text, text, text, text, text, jsonb, jsonb) from public, anon, authenticated;
 grant execute on function public.save_role_decomposition(text, text, text, text, text, text, jsonb, jsonb) to service_role;
