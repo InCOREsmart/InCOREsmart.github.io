@@ -8,6 +8,7 @@ create table if not exists public.business_goal_diagnostics (
   baseline_value numeric not null check (baseline_value >= 0),
   target_value numeric not null check (target_value >= 0),
   unit text not null check (char_length(trim(unit)) between 1 and 40),
+  financial_unit text not null default '₽' check (char_length(trim(financial_unit)) between 1 and 12),
   target_date date,
   process_description text not null check (char_length(trim(process_description)) between 1 and 5000),
   constraint_description text not null check (char_length(trim(constraint_description)) between 1 and 5000),
