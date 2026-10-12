@@ -197,6 +197,46 @@ for each row execute function public.set_business_goal_diagnostics_updated_at();
 
 grant select, insert, update, delete on public.business_goal_alternatives to authenticated;
 
+create or replace function public.enforce_business_goal_diagnosis_transition()
+returns trigger
+language plpgsql
+set search_path = public
+as $function$
+declare
+  v_alternative_count integer;
+  v_horizon_count integer;
+begin
+  if new.chosen_solution is not null then
+    select count(*), count(distinct comparison_horizon_months)
+      into v_alternative_count, v_horizon_count
+    from public.business_goal_alternatives
+    where goal_id = new.id;
+
+    if v_alternative_count <> 6 or v_horizon_count <> 1 then
+      raise exception 'Save all six alternatives with one shared comparison horizon before choosing a solution';
+    end if;
+
+    if new.chosen_solution = 'hire' and new.status <> 'ready_for_role' then
+      raise exception 'External hire selection must use ready_for_role status';
+    end if;
+
+    if new.chosen_solution <> 'hire' and new.status <> 'solution_selected' then
+      raise exception 'Non-hire solution must use solution_selected status';
+    end if;
+  elsif new.status in ('ready_for_role', 'solution_selected') then
+    raise exception 'A solution must be selected after the economic comparison';
+  end if;
+
+  return new;
+end;
+$function$;
+
+create trigger business_goal_diagnosis_transition_guard
+before update of chosen_solution, status on public.business_goal_diagnostics
+for each row execute function public.enforce_business_goal_diagnosis_transition();
+
+revoke all on function public.enforce_business_goal_diagnosis_transition() from public, anon, authenticated;
+
 create table if not exists public.hh_oauth_states (
   id uuid primary key default gen_random_uuid(),
   state_hash text not null unique,
