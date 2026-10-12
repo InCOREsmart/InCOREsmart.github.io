@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, FileText, Plus, RefreshCw, Save, Sparkles, Trash2, Upload, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { insuranceAgentDecomposition } from '../../data/insuranceAgentDecomposition';
@@ -41,6 +41,8 @@ const emptyInput: RoleInput = {
   actions: [''],
   expected_results: [''],
 };
+
+type BusinessGoalContext = { id: string; goal_title: string; business_outcome: string; metric_name: string; baseline_value: number; target_value: number; unit: string; process_description: string; constraint_description: string; chosen_solution: string | null; status: string };
 
 type SavedSkill = {
   id: string;
@@ -95,6 +97,8 @@ function cleanList(items: string[]) {
 export function RoleDecompositionPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const businessGoalId = new URLSearchParams(location.search).get('businessGoalId');
   const fileRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState<RoleInput>(emptyInput);
   const [result, setResult] = useState<RoleDecomposition | null>(null);
@@ -105,6 +109,8 @@ export function RoleDecompositionPage() {
   const [openingRoleId, setOpeningRoleId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [documentName, setDocumentName] = useState('');
+  const [businessGoal, setBusinessGoal] = useState<BusinessGoalContext | null>(null);
+  const [loadingBusinessGoal, setLoadingBusinessGoal] = useState(false);
 
   const validation = useMemo(() => result ? validateDecomposition(result) : null, [result]);
   const isInsuranceDemo = input.name.trim().toLowerCase() === 'страховой агент';
@@ -130,6 +136,49 @@ export function RoleDecompositionPage() {
   useEffect(() => {
     if (user) void loadSavedRoles();
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    const loadBusinessGoal = async () => {
+      if (!user || !businessGoalId) { setBusinessGoal(null); return; }
+      setLoadingBusinessGoal(true);
+      setError('');
+      try {
+        const { data, error: goalError } = await supabase
+          .from('business_goal_diagnostics')
+          .select('id, goal_title, business_outcome, metric_name, baseline_value, target_value, unit, process_description, constraint_description, chosen_solution, status')
+          .eq('id', businessGoalId)
+          .maybeSingle();
+        if (goalError) throw goalError;
+        if (!data || data.chosen_solution !== 'hire' || data.status !== 'ready_for_role') {
+          throw new Error('К модели роли можно перейти только из сохранённой диагностики с выбранным внешним наймом.');
+        }
+        if (!active) return;
+        const goal = data as BusinessGoalContext;
+        setBusinessGoal(goal);
+        setInput(prev => ({
+          ...prev,
+          description: (prev.description ?? '').trim() ? prev.description : [
+            goal.business_outcome,
+            `Процесс: ${goal.process_description}`,
+            `Ограничение / гипотеза: ${goal.constraint_description}`,
+          ].join('\n\n'),
+          expected_results: prev.expected_results.some(value => value.trim()) ? prev.expected_results : [
+            `${goal.metric_name}: ${goal.baseline_value} → ${goal.target_value} ${goal.unit}`,
+          ],
+        }));
+      } catch (err) {
+        if (active) {
+          setBusinessGoal(null);
+          setError(err instanceof Error ? err.message : 'Не удалось загрузить бизнес-цель.');
+        }
+      } finally {
+        if (active) setLoadingBusinessGoal(false);
+      }
+    };
+    void loadBusinessGoal();
+    return () => { active = false; };
+  }, [user, businessGoalId]);
 
   const openSavedRole = async (role: SavedRole) => {
     setOpeningRoleId(role.id);
@@ -276,11 +325,11 @@ export function RoleDecompositionPage() {
   };
 
   const save = async () => {
-    if (!result || !validation?.valid || !user) return;
+    if (!result || !validation?.valid || !user || !businessGoalId || !businessGoal || loadingBusinessGoal) return;
     setSaving(true);
     setError('');
     try {
-      const { data, error: rpcError } = await supabase.rpc('save_role_decomposition', {
+      const roleArgs = {
         p_name: result.role.name,
         p_description: result.role.description,
         p_industry: result.role.industry,
@@ -289,7 +338,10 @@ export function RoleDecompositionPage() {
         p_source: isInsuranceDemo ? 'template' : 'ai',
         p_skills: result.skills,
         p_relations: result.skills_relations,
-      });
+      };
+      const { data, error: rpcError } = businessGoalId && businessGoal
+        ? await supabase.rpc('save_role_decomposition_for_goal', { ...roleArgs, p_goal_id: businessGoalId })
+        : await supabase.rpc('save_role_decomposition', roleArgs);
       if (rpcError) throw rpcError;
       if (!data) throw new Error('Роль не сохранена.');
       setResult(null);
@@ -306,6 +358,22 @@ export function RoleDecompositionPage() {
 
   return (
     <div className="w-full min-w-0 p-4 md:p-8 space-y-6 max-w-7xl mx-auto overflow-x-hidden">
+      {!businessGoalId && <section className="rounded-2xl border border-[#B8860B]/30 bg-[#B8860B]/5 p-4 md:p-5">
+        <p className="font-bold text-[#000052]">Сначала бизнес-цель, затем роль</p>
+        <p className="mt-1 text-sm leading-6 text-gray-700">Новая модель роли сохраняется только как ответ на измеренный дефицит мощности и выбранное решение о внешнем найме.</p>
+        <Link to="/ceo/business-goals/new" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#000052] px-4 py-2.5 text-sm font-semibold text-white">Перейти к диагностике бизнес-цели <ArrowLeft className="h-4 w-4 rotate-180" /></Link>
+      </section>}
+      {loadingBusinessGoal && <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Загружаем контекст бизнес-цели…</div>}
+      {businessGoal && <section className="rounded-2xl border border-[#B8860B]/30 bg-[#B8860B]/5 p-4 md:p-5">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#8A6500]">Основание модели роли</p>
+        <h2 className="mt-1 text-lg font-bold text-[#000052]">{businessGoal.goal_title}</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-700">{businessGoal.business_outcome}</p>
+        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          <p><span className="font-semibold text-[#000052]">Целевой показатель:</span> {businessGoal.metric_name}: {businessGoal.baseline_value} → {businessGoal.target_value} {businessGoal.unit}</p>
+          <p><span className="font-semibold text-[#000052]">Ограничение:</span> {businessGoal.constraint_description}</p>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-gray-600">Роль должна отвечать на конкретный дефицит мощности. Не превращайте описание цели в перечень общих обязанностей.</p>
+      </section>}
       <div className="flex items-start gap-2 sm:gap-3 min-w-0">
         <button onClick={() => navigate('/ceo/agents')} className="shrink-0 p-2 rounded-xl hover:bg-[#000052]/5 text-[#000052]" aria-label="Назад"><ArrowLeft className="w-5 h-5" /></button>
         <div className="min-w-0"><h1 className="text-[24px] sm:text-[26px] md:text-3xl font-bold text-[#000052] break-words">Декомпозиция роли</h1><p className="text-sm text-gray-400 mt-1 break-words">AI конвертирует реальную работу роли в проверяемые навыки.</p></div>
@@ -331,7 +399,7 @@ export function RoleDecompositionPage() {
             </div>
             <div><label className="block text-sm font-semibold text-[#000052] mb-1.5">Индустрия</label><select value={input.industry} onChange={e => setInput({ ...input, industry: e.target.value })} className="w-full min-w-0 px-4 py-3 border border-gray-200 rounded-xl text-[#000052]">{INDUSTRIES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
             {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</div>}
-            <button onClick={decompose} disabled={loading} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-50"><Sparkles className="w-5 h-5 shrink-0" />{loading ? 'AI анализирует роль...' : 'AI-декомпозировать роль'}</button>
+            <button onClick={decompose} disabled={loading || !businessGoalId || !businessGoal} className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#000052] text-white rounded-xl font-semibold disabled:opacity-50"><Sparkles className="w-5 h-5 shrink-0" />{loading ? 'AI анализирует роль...' : !businessGoalId || !businessGoal ? 'Сначала выберите внешний найм в диагностике цели' : 'AI-декомпозировать роль'}</button>
           </div>
         </div>
       )}
@@ -366,7 +434,7 @@ export function RoleDecompositionPage() {
           <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 min-w-0"><h3 className="font-bold text-[#000052] mb-3">Связи между навыками</h3><div className="space-y-2">{result.skills_relations.map((relation, index) => <div key={`${relation.skill_from}-${relation.skill_to}-${index}`} className="text-sm flex flex-wrap items-center gap-2 min-w-0"><span className="font-medium text-[#000052] break-words max-w-full">{relation.skill_from}</span><span className="shrink-0 px-2 py-1 bg-[#000052]/5 rounded-lg text-xs">{RELATION_LABELS[relation.relation_type]}</span><span className="font-medium text-[#000052] break-words max-w-full">{relation.skill_to}</span><span className="shrink-0 text-gray-400">{Math.round(relation.strength * 100)}%</span></div>)}</div></div>
 
           {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm break-words">{error}</div>}
-          <div className="flex flex-col md:flex-row gap-3"><button onClick={() => { setResult(null); setError(''); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-[#000052] rounded-xl font-semibold"><RefreshCw className="w-4 h-4 shrink-0" />Изменить входные данные</button><button onClick={save} disabled={!validation.valid || saving} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold disabled:opacity-50"><Save className="w-4 h-4 shrink-0" />{saving ? 'Сохранение...' : 'Подтвердить и сохранить'}</button></div>
+          <div className="flex flex-col md:flex-row gap-3"><button onClick={() => { setResult(null); setError(''); }} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-white border border-gray-200 text-[#000052] rounded-xl font-semibold"><RefreshCw className="w-4 h-4 shrink-0" />Изменить входные данные</button><button onClick={save} disabled={!validation.valid || saving || loadingBusinessGoal || !businessGoalId || !businessGoal} className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold disabled:opacity-50"><Save className="w-4 h-4 shrink-0" />{saving ? 'Сохранение...' : 'Подтвердить и сохранить'}</button></div>
         </div>
       )}
 
