@@ -91,13 +91,13 @@ create table if not exists public.business_goal_alternatives (
   company_id uuid not null references public.companies(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   solution_key text not null check (solution_key in ('develop_team', 'redeploy', 'hire', 'contractor', 'automate', 'redesign_process')),
-  one_time_cost numeric not null default 0 check (one_time_cost >= 0),
-  monthly_cost numeric not null default 0 check (monthly_cost >= 0),
-  expected_monthly_value numeric not null default 0,
-  confidence_pct numeric not null default 50 check (confidence_pct between 0 and 100),
-  time_to_effect_months integer not null default 0 check (time_to_effect_months between 0 and 60),
-  comparison_horizon_months integer not null default 12 check (comparison_horizon_months between 1 and 60),
-  risk_reserve numeric not null default 0 check (risk_reserve >= 0),
+  one_time_cost numeric not null check (one_time_cost >= 0),
+  monthly_cost numeric not null check (monthly_cost >= 0),
+  expected_monthly_value numeric not null,
+  confidence_pct numeric not null check (confidence_pct between 0 and 100),
+  time_to_effect_months integer not null check (time_to_effect_months between 0 and 60),
+  comparison_horizon_months integer not null check (comparison_horizon_months between 1 and 60),
+  risk_reserve numeric not null check (risk_reserve >= 0),
   expected_benefit numeric generated always as (
     expected_monthly_value
       * greatest(comparison_horizon_months - time_to_effect_months, 0)
