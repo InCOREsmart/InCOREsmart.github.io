@@ -145,6 +145,11 @@ export function BusinessGoalDiagnosisPage() {
       setSaving(false);
       return;
     }
+    if (current === null || required === null) {
+      setError('Укажите текущую и требуемую мощность за один и тот же период, чтобы проверить дефицит.');
+      setSaving(false);
+      return;
+    }
     if ((current !== null && (!Number.isFinite(current) || current < 0)) ||
         (required !== null && (!Number.isFinite(required) || required < 0))) {
       setError('Значения мощности должны быть числами не меньше нуля.');
@@ -188,6 +193,7 @@ export function BusinessGoalDiagnosisPage() {
     setSaving(true);
     setError('');
     try {
+      if (solution === 'hire' && (record.capacity_gap === null || record.capacity_gap <= 0)) { setError('Внешний найм доступен только при измеренном положительном дефиците мощности. Уточните текущую и требуемую мощность.'); setSaving(false); return; }
       if (savedAlternatives.length !== solutions.length) { setError('Сначала сохраните расчёт для всех шести альтернатив. Иначе это не сравнение, а гадание с таблицей.'); setSaving(false); return; }
       const status = solution === 'hire' ? 'ready_for_role' : 'solution_selected';
       const { data, error: updateError } = await supabase.from('business_goal_diagnostics')
@@ -284,10 +290,10 @@ export function BusinessGoalDiagnosisPage() {
               <textarea required rows={3} maxLength={5000} value={form.constraint_description} onChange={e => setField('constraint_description', e.target.value)} placeholder="Например, заявки ждут обработки 3 дня; подтвердите цифрами или наблюдениями" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
             <label className="block text-sm font-semibold text-[#000052]">Текущая мощность (число за период)
-              <input type="number" min="0" step="any" value={form.current_capacity} onChange={e => setField('current_capacity', e.target.value)} placeholder="Например, 80" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
+              <input type="number" min="0" step="any" value={form.current_capacity} onChange={e => setField('current_capacity', e.target.value)} placeholder="Например, 80" required className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
             <label className="block text-sm font-semibold text-[#000052]">Требуемая мощность (за тот же период)
-              <input type="number" min="0" step="any" value={form.required_capacity} onChange={e => setField('required_capacity', e.target.value)} placeholder="Например, 120" className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
+              <input type="number" min="0" step="any" value={form.required_capacity} onChange={e => setField('required_capacity', e.target.value)} placeholder="Например, 120" required className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 font-normal" />
             </label>
           </div>
           <div className="rounded-xl bg-[#F7F8FC] p-4 text-sm leading-6 text-gray-600">Важное правило: ограничение может быть связано с процессом, спросом, распределением задач, навыками или технологией. Сам факт нехватки людей ещё ничего не доказывает.</div>
