@@ -232,3 +232,121 @@ create index if not exists hh_oauth_connections_user_idx on public.hh_oauth_conn
 create trigger hh_oauth_connections_updated_at
 before update on public.hh_oauth_connections
 for each row execute function public.set_business_goal_diagnostics_updated_at();
+
+
+create table if not exists public.business_goal_role_links (
+  id uuid primary key default gen_random_uuid(),
+  goal_id uuid not null,
+  role_id uuid not null references public.roles(id) on delete cascade,
+  company_id uuid not null references public.companies(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (goal_id, role_id),
+  constraint business_goal_role_link_goal_owner foreign key (goal_id, company_id, user_id)
+    references public.business_goal_diagnostics(id, company_id, user_id) on delete cascade
+);
+
+create index if not exists business_goal_role_links_company_created_idx
+  on public.business_goal_role_links(company_id, created_at desc);
+
+alter table public.business_goal_role_links enable row level security;
+
+create policy "business_goal_role_links_select_own"
+  on public.business_goal_role_links for select to authenticated
+  using (exists (
+    select 1 from public.companies c
+    where c.id = business_goal_role_links.company_id
+      and c.user_id = (select auth.uid())
+  ));
+
+create policy "business_goal_role_links_insert_own_hire_goal"
+  on public.business_goal_role_links for insert to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1 from public.companies c
+      where c.id = business_goal_role_links.company_id
+        and c.user_id = (select auth.uid())
+    )
+    and exists (
+      select 1 from public.business_goal_diagnostics g
+      where g.id = business_goal_role_links.goal_id
+        and g.company_id = business_goal_role_links.company_id
+        and g.user_id = (select auth.uid())
+        and g.chosen_solution = 'hire'
+        and g.status = 'ready_for_role'
+    )
+    and exists (
+      select 1 from public.roles r
+      where r.id = business_goal_role_links.role_id
+        and r.company_id = business_goal_role_links.company_id
+    )
+  );
+
+create policy "business_goal_role_links_delete_own"
+  on public.business_goal_role_links for delete to authenticated
+  using (exists (
+    select 1 from public.companies c
+    where c.id = business_goal_role_links.company_id
+      and c.user_id = (select auth.uid())
+  ));
+
+grant select, insert, delete on public.business_goal_role_links to authenticated;
+
+create or replace function public.save_role_decomposition_for_goal(
+  p_goal_id uuid,
+  p_name text,
+  p_description text,
+  p_industry text,
+  p_category text,
+  p_region text,
+  p_source text,
+  p_skills jsonb,
+  p_relations jsonb
+)
+returns uuid
+language plpgsql
+set search_path = public
+as $function$
+declare
+  v_company_id uuid;
+  v_role_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  select c.id into v_company_id
+  from public.companies c
+  where c.user_id = auth.uid()
+  limit 1;
+
+  if v_company_id is null then
+    raise exception 'Company not found';
+  end if;
+
+  if not exists (
+    select 1
+    from public.business_goal_diagnostics g
+    where g.id = p_goal_id
+      and g.company_id = v_company_id
+      and g.user_id = auth.uid()
+      and g.chosen_solution = 'hire'
+      and g.status = 'ready_for_role'
+  ) then
+    raise exception 'External hire must be selected in an owned business goal diagnosis first';
+  end if;
+
+  v_role_id := public.save_role_decomposition(
+    p_name, p_description, p_industry, p_category, p_region, p_source, p_skills, p_relations
+  );
+
+  insert into public.business_goal_role_links(goal_id, role_id, company_id, user_id)
+  values (p_goal_id, v_role_id, v_company_id, auth.uid());
+
+  return v_role_id;
+end;
+$function$;
+
+revoke all on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) from public, anon;
+grant execute on function public.save_role_decomposition_for_goal(uuid, text, text, text, text, text, text, jsonb, jsonb) to authenticated;
