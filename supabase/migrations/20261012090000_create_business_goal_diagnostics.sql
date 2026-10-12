@@ -237,6 +237,42 @@ for each row execute function public.enforce_business_goal_diagnosis_transition(
 
 revoke all on function public.enforce_business_goal_diagnosis_transition() from public, anon, authenticated;
 
+create or replace function public.reset_business_goal_solution_on_alternative_change()
+returns trigger
+language plpgsql
+set search_path = public
+as $function$
+declare
+  v_goal_id uuid;
+begin
+  if tg_op = 'UPDATE' and (
+    old.goal_id is distinct from new.goal_id
+    or old.company_id is distinct from new.company_id
+    or old.user_id is distinct from new.user_id
+    or old.solution_key is distinct from new.solution_key
+  ) then
+    raise exception 'Alternative identity fields cannot be changed';
+  end if;
+
+  v_goal_id := case when tg_op = 'DELETE' then old.goal_id else new.goal_id end;
+
+  update public.business_goal_diagnostics
+  set chosen_solution = null, status = 'diagnosing'
+  where id = v_goal_id and chosen_solution is not null;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$function$;
+
+create trigger business_goal_alternative_change_resets_solution
+before insert or update or delete on public.business_goal_alternatives
+for each row execute function public.reset_business_goal_solution_on_alternative_change();
+
+revoke all on function public.reset_business_goal_solution_on_alternative_change() from public, anon, authenticated;
+
 create table if not exists public.hh_oauth_states (
   id uuid primary key default gen_random_uuid(),
   state_hash text not null unique,
