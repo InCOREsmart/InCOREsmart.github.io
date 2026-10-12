@@ -242,7 +242,7 @@ export function BusinessGoalDiagnosisPage() {
 
       <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
         <h2 className="font-bold text-[#000052]">Последние диагностики</h2>
-        {recent.length === 0 ? <p className="mt-2 text-sm text-gray-500">Сохранённых целей пока нет.</p> : <ul className="mt-3 divide-y divide-gray-100">{recent.map(item => <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#000052]">{item.goal_title}</p><p className="text-sm text-gray-500">{item.metric_name}: {item.baseline_value} → {item.target_value} {item.unit}</p></div><span className="text-xs text-gray-500">{item.chosen_solution ? solutions.find(s => s.value === item.chosen_solution)?.label : 'Решение не выбрано'}</span></li>)}</ul>}
+        {recent.length === 0 ? <p className="mt-2 text-sm text-gray-500">Сохранённых целей пока нет.</p> : <ul className="mt-3 divide-y divide-gray-100">{recent.map(item => <li key={item.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[#000052]">{item.goal_title}</p><p className="text-sm text-gray-500">{item.metric_name}: {item.baseline_value} → {item.target_value} {item.unit}</p><p className="text-xs text-gray-500">{item.chosen_solution ? solutions.find(s => s.value === item.chosen_solution)?.label : 'Решение не выбрано'}</p></div><button type="button" onClick={() => { setRecord(item); setSolution(item.chosen_solution ?? ''); setError(''); }} className="self-start rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-[#000052] hover:bg-gray-50">Открыть</button></li>)}</ul>}
       </section>
     </main>
   );
