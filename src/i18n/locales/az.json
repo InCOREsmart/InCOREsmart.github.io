@@ -181,5 +181,18 @@
     "title": "Rola təsdiqlənmiş uyğunluq",
     "migrationNeeded": "Sübut miqrasiyası hələ verilənlər bazasına tətbiq edilməyib.",
     "details": "Təsdiqlənmiş bacarıqlar: {{verified}} / {{total}}. Yoxlama gözləyir: {{pending}}."
+  },
+  "evidenceReview": {
+    "title": "Bacarıq sübutlarının yoxlanması",
+    "subtitle": "Mənbəni nəzərdən keçirin və yalnız kifayət qədər sübutu olan bacarıqları təsdiqləyin.",
+    "empty": "Yoxlama gözləyən sübut yoxdur.",
+    "candidateId": "Namizəd ID-si",
+    "verify": "Bacarığı təsdiqlə",
+    "reject": "Sübutu rədd et",
+    "verifiedNotice": "Bacarıq təsdiqləndi və uyğunluq hesabına daxil edildi.",
+    "rejectedNotice": "Sübut rədd edildi.",
+    "forbiddenTitle": "Yoxlama icazəsi yoxdur",
+    "forbiddenText": "Bu bölmə yalnız qorunan hesab metadatasında reviewer və ya admin rolu olan istifadəçilər üçün əlçatandır.",
+    "back": "Namizədlərə qayıt"
   }
 }
