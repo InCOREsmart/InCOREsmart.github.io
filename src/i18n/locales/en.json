@@ -181,5 +181,18 @@
     "title": "Verified role match",
     "migrationNeeded": "The evidence migration has not been applied to the database yet.",
     "details": "Verified skills: {{verified}} of {{total}}. Pending review: {{pending}}."
+  },
+  "evidenceReview": {
+    "title": "Skill evidence review",
+    "subtitle": "Review the source and verify only skills supported by sufficient evidence.",
+    "empty": "No evidence is waiting for review.",
+    "candidateId": "Candidate ID",
+    "verify": "Verify skill",
+    "reject": "Reject evidence",
+    "verifiedNotice": "Skill verified. It is now counted in matching.",
+    "rejectedNotice": "Evidence rejected.",
+    "forbiddenTitle": "Review access denied",
+    "forbiddenText": "This section is available only to users with reviewer or admin in protected account metadata.",
+    "back": "Back to candidates"
   }
 }
