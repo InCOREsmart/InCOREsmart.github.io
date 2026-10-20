@@ -78,3 +78,60 @@ grant select, insert, update, delete on table public.candidate_skill_evidence to
 -- Intentionally no browser UPDATE or DELETE policy:
 -- evidence is append-only and clients cannot self-award verified status.
 -- A trusted server-side verifier using the service role may set verification fields.
+
+-- Authorized reviewers can inspect evidence submitted by any employer.
+drop policy if exists "Reviewers can read candidate skill evidence"
+  on public.candidate_skill_evidence;
+create policy "Reviewers can read candidate skill evidence"
+  on public.candidate_skill_evidence
+  for select
+  to authenticated
+  using (
+    coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in ('admin', 'reviewer')
+  );
+
+-- Evidence status can only be changed through this role-checked function.
+-- Browser clients cannot directly update the table.
+create or replace function public.review_candidate_skill_evidence(
+  p_evidence_id uuid,
+  p_status text
+)
+returns public.candidate_skill_evidence
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text;
+  v_record public.candidate_skill_evidence;
+begin
+  v_role := coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '');
+
+  if auth.uid() is null or v_role not in ('admin', 'reviewer') then
+    raise exception 'Not authorized to review candidate evidence'
+      using errcode = '42501';
+  end if;
+
+  if p_status not in ('verified', 'rejected') then
+    raise exception 'Review status must be verified or rejected'
+      using errcode = '22023';
+  end if;
+
+  update public.candidate_skill_evidence
+     set verification_status = p_status,
+         verified_by = auth.uid(),
+         verified_at = now()
+   where id = p_evidence_id
+   returning * into v_record;
+
+  if not found then
+    raise exception 'Candidate evidence not found'
+      using errcode = 'P0002';
+  end if;
+
+  return v_record;
+end;
+$$;
+
+revoke all on function public.review_candidate_skill_evidence(uuid, text) from public, anon;
+grant execute on function public.review_candidate_skill_evidence(uuid, text) to authenticated;
