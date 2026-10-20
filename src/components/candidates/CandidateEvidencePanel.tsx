@@ -129,7 +129,10 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
 
   const sourceLabel = (value: CandidateEvidenceSourceType) =>
     t(`candidateEvidence.sources.${value}`);
-  const verifiedSkillIds = [...new Set(items.filter(item => item.verification_status === 'verified').map(item => item.skill_id))];
+  const verifiedSkillIds = [...new Set([
+    ...items.filter(item => item.verification_status === 'verified').map(item => item.skill_id),
+    ...workHistory.flatMap(item => item.skill_id ? [item.skill_id] : []),
+  ])];
 
   return (
     <section className="mt-4 rounded-xl border border-[#000052]/15 bg-[#000052]/[0.02] p-4 space-y-4">
