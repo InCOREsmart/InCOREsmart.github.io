@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileCheck2, Plus, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -38,7 +38,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     const { data, error: queryError } = await supabase
@@ -49,11 +49,11 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
     if (queryError) setError(queryError.message);
     else setItems((data ?? []) as CandidateSkillEvidence[]);
     setLoading(false);
-  };
+  }, [candidateId]);
 
   useEffect(() => {
     void load();
-  }, [candidateId]);
+  }, [load]);
 
   const save = async () => {
     if (!user || !skillId || (!sourceUri.trim() && !evidenceText.trim())) {
