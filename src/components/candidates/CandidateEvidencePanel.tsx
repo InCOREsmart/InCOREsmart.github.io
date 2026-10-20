@@ -24,6 +24,7 @@ type Props = {
   onClose: () => void;
   onEvidenceChanged?: () => void;
   showWorkHistory?: boolean;
+  additionalVerifiedSkillIds?: string[];
 };
 
 const sourceTypes: CandidateEvidenceSourceType[] = [
@@ -35,7 +36,7 @@ const sourceTypes: CandidateEvidenceSourceType[] = [
   'other',
 ];
 
-export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenceChanged, showWorkHistory = true }: Props) {
+export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenceChanged, showWorkHistory = true, additionalVerifiedSkillIds = [] }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<CandidateSkillEvidence[]>([]);
@@ -133,6 +134,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
   const verifiedSkillIds = [...new Set([
     ...items.filter(item => item.verification_status === 'verified').map(item => item.skill_id),
     ...workHistory.flatMap(item => item.skill_id ? [item.skill_id] : []),
+    ...additionalVerifiedSkillIds,
   ])];
 
   return (
