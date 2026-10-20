@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ClipboardCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, LogOut, XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { CandidateEvidenceSourceType, CandidateEvidenceVerificationStatus } from '../../types/candidateEvidence';
@@ -21,7 +21,7 @@ type SkillRow = { id: string; name: string };
 
 export function CandidateEvidenceReviewPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const role = String(user?.app_metadata?.role ?? '');
   const [databaseAdmin, setDatabaseAdmin] = useState(false);
@@ -120,12 +120,17 @@ export function CandidateEvidenceReviewPage() {
   }
 
   return <main className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6 md:p-8">
-    <header className="flex items-start gap-3">
-      <div className="rounded-xl bg-[#000052]/5 p-3"><ClipboardCheck className="h-6 w-6 text-[#000052]" /></div>
-      <div>
-        <h1 className="text-2xl font-bold text-[#000052]">{t('evidenceReview.title')}</h1>
-        <p className="mt-1 text-sm text-gray-500">{t('evidenceReview.subtitle')}</p>
+    <header className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="rounded-xl bg-[#000052]/5 p-3"><ClipboardCheck className="h-6 w-6 text-[#000052]" /></div>
+        <div>
+          <h1 className="text-2xl font-bold text-[#000052]">{t('evidenceReview.title')}</h1>
+          <p className="mt-1 text-sm text-gray-500">{t('evidenceReview.subtitle')}</p>
+        </div>
       </div>
+      <button type="button" onClick={() => void signOut().then(() => navigate('/login', { replace: true }))} className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#000052] hover:bg-gray-50">
+        <LogOut className="h-4 w-4" /><span className="hidden sm:inline">{t('layout.logout')}</span>
+      </button>
     </header>
     {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 break-words">{error}</p>}
     {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
