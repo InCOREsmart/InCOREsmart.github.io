@@ -119,7 +119,7 @@ export function CandidateEvidenceReviewPage() {
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-800">{t('candidateEvidence.status.pending')}</span>
         </div>
         {item.evidence_text && <p className="mt-4 whitespace-pre-wrap break-words text-sm text-gray-700">{item.evidence_text}</p>}
-        {item.source_uri && <a href={item.source_uri} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm text-blue-700 underline">{item.source_uri}</a>}
+        {item.source_uri && /^https?:\/\//i.test(item.source_uri) && <a href={item.source_uri} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm text-blue-700 underline">{item.source_uri}</a>}
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <button type="button" disabled={busyId === item.id} onClick={() => void review(item, 'verified')} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#000052] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"><CheckCircle2 className="h-4 w-4" />{t('evidenceReview.verify')}</button>
           <button type="button" disabled={busyId === item.id} onClick={() => void review(item, 'rejected')} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 disabled:opacity-50"><XCircle className="h-4 w-4" />{t('evidenceReview.reject')}</button>
