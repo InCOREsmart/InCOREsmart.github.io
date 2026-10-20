@@ -23,6 +23,11 @@ create table if not exists public.candidate_skill_evidence (
     or
     (verification_status in ('verified', 'rejected') and verified_at is not null)
   ),
+  constraint candidate_skill_evidence_source_uri_safe check (
+    source_uri is null
+    or left(lower(source_uri), 7) = 'http://'
+    or left(lower(source_uri), 8) = 'https://'
+  ),
   constraint candidate_skill_evidence_has_content check (
     nullif(trim(coalesce(evidence_text, '')), '') is not null
     or nullif(trim(coalesce(source_uri, '')), '') is not null
