@@ -92,7 +92,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose }: Props) 
           <h4 className="font-semibold text-[#000052]">{t('candidateEvidence.title')}</h4>
           <p className="mt-1 text-xs text-gray-500">{t('candidateEvidence.hint')}</p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-100" aria-label={t('common.close')}>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 hover:bg-gray-100" aria-label={t('candidateEvidence.close')}>
           <X className="h-4 w-4" />
         </button>
       </div>
