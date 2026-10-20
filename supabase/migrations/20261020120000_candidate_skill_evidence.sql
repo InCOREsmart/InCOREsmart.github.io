@@ -21,7 +21,7 @@ create table if not exists public.candidate_skill_evidence (
   constraint candidate_skill_evidence_verification_consistency check (
     (verification_status = 'pending' and verified_at is null and verified_by is null)
     or
-    (verification_status in ('verified', 'rejected') and verified_at is not null and verified_by is not null)
+    (verification_status in ('verified', 'rejected') and verified_at is not null)
   ),
   constraint candidate_skill_evidence_has_content check (
     nullif(trim(coalesce(evidence_text, '')), '') is not null
