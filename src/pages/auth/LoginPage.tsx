@@ -21,6 +21,10 @@ export function LoginPage() {
         navigate('/review/skill-evidence', { replace: true });
         return;
       }
+      if (role === 'candidate') {
+        navigate('/candidate/skills', { replace: true });
+        return;
+      }
       const b2cIntent = localStorage.getItem('incore-b2c-login-intent') === '1';
       if (b2cIntent || role === 'guest') {
         localStorage.removeItem('incore-b2c-login-intent');
