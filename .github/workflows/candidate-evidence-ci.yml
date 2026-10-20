@@ -26,7 +26,7 @@ jobs:
           node-version: 20
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Check translations
         run: npm run check:i18n
       - name: TypeScript check
