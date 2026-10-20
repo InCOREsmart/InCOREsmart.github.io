@@ -9,6 +9,14 @@ import type {
 } from '../../types/candidateEvidence';
 
 type SkillOption = { id: string; name: string };
+type VerifiedWorkHistoryItem = {
+  id: string;
+  contract_id: string;
+  title: string;
+  skill_id: string | null;
+  verified_at: string | null;
+  evidence: Record<string, unknown> | null;
+};
 
 type Props = {
   candidateId: string;
@@ -30,6 +38,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
   const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<CandidateSkillEvidence[]>([]);
+  const [workHistory, setWorkHistory] = useState<VerifiedWorkHistoryItem[]>([]);
   const [skillId, setSkillId] = useState(skills[0]?.id ?? '');
   const [sourceType, setSourceType] = useState<CandidateEvidenceSourceType>('work_sample');
   const [sourceUri, setSourceUri] = useState('');
@@ -48,6 +57,40 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
       .order('created_at', { ascending: false });
     if (queryError) setError(queryError.message);
     else setItems((data ?? []) as CandidateSkillEvidence[]);
+
+    // Work history is derived only from outcomes already marked VERIFIED in the contract workflow.
+    const { data: contractRows, error: contractError } = await supabase
+      .from('contracts')
+      .select('id,title,created_at')
+      .eq('candidate_id', candidateId)
+      .order('created_at', { ascending: false });
+    if (!contractError && contractRows?.length) {
+      const contractIds = contractRows.map(row => row.id);
+      const { data: outcomeRows, error: outcomeError } = await supabase
+        .from('contract_outcome_verifications')
+        .select('id,contract_id,contract_skill_model_id,verified_at,evidence,contract_skill_models(skill_id)')
+        .in('contract_id', contractIds)
+        .eq('status', 'VERIFIED')
+        .order('verified_at', { ascending: false });
+      if (!outcomeError) {
+        const titles = Object.fromEntries(contractRows.map(row => [row.id, row.title]));
+        setWorkHistory((outcomeRows ?? []).map(row => {
+          const model = row.contract_skill_models as unknown as { skill_id: string } | null;
+          return {
+            id: row.id,
+            contract_id: row.contract_id,
+            title: titles[row.contract_id] ?? t('candidateEvidence.unknownContract'),
+            skill_id: model?.skill_id ?? null,
+            verified_at: row.verified_at,
+            evidence: row.evidence as Record<string, unknown> | null,
+          };
+        }));
+      } else {
+        setWorkHistory([]);
+      }
+    } else {
+      setWorkHistory([]);
+    }
     setLoading(false);
   }, [candidateId]);
 
@@ -86,6 +129,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
 
   const sourceLabel = (value: CandidateEvidenceSourceType) =>
     t(`candidateEvidence.sources.${value}`);
+  const verifiedSkillIds = [...new Set(items.filter(item => item.verification_status === 'verified').map(item => item.skill_id))];
 
   return (
     <section className="mt-4 rounded-xl border border-[#000052]/15 bg-[#000052]/[0.02] p-4 space-y-4">
@@ -129,6 +173,16 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
         <Plus className="h-4 w-4" />{saving ? t('common.loading') : t('candidateEvidence.add')}
       </button>
 
+      <div className="rounded-xl border border-[#B8860B]/25 bg-white p-3 sm:p-4 space-y-2">
+        <h5 className="font-semibold text-[#000052]">{t('candidateEvidence.passportTitle')}</h5>
+        <p className="text-xs text-gray-500">{t('candidateEvidence.passportHint')}</p>
+        <div className="text-sm font-semibold text-[#B8860B]">{t('candidateEvidence.verifiedSkillsCount', { count: verifiedSkillIds.length })}</div>
+        {verifiedSkillIds.length ? <div className="flex flex-wrap gap-2">{verifiedSkillIds.map(id => {
+          const skill = skills.find(option => option.id === id);
+          return <span key={id} className="rounded-full bg-[#000052]/5 px-3 py-1 text-xs text-[#000052]">{skill?.name ?? t('candidateEvidence.unknownSkill')}</span>;
+        })}</div> : <p className="text-sm text-gray-500">{t('candidateEvidence.noVerifiedSkills')}</p>}
+      </div>
+
       <div className="space-y-2">
         <h5 className="text-sm font-semibold text-[#000052]">{t('candidateEvidence.history')}</h5>
         {loading ? <p className="text-sm text-gray-500">{t('common.loading')}</p> : items.length === 0 ? (
@@ -151,6 +205,23 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
               </div>
             </div>
           );
+        })}
+      </div>
+
+      <div className="space-y-2">
+        <h5 className="text-sm font-semibold text-[#000052]">{t('candidateEvidence.workHistoryTitle')}</h5>
+        {loading ? <p className="text-sm text-gray-500">{t('common.loading')}</p> : workHistory.length === 0 ? (
+          <p className="text-sm text-gray-500">{t('candidateEvidence.workHistoryEmpty')}</p>
+        ) : workHistory.map(item => {
+          const skill = skills.find(option => option.id === item.skill_id);
+          return <div key={item.id} className="rounded-lg border border-gray-200 bg-white p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[#000052]">{skill?.name ?? t('candidateEvidence.unknownSkill')}</span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">{t('candidateEvidence.status.verified')}</span>
+            </div>
+            <p className="mt-1 text-sm text-gray-700">{item.title}</p>
+            {item.verified_at && <p className="mt-1 text-xs text-gray-500">{new Date(item.verified_at).toLocaleDateString()}</p>}
+          </div>;
         })}
       </div>
     </section>
