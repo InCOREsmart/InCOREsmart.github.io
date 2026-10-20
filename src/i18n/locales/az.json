@@ -176,5 +176,10 @@
       "rejected": "Təsdiqlənməyib"
     },
     "close": "Bağla"
+  },
+  "evidenceMatching": {
+    "title": "Rola təsdiqlənmiş uyğunluq",
+    "migrationNeeded": "Sübut miqrasiyası hələ verilənlər bazasına tətbiq edilməyib.",
+    "details": "Təsdiqlənmiş bacarıqlar: {{verified}} / {{total}}. Yoxlama gözləyir: {{pending}}."
   }
 }
