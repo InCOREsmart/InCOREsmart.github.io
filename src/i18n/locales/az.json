@@ -36,7 +36,8 @@
     "registerError": "Qeydiyyat xətası. Sonra yenidən cəhd edin.",
     "alreadyHaveAccount": "Hesabınız var?",
     "loginNow": "Daxil ol",
-    "legalFooter": "Qeydiyyatdan keçməklə smart-müqavilə şərtləri və vergi xəbərdarlığı ilə tanış olduğunuzu təsdiq edirsiniz"
+    "legalFooter": "Qeydiyyatdan keçməklə smart-müqavilə şərtləri və vergi xəbərdarlığı ilə tanış olduğunuzu təsdiq edirsiniz",
+    "roleCandidate": "Namizəd"
   },
   "ceoDashboard": {
     "title": "Maliyyə nüvəsi",
@@ -201,5 +202,19 @@
     "forbiddenTitle": "Yoxlama icazəsi yoxdur",
     "forbiddenText": "Bu bölmə yalnız qorunan hesab metadatasında reviewer və ya admin rolu olan istifadəçilər üçün əlçatandır.",
     "back": "Namizədlərə qayıt"
+  },
+  "candidatePortal": {
+    "eyebrow": "Mütəxəssis profili",
+    "title": "Peşəkar kapital pasportu",
+    "subtitle": "Artıq sahib olduğunuz bacarıqları təsdiqləyin. Təsdiq CV-dəki iş stajına deyil, sübutlara əsaslanır.",
+    "profileHint": "Bacarıqlarınızı göstərən iş nümunələri, portfolio, sertifikatlar və keçidlər əlavə edin. Yoxlayan şəxs hər qeydi təsdiq və ya rədd edə bilər.",
+    "verifiedWork": "İşəgötürən tərəfindən təsdiqlənmiş nəticələr",
+    "verifiedWorkHint": "Burada yalnız müqavilə üzrə yoxlamadan keçmiş nəticələr göstərilir.",
+    "noWorkHistory": "Hələ təsdiqlənmiş iş nəticəsi yoxdur.",
+    "evidenceTitle": "Bacarıq sübutları",
+    "evidenceHint": "Hər bacarıq üçün keçid və ya təsvir əlavə edin. Göndərilən qeydlər yoxlama gözləyəcək.",
+    "noProfile": "Namizəd profili tapılmadı.",
+    "noProfileHint": "İşəgötürən profilinizi bu təsdiqlənmiş email ünvanı ilə yaratmalıdır. Profil artıq varsa, email-in təsdiqləndiyini yoxlayın.",
+    "claimError": "Profili əlaqələndirmək mümkün olmadı. Email-i təsdiqləyin və işəgötürənin sizi InCORE-a əlavə etdiyinə əmin olun."
   }
 }
