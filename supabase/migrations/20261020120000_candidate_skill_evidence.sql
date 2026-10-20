@@ -88,6 +88,11 @@ create policy "Reviewers can read candidate skill evidence"
   to authenticated
   using (
     coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in ('admin', 'reviewer')
+    or exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+        and upper(ur.role::text) = 'ADMIN'
+    )
   );
 
 -- Evidence status can only be changed through this role-checked function.
@@ -107,7 +112,15 @@ declare
 begin
   v_role := coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '');
 
-  if auth.uid() is null or v_role not in ('admin', 'reviewer') then
+  if auth.uid() is null
+     or not (
+       v_role in ('admin', 'reviewer')
+       or exists (
+         select 1 from public.user_roles ur
+         where ur.user_id = auth.uid()
+           and upper(ur.role::text) = 'ADMIN'
+       )
+     ) then
     raise exception 'Not authorized to review candidate evidence'
       using errcode = '42501';
   end if;
@@ -135,3 +148,19 @@ $$;
 
 revoke all on function public.review_candidate_skill_evidence(uuid, text) from public, anon;
 grant execute on function public.review_candidate_skill_evidence(uuid, text) to authenticated;
+
+-- Reviewers need skill labels in the review queue; skill definitions are not candidate PII.
+drop policy if exists "Reviewers can read skill names"
+  on public.skills;
+create policy "Reviewers can read skill names"
+  on public.skills
+  for select
+  to authenticated
+  using (
+    coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in ('admin', 'reviewer')
+    or exists (
+      select 1 from public.user_roles ur
+      where ur.user_id = auth.uid()
+        and upper(ur.role::text) = 'ADMIN'
+    )
+  );
