@@ -1,4 +1,118 @@
 -- Candidate skill evidence: append-only evidence records for skills claimed by a candidate.
+-- Allow a candidate to claim the employer-created profile after verifying their email.
+alter table public.candidates
+  add column if not exists candidate_user_id uuid
+  references auth.users(id) on delete set null;
+
+create unique index if not exists candidates_candidate_user_id_unique
+  on public.candidates (candidate_user_id)
+  where candidate_user_id is not null;
+
+drop policy if exists "Candidates can read their claimed profile" on public.candidates;
+create policy "Candidates can read their claimed profile"
+  on public.candidates
+  for select
+  to authenticated
+  using (candidate_user_id = auth.uid());
+
+drop policy if exists "Candidates can read role for claimed profile" on public.roles;
+create policy "Candidates can read role for claimed profile"
+  on public.roles
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.candidates c
+      where c.role_id = roles.id and c.candidate_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Candidates can read role skills for claimed profile" on public.role_skills;
+create policy "Candidates can read role skills for claimed profile"
+  on public.role_skills
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.candidates c
+      where c.role_id = role_skills.role_id and c.candidate_user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Candidates can read skills for claimed profile" on public.skills;
+create policy "Candidates can read skills for claimed profile"
+  on public.skills
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1
+        from public.candidates c
+        join public.role_skills rs on rs.role_id = c.role_id
+       where c.candidate_user_id = auth.uid()
+         and rs.skill_id = skills.id
+    )
+  );
+
+create or replace function public.claim_candidate_profile()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $
+declare
+  v_email text;
+  v_confirmed_at timestamptz;
+  v_candidate public.candidates;
+  v_count integer;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select email, email_confirmed_at
+    into v_email, v_confirmed_at
+    from auth.users
+   where id = auth.uid();
+
+  if v_email is null or v_confirmed_at is null then
+    raise exception 'Verify your email before claiming a candidate profile'
+      using errcode = '42501';
+  end if;
+
+  select count(*) into v_count
+    from public.candidates
+   where lower(email) = lower(v_email)
+     and (candidate_user_id is null or candidate_user_id = auth.uid());
+
+  if v_count = 0 then
+    raise exception 'No unclaimed candidate profile matches this verified email'
+      using errcode = 'P0002';
+  end if;
+
+  if v_count > 1 then
+    raise exception 'More than one candidate profile matches this email; support review is required'
+      using errcode = '21000';
+  end if;
+
+  update public.candidates
+     set candidate_user_id = auth.uid()
+   where lower(email) = lower(v_email)
+     and (candidate_user_id is null or candidate_user_id = auth.uid())
+  returning * into v_candidate;
+
+  return jsonb_build_object(
+    'id', v_candidate.id,
+    'full_name', v_candidate.full_name,
+    'email', v_candidate.email,
+    'role_id', v_candidate.role_id
+  );
+end;
+$;
+
+revoke all on function public.claim_candidate_profile() from public, anon;
+grant execute on function public.claim_candidate_profile() to authenticated;
+
 -- Link a candidate profile to contracts created from that candidate card.
 alter table public.contracts
   add column if not exists candidate_id uuid
@@ -67,9 +181,23 @@ create policy "Employers can read evidence for their candidates"
     )
   );
 
+drop policy if exists "Candidates can read evidence for their claimed profile"
+  on public.candidate_skill_evidence;
+create policy "Candidates can read evidence for their claimed profile"
+  on public.candidate_skill_evidence
+  for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.candidates c
+      where c.id = candidate_skill_evidence.candidate_id
+        and c.candidate_user_id = auth.uid()
+    )
+  );
+
 drop policy if exists "Employers can submit pending evidence for their candidates"
   on public.candidate_skill_evidence;
-create policy "Employers can submit pending evidence for their candidates"
+create policy "Employers and candidates can submit pending evidence"
   on public.candidate_skill_evidence
   for insert
   to authenticated
@@ -82,7 +210,7 @@ create policy "Employers can submit pending evidence for their candidates"
       select 1
       from public.candidates c
       where c.id = candidate_skill_evidence.candidate_id
-        and c.user_id = auth.uid()
+        and (c.user_id = auth.uid() or c.candidate_user_id = auth.uid())
     )
   );
 
