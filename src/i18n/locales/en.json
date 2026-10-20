@@ -147,5 +147,33 @@
     "save": "Save",
     "cancel": "Cancel",
     "success": "Saved successfully"
+  },
+  "candidateEvidence": {
+    "title": "Skill evidence",
+    "hint": "Add evidence sources. New records remain pending until reviewed.",
+    "skill": "Skill",
+    "source": "Source type",
+    "link": "Evidence link",
+    "description": "What this evidence demonstrates",
+    "add": "Add evidence",
+    "history": "Evidence history",
+    "empty": "No evidence added yet.",
+    "unknownSkill": "Skill from another role",
+    "required": "Select a skill and add text or a link.",
+    "open": "Skill evidence",
+    "hide": "Hide evidence",
+    "sources": {
+      "resume": "Resume",
+      "portfolio": "Portfolio",
+      "work_sample": "Work sample",
+      "reference": "Reference",
+      "certificate": "Certificate",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending review",
+      "verified": "Verified",
+      "rejected": "Not verified"
+    }
   }
 }
