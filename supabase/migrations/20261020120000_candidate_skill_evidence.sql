@@ -366,3 +366,41 @@ on public.contracts
 for each row execute function public.validate_contract_candidate_owner();
 
 revoke all on function public.validate_contract_candidate_owner() from public, anon, authenticated;
+
+-- Expose only verified work history to the candidate, not full contract financial records.
+create or replace function public.get_candidate_verified_work_history()
+returns table (
+  contract_title text,
+  skill_name text,
+  verified_at timestamptz,
+  evidence jsonb
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or not exists (
+    select 1 from public.candidates c
+    where c.candidate_user_id = auth.uid()
+  ) then
+    raise exception 'No claimed candidate profile for this account'
+      using errcode = '42501';
+  end if;
+
+  return query
+  select c.title, s.name, cov.verified_at, cov.evidence
+    from public.candidates candidate
+    join public.contracts c on c.candidate_id = candidate.id
+    join public.contract_skill_models csm on csm.contract_id = c.id
+    join public.skills s on s.id = csm.skill_id
+    join public.contract_outcome_verifications cov
+      on cov.contract_skill_model_id = csm.id
+   where candidate.candidate_user_id = auth.uid()
+     and cov.status = 'VERIFIED'
+   order by cov.verified_at desc nulls last;
+end;
+$$;
+
+revoke all on function public.get_candidate_verified_work_history() from public, anon;
+grant execute on function public.get_candidate_verified_work_history() to authenticated;
