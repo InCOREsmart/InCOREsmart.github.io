@@ -146,7 +146,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
                   </div>
                   <p className="mt-1 text-xs text-gray-500">{sourceLabel(item.source_type)}</p>
                   {item.evidence_text && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-gray-700">{item.evidence_text}</p>}
-                  {item.source_uri && <a href={item.source_uri} target="_blank" rel="noreferrer" className="mt-2 block break-all text-sm text-blue-700 underline">{item.source_uri}</a>}
+                  {item.source_uri && /^https?:\/\//i.test(item.source_uri) && <a href={item.source_uri} target="_blank" rel="noreferrer" className="mt-2 block break-all text-sm text-blue-700 underline">{item.source_uri}</a>}
                 </div>
               </div>
             </div>
