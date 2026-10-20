@@ -17,7 +17,7 @@ export function LoginPage() {
   useEffect(() => {
     if (!loading && user && role) {
       const protectedRole = String(user.app_metadata?.role ?? '');
-      if (protectedRole === 'reviewer' || protectedRole === 'admin') {
+      if (protectedRole === 'reviewer' || protectedRole === 'admin' || role === 'reviewer' || role === 'admin') {
         navigate('/review/skill-evidence', { replace: true });
         return;
       }
