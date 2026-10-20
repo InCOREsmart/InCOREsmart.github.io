@@ -14,6 +14,7 @@ type Props = {
   candidateId: string;
   skills: SkillOption[];
   onClose: () => void;
+  onEvidenceChanged?: () => void;
 };
 
 const sourceTypes: CandidateEvidenceSourceType[] = [
@@ -25,7 +26,7 @@ const sourceTypes: CandidateEvidenceSourceType[] = [
   'other',
 ];
 
-export function CandidateEvidencePanel({ candidateId, skills, onClose }: Props) {
+export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenceChanged }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<CandidateSkillEvidence[]>([]);
@@ -78,6 +79,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose }: Props) 
       setSourceUri('');
       setEvidenceText('');
       await load();
+      onEvidenceChanged?.();
     }
     setSaving(false);
   };
