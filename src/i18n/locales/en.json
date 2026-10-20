@@ -176,5 +176,10 @@
       "rejected": "Not verified"
     },
     "close": "Close"
+  },
+  "evidenceMatching": {
+    "title": "Verified role match",
+    "migrationNeeded": "The evidence migration has not been applied to the database yet.",
+    "details": "Verified skills: {{verified}} of {{total}}. Pending review: {{pending}}."
   }
 }
