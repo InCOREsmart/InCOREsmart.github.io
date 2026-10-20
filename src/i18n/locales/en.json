@@ -175,7 +175,14 @@
       "verified": "Verified",
       "rejected": "Not verified"
     },
-    "close": "Close"
+    "close": "Close",
+    "passportTitle": "Professional Capital Passport",
+    "passportHint": "Only skills with reviewed evidence appear here. Resume scores do not count as verification.",
+    "verifiedSkillsCount": "Verified skills: {{count}}",
+    "noVerifiedSkills": "No skills have verified evidence yet.",
+    "workHistoryTitle": "Verified work outcomes",
+    "workHistoryEmpty": "No contract outcomes have been verified yet.",
+    "unknownContract": "Contract"
   },
   "evidenceMatching": {
     "title": "Verified role match",
