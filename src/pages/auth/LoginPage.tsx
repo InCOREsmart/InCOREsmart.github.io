@@ -16,6 +16,15 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!loading && user && role) {
+      const protectedRole = String(user.app_metadata?.role ?? '');
+      if (protectedRole === 'reviewer' || protectedRole === 'admin' || role === 'reviewer' || role === 'admin') {
+        navigate('/review/skill-evidence', { replace: true });
+        return;
+      }
+      if (role === 'candidate') {
+        navigate('/candidate/skills', { replace: true });
+        return;
+      }
       const b2cIntent = localStorage.getItem('incore-b2c-login-intent') === '1';
       if (b2cIntent || role === 'guest') {
         localStorage.removeItem('incore-b2c-login-intent');

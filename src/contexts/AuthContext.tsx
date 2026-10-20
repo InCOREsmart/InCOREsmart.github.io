@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { DEMO_AGENTS } from '../lib/demoData';
 import { COMPLETED_DEMO_CONTRACTS } from '../lib/demoCompletedContracts';
 
-type UserRole = 'ceo' | 'agent' | 'guest' | null;
+type UserRole = 'ceo' | 'agent' | 'guest' | 'candidate' | 'admin' | 'reviewer' | null;
 interface AuthContextType { user: User | null; session: Session | null; role: UserRole; loading: boolean; signIn: (email: string, password: string) => Promise<void>; signOut: () => Promise<void> }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEMO_EMAILS = new Set(['hronline1226@gmail.com', 'hronline2612@gmail.com', 'hronline1226ceo@gmail.com']);
@@ -27,7 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const profileType = (u.user_metadata?.profile_type as string | undefined)?.toLowerCase();
     if (profileType === 'b2c_calculator') return 'guest';
     if (meta === 'guest') return 'guest';
-    if (meta === 'agent' || meta === 'ceo') return meta;
+    if (meta === 'agent' || meta === 'ceo' || meta === 'candidate') return meta;
+    const appRole = (u.app_metadata?.role as string | undefined)?.toLowerCase();
+    if (appRole === 'admin' || appRole === 'reviewer') return appRole;
+    const { data: assignedRole } = await supabase.from('user_roles').select('role').eq('user_id', u.id).maybeSingle();
+    if (String(assignedRole?.role ?? '').toUpperCase() === 'ADMIN') return 'admin';
     const { data: c } = await supabase.from('companies').select('id').eq('user_id', u.id).maybeSingle();
     if (c) return 'ceo';
     const { data: a } = await supabase.from('agents').select('id').eq('user_id', u.id).maybeSingle();
@@ -66,13 +70,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const meta = (s.user.user_metadata?.role as string | undefined)?.toLowerCase();
+      const appRole = (s.user.app_metadata?.role as string | undefined)?.toLowerCase();
       const profileType = (s.user.user_metadata?.profile_type as string | undefined)?.toLowerCase();
+      if (appRole === 'admin' || appRole === 'reviewer') {
+        setRole(appRole);
+        setLoading(false);
+        return;
+      }
       if (profileType === 'b2c_calculator' || meta === 'guest') {
         setRole('guest');
         setLoading(false);
         return;
       }
-      if (meta === 'agent' || meta === 'ceo') {
+      if (meta === 'agent' || meta === 'ceo' || meta === 'candidate') {
         setRole(meta);
         setLoading(false);
         return;

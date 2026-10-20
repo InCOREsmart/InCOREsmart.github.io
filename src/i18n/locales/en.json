@@ -36,7 +36,8 @@
     "registerError": "Registration error. Please try again later.",
     "alreadyHaveAccount": "Already have an account?",
     "loginNow": "Login",
-    "legalFooter": "By registering, you confirm that you have read the smart contract terms and tax disclaimer"
+    "legalFooter": "By registering, you confirm that you have read the smart contract terms and tax disclaimer",
+    "roleCandidate": "Candidate"
   },
   "ceoDashboard": {
     "title": "Financial Core",
@@ -147,5 +148,73 @@
     "save": "Save",
     "cancel": "Cancel",
     "success": "Saved successfully"
+  },
+  "candidateEvidence": {
+    "title": "Skill evidence",
+    "hint": "Add evidence sources. New records remain pending until reviewed.",
+    "skill": "Skill",
+    "source": "Source type",
+    "link": "Evidence link",
+    "description": "What this evidence demonstrates",
+    "add": "Add evidence",
+    "history": "Evidence history",
+    "empty": "No evidence added yet.",
+    "unknownSkill": "Skill from another role",
+    "required": "Select a skill and add text or a link.",
+    "open": "Skill evidence",
+    "hide": "Hide evidence",
+    "sources": {
+      "resume": "Resume",
+      "portfolio": "Portfolio",
+      "work_sample": "Work sample",
+      "reference": "Reference",
+      "certificate": "Certificate",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending review",
+      "verified": "Verified",
+      "rejected": "Not verified"
+    },
+    "close": "Close",
+    "passportTitle": "Professional Capital Passport",
+    "passportHint": "Only skills with reviewed evidence appear here. Resume scores do not count as verification.",
+    "verifiedSkillsCount": "Verified skills: {{count}}",
+    "noVerifiedSkills": "No skills have verified evidence yet.",
+    "workHistoryTitle": "Verified work outcomes",
+    "workHistoryEmpty": "No contract outcomes have been verified yet.",
+    "unknownContract": "Contract"
+  },
+  "evidenceMatching": {
+    "title": "Verified role match",
+    "migrationNeeded": "The evidence migration has not been applied to the database yet.",
+    "details": "Verified skills: {{verified}} of {{total}}. Pending review: {{pending}}."
+  },
+  "evidenceReview": {
+    "title": "Skill evidence review",
+    "subtitle": "Review the source and verify only skills supported by sufficient evidence.",
+    "empty": "No evidence is waiting for review.",
+    "candidateId": "Candidate ID",
+    "verify": "Verify skill",
+    "reject": "Reject evidence",
+    "verifiedNotice": "Skill verified. It is now counted in matching.",
+    "rejectedNotice": "Evidence rejected.",
+    "forbiddenTitle": "Review access denied",
+    "forbiddenText": "This section is available only to users with reviewer or admin in protected account metadata.",
+    "back": "Back to candidates"
+  },
+  "candidatePortal": {
+    "eyebrow": "Specialist profile",
+    "title": "Professional Capital Passport",
+    "subtitle": "Confirm the skills you already have. Verification relies on evidence, not years listed on a resume.",
+    "profileHint": "Add work samples, portfolio items, certificates, and links that demonstrate your skills. A reviewer can verify or reject each entry.",
+    "verifiedWork": "Employer-verified work outcomes",
+    "verifiedWorkHint": "Only outcomes from contracts that have passed verification appear here.",
+    "noWorkHistory": "No verified work outcomes yet.",
+    "evidenceTitle": "Skill evidence",
+    "evidenceHint": "Add a link or description for each skill. Submitted records will appear as pending review.",
+    "noProfile": "Candidate profile not found.",
+    "noProfileHint": "An employer must create your profile with this verified email address. If the profile already exists, make sure your email is confirmed.",
+    "claimError": "Could not link the profile. Verify your email and make sure an employer has added you to InCORE."
   }
 }
