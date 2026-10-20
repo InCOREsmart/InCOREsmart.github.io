@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CandidateEvidencePanel } from '../../components/candidates/CandidateEvidencePanel';
 
-type CandidateProfile = { id: string; full_name: string; email: string; role_id: string };
+type CandidateProfile = { id: string; full_name: string; email: string | null; role_id: string };
 type RoleSkill = { weight: number; skills: { id: string; name: string } | null };
 type VerifiedOutcome = { contract_title: string; skill_name: string; verified_at: string | null; evidence: Record<string, unknown> | null };
 
@@ -34,7 +34,7 @@ export function CandidateSkillsPage() {
       const { data: claimed, error: claimError } = await supabase.rpc('claim_candidate_profile');
       if (claimError || !claimed?.id || !claimed?.role_id) {
         if (alive) {
-          setError(claimError?.message || t('candidatePortal.noProfile'));
+          setError(claimError ? t('candidatePortal.claimError') : t('candidatePortal.noProfile'));
           setLoading(false);
         }
         return;
