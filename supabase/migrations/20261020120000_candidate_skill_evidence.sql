@@ -1,4 +1,13 @@
 -- Candidate skill evidence: append-only evidence records for skills claimed by a candidate.
+-- Link a candidate profile to contracts created from that candidate card.
+alter table public.contracts
+  add column if not exists candidate_id uuid
+  references public.candidates(id) on delete set null;
+
+create index if not exists contracts_candidate_id_idx
+  on public.contracts (candidate_id)
+  where candidate_id is not null;
+
 -- Verification must be performed by a trusted server-side process, never by the browser client.
 
 create table if not exists public.candidate_skill_evidence (
