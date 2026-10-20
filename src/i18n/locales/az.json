@@ -147,5 +147,33 @@
     "save": "Saxla",
     "cancel": "Ləğv et",
     "success": "Uğurla saxlanıldı"
+  },
+  "candidateEvidence": {
+    "title": "Bacarıq sübutları",
+    "hint": "Təsdiq mənbələri əlavə edin. Yeni qeydlər yoxlama gözləyir.",
+    "skill": "Bacarıq",
+    "source": "Mənbə növü",
+    "link": "Sübut keçidi",
+    "description": "Bu sübut bacarığın nəyini göstərir",
+    "add": "Sübut əlavə et",
+    "history": "Sübut tarixçəsi",
+    "empty": "Hələ sübut əlavə edilməyib.",
+    "unknownSkill": "Başqa roldan bacarıq",
+    "required": "Bacarıq seçin və mətn və ya keçid əlavə edin.",
+    "open": "Bacarıq sübutları",
+    "hide": "Sübutları gizlət",
+    "sources": {
+      "resume": "CV",
+      "portfolio": "Portfolio",
+      "work_sample": "İş nümunəsi",
+      "reference": "Tövsiyə",
+      "certificate": "Sertifikat",
+      "other": "Digər"
+    },
+    "status": {
+      "pending": "Yoxlama gözləyir",
+      "verified": "Təsdiqlənib",
+      "rejected": "Təsdiqlənməyib"
+    }
   }
 }
