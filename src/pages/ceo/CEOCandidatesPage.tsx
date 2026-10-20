@@ -11,19 +11,55 @@ type RoleSkill = { weight:number; skills:{id:string;name:string}|null };
 type Role = { id:string; name:string; description:string|null; role_skills:RoleSkill[] };
 type Candidate = { id:string; full_name:string; email:string|null; source:string; role_id:string|null; status:string };
 
+async function loadEvidenceMatchRecords(candidateIds: string[]): Promise<Array<EvidenceMatchInput & { candidate_id: string }>> {
+  if (!candidateIds.length) return [];
+  const { data: evidence, error: evidenceError } = await supabase
+    .from('candidate_skill_evidence')
+    .select('candidate_id,skill_id,verification_status')
+    .in('candidate_id', candidateIds);
+  if (evidenceError) throw evidenceError;
+
+  const { data: contracts, error: contractsError } = await supabase
+    .from('contracts')
+    .select('id,candidate_id')
+    .in('candidate_id', candidateIds);
+  if (contractsError) throw contractsError;
+  if (!contracts?.length) return (evidence ?? []) as Array<EvidenceMatchInput & { candidate_id: string }>;
+
+  const { data: outcomes, error: outcomesError } = await supabase
+    .from('contract_outcome_verifications')
+    .select('contract_id,contract_skill_models(skill_id)')
+    .in('contract_id', contracts.map(contract => contract.id))
+    .eq('status', 'VERIFIED');
+  if (outcomesError) throw outcomesError;
+
+  const candidateByContract = new Map(contracts.map(contract => [contract.id, contract.candidate_id]));
+  const verifiedWork = (outcomes ?? []).flatMap(outcome => {
+    const model = outcome.contract_skill_models as unknown as { skill_id: string } | null;
+    const candidateId = candidateByContract.get(outcome.contract_id);
+    return model?.skill_id && candidateId
+      ? [{ candidate_id: candidateId, skill_id: model.skill_id, verification_status: 'verified' as const }]
+      : [];
+  });
+  return [
+    ...((evidence ?? []) as Array<EvidenceMatchInput & { candidate_id: string }>),
+    ...verifiedWork,
+  ];
+}
+
 export function CEOCandidatesPage(){
   const {t}=useTranslation(); const {user}=useAuth(); const navigate=useNavigate();
   const [roles,setRoles]=useState<Role[]>([]); const [candidates,setCandidates]=useState<Candidate[]>([]); const [roleId,setRoleId]=useState('');
   const [name,setName]=useState(''); const [email,setEmail]=useState(''); const [source,setSource]=useState('manual'); const [resume,setResume]=useState('');
   const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [selectingId,setSelectingId]=useState<string|null>(null); const [error,setError]=useState(''); const [showForm,setShowForm]=useState(false); const [evidenceCandidateId,setEvidenceCandidateId]=useState<string|null>(null); const [evidenceRecords,setEvidenceRecords]=useState<Array<EvidenceMatchInput & {candidate_id:string}>>([]); const [evidenceLoadError,setEvidenceLoadError]=useState(false);
 
-  const load=async()=>{if(!user)return;setLoading(true);setError('');try{const {data:rs,error:re}=await supabase.from('roles').select('id,name,description,role_skills(weight,skills(id,name))').eq('is_active',true).order('created_at',{ascending:false});if(re)throw re;setRoles((rs||[]) as unknown as Role[]);const {data:cs,error:ce}=await supabase.from('candidates').select('id,full_name,email,source,role_id,status').eq('user_id',user.id).order('created_at',{ascending:false});if(ce)throw ce;const loadedCandidates=(cs||[]) as Candidate[];setCandidates(loadedCandidates);if(loadedCandidates.length){const {data:ev,error:ee}=await supabase.from('candidate_skill_evidence').select('candidate_id,skill_id,verification_status').in('candidate_id',loadedCandidates.map(candidate=>candidate.id));if(ee){setEvidenceRecords([]);setEvidenceLoadError(true);}else{setEvidenceRecords((ev||[]) as Array<EvidenceMatchInput & {candidate_id:string}>);setEvidenceLoadError(false);}}else{setEvidenceRecords([]);setEvidenceLoadError(false);}}catch(e:any){setError(e?.message||t('candidates.error'));}finally{setLoading(false);}};
+  const load=async()=>{if(!user)return;setLoading(true);setError('');try{const {data:rs,error:re}=await supabase.from('roles').select('id,name,description,role_skills(weight,skills(id,name))').eq('is_active',true).order('created_at',{ascending:false});if(re)throw re;setRoles((rs||[]) as unknown as Role[]);const {data:cs,error:ce}=await supabase.from('candidates').select('id,full_name,email,source,role_id,status').eq('user_id',user.id).order('created_at',{ascending:false});if(ce)throw ce;const loadedCandidates=(cs||[]) as Candidate[];setCandidates(loadedCandidates);if(loadedCandidates.length){try{setEvidenceRecords(await loadEvidenceMatchRecords(loadedCandidates.map(candidate=>candidate.id)));setEvidenceLoadError(false);}catch{setEvidenceRecords([]);setEvidenceLoadError(true);}}else{setEvidenceRecords([]);setEvidenceLoadError(false);}}catch(e:any){setError(e?.message||t('candidates.error'));}finally{setLoading(false);}};
   useEffect(()=>{void load();},[user]);
   useEffect(()=>{if(!roleId&&roles[0])setRoleId(roles[0].id);},[roles,roleId]);
 
   const save=async()=>{if(!user||!name.trim()||!roleId){setError(t('candidates.required'));return;}setSaving(true);setError('');try{const {data:company,error:companyError}=await supabase.from('companies').select('id').eq('user_id',user.id).maybeSingle();if(companyError)throw companyError;if(!company?.id)throw new Error(t('candidates.error'));const {error:insertError}=await supabase.from('candidates').insert({user_id:user.id,company_id:company.id,role_id:roleId,full_name:name.trim(),email:email.trim()||null,source,resume_text:resume.trim()||null,skill_scores:{},status:'new'});if(insertError)throw insertError;setName('');setEmail('');setResume('');setShowForm(false);await load();}catch(e:any){setError(e?.message||t('candidates.error'));}finally{setSaving(false);}};
 
-  const refreshEvidence=async()=>{if(!candidates.length)return;const {data,error:queryError}=await supabase.from('candidate_skill_evidence').select('candidate_id,skill_id,verification_status').in('candidate_id',candidates.map(candidate=>candidate.id));if(queryError){setEvidenceLoadError(true);return;}setEvidenceRecords((data||[]) as Array<EvidenceMatchInput & {candidate_id:string}>);setEvidenceLoadError(false);};
+  const refreshEvidence=async()=>{if(!candidates.length)return;try{setEvidenceRecords(await loadEvidenceMatchRecords(candidates.map(candidate=>candidate.id)));setEvidenceLoadError(false);}catch{setEvidenceLoadError(true);}};
 
   const selectExecutor=async(candidate:Candidate)=>{if(!user)return;setSelectingId(candidate.id);setError('');try{const {error:updateError}=await supabase.from('candidates').update({status:'selected'}).eq('id',candidate.id).eq('user_id',user.id);if(updateError)throw updateError;setCandidates(current=>current.map(item=>item.id===candidate.id?{...item,status:'selected'}:item));navigate(`/ceo/contracts/new?candidate=${encodeURIComponent(candidate.id)}`);}catch(e:any){setError(e?.message||t('candidates.selectionError'));}finally{setSelectingId(null);}};
 
