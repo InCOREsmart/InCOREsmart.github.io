@@ -368,10 +368,12 @@ for each row execute function public.validate_contract_candidate_owner();
 revoke all on function public.validate_contract_candidate_owner() from public, anon, authenticated;
 
 -- Expose only verified work history to the candidate, not full contract financial records.
-create or replace function public.get_candidate_verified_work_history()
+drop function if exists public.get_candidate_verified_work_history();
+create function public.get_candidate_verified_work_history()
 returns table (
   contract_title text,
   skill_name text,
+  skill_id uuid,
   verified_at timestamptz,
   evidence jsonb
 )
@@ -389,7 +391,7 @@ begin
   end if;
 
   return query
-  select c.title, s.name, cov.verified_at, cov.evidence
+  select c.title, s.name, s.id, cov.verified_at, cov.evidence
     from public.candidates candidate
     join public.contracts c on c.candidate_id = candidate.id
     join public.contract_skill_models csm on csm.contract_id = c.id
