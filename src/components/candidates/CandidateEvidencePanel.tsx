@@ -23,6 +23,7 @@ type Props = {
   skills: SkillOption[];
   onClose: () => void;
   onEvidenceChanged?: () => void;
+  showWorkHistory?: boolean;
 };
 
 const sourceTypes: CandidateEvidenceSourceType[] = [
@@ -34,7 +35,7 @@ const sourceTypes: CandidateEvidenceSourceType[] = [
   'other',
 ];
 
-export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenceChanged }: Props) {
+export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenceChanged, showWorkHistory = true }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [items, setItems] = useState<CandidateSkillEvidence[]>([]);
@@ -211,7 +212,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
         })}
       </div>
 
-      <div className="space-y-2">
+      {showWorkHistory && <div className="space-y-2">
         <h5 className="text-sm font-semibold text-[#000052]">{t('candidateEvidence.workHistoryTitle')}</h5>
         {loading ? <p className="text-sm text-gray-500">{t('common.loading')}</p> : workHistory.length === 0 ? (
           <p className="text-sm text-gray-500">{t('candidateEvidence.workHistoryEmpty')}</p>
@@ -226,7 +227,7 @@ export function CandidateEvidencePanel({ candidateId, skills, onClose, onEvidenc
             {item.verified_at && <p className="mt-1 text-xs text-gray-500">{new Date(item.verified_at).toLocaleDateString()}</p>}
           </div>;
         })}
-      </div>
+      </div>}
     </section>
   );
 }
