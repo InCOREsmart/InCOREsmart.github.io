@@ -164,3 +164,34 @@ create policy "Reviewers can read skill names"
         and upper(ur.role::text) = 'ADMIN'
     )
   );
+
+-- Prevent evidence from being attached to a skill outside the candidate's role.
+create or replace function public.validate_candidate_skill_evidence_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+      from public.candidates c
+      join public.role_skills rs on rs.role_id = c.role_id
+     where c.id = new.candidate_id
+       and rs.skill_id = new.skill_id
+  ) then
+    raise exception 'Evidence skill must belong to the candidate role'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists candidate_skill_evidence_role_guard
+  on public.candidate_skill_evidence;
+create trigger candidate_skill_evidence_role_guard
+before insert or update of candidate_id, skill_id
+on public.candidate_skill_evidence
+for each row execute function public.validate_candidate_skill_evidence_role();
+
+revoke all on function public.validate_candidate_skill_evidence_role() from public, anon, authenticated;
