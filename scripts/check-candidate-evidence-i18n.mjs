@@ -2,6 +2,12 @@ import fs from 'node:fs';
 
 const locales = ['ru', 'en', 'kk', 'az'];
 const required = {
+  auth: ['roleCandidate'],
+  candidatePortal: [
+    'eyebrow', 'title', 'subtitle', 'profileHint', 'verifiedWork',
+    'verifiedWorkHint', 'noWorkHistory', 'evidenceTitle', 'evidenceHint',
+    'noProfile', 'noProfileHint', 'claimError',
+  ],
   candidateEvidence: [
     'title', 'hint', 'skill', 'source', 'link', 'description', 'add',
     'history', 'empty', 'unknownSkill', 'required', 'open', 'hide', 'close',
