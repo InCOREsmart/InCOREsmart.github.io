@@ -24,7 +24,28 @@ export function CandidateEvidenceReviewPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const role = String(user?.app_metadata?.role ?? '');
-  const authorized = role === 'admin' || role === 'reviewer';
+  const [databaseAdmin, setDatabaseAdmin] = useState(false);
+  const [roleChecked, setRoleChecked] = useState(false);
+  const authorized = role === 'admin' || role === 'reviewer' || databaseAdmin;
+
+  useEffect(() => {
+    let alive = true;
+    if (!user) {
+      setRoleChecked(true);
+      return () => { alive = false; };
+    }
+    if (role === 'admin' || role === 'reviewer') {
+      setRoleChecked(true);
+      return () => { alive = false; };
+    }
+    supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => {
+        if (!alive) return;
+        setDatabaseAdmin(String(data?.role ?? '').toUpperCase() === 'ADMIN');
+        setRoleChecked(true);
+      });
+    return () => { alive = false; };
+  }, [user, role]);
   const [items, setItems] = useState<EvidenceRow[]>([]);
   const [skills, setSkills] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -33,7 +54,12 @@ export function CandidateEvidenceReviewPage() {
   const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
-    if (!authorized) {
+    if (!roleChecked) return;
+    if (!roleChecked || loading) {
+    return <div className="p-6 text-sm text-gray-500">{t('common.loading')}</div>;
+  }
+
+  if (!authorized) {
       setLoading(false);
       return;
     }
@@ -64,7 +90,7 @@ export function CandidateEvidenceReviewPage() {
       setSkills({});
     }
     setLoading(false);
-  }, [authorized]);
+  }, [authorized, roleChecked]);
 
   useEffect(() => { void load(); }, [load]);
 
