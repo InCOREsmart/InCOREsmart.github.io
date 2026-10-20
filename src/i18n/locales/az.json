@@ -175,7 +175,14 @@
       "verified": "Təsdiqlənib",
       "rejected": "Təsdiqlənməyib"
     },
-    "close": "Bağla"
+    "close": "Bağla",
+    "passportTitle": "Peşəkar kapital pasportu",
+    "passportHint": "Burada yalnız sübutları yoxlanmış bacarıqlar göstərilir. CV balı təsdiq sayılmır.",
+    "verifiedSkillsCount": "Təsdiqlənmiş bacarıqlar: {{count}}",
+    "noVerifiedSkills": "Hələ təsdiqlənmiş sübutu olan bacarıq yoxdur.",
+    "workHistoryTitle": "Təsdiqlənmiş iş nəticələri",
+    "workHistoryEmpty": "Hələ təsdiqlənmiş müqavilə nəticəsi yoxdur.",
+    "unknownContract": "Müqavilə"
   },
   "evidenceMatching": {
     "title": "Rola təsdiqlənmiş uyğunluq",
