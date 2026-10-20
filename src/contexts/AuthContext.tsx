@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { DEMO_AGENTS } from '../lib/demoData';
 import { COMPLETED_DEMO_CONTRACTS } from '../lib/demoCompletedContracts';
 
-type UserRole = 'ceo' | 'agent' | 'guest' | 'admin' | 'reviewer' | null;
+type UserRole = 'ceo' | 'agent' | 'guest' | 'candidate' | 'admin' | 'reviewer' | null;
 interface AuthContextType { user: User | null; session: Session | null; role: UserRole; loading: boolean; signIn: (email: string, password: string) => Promise<void>; signOut: () => Promise<void> }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEMO_EMAILS = new Set(['hronline1226@gmail.com', 'hronline2612@gmail.com', 'hronline1226ceo@gmail.com']);
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const profileType = (u.user_metadata?.profile_type as string | undefined)?.toLowerCase();
     if (profileType === 'b2c_calculator') return 'guest';
     if (meta === 'guest') return 'guest';
-    if (meta === 'agent' || meta === 'ceo') return meta;
+    if (meta === 'agent' || meta === 'ceo' || meta === 'candidate') return meta;
     const appRole = (u.app_metadata?.role as string | undefined)?.toLowerCase();
     if (appRole === 'admin' || appRole === 'reviewer') return appRole;
     const { data: assignedRole } = await supabase.from('user_roles').select('role').eq('user_id', u.id).maybeSingle();
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
         return;
       }
-      if (meta === 'agent' || meta === 'ceo') {
+      if (meta === 'agent' || meta === 'ceo' || meta === 'candidate') {
         setRole(meta);
         setLoading(false);
         return;
