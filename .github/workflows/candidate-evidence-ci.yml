@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Check translations
-        run: npm run check:i18n
+        run: node scripts/check-candidate-evidence-i18n.mjs
       - name: TypeScript check
         run: npm run typecheck
       - name: Production build
