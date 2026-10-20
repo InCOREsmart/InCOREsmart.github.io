@@ -72,6 +72,9 @@ create policy "Employers can submit pending evidence for their candidates"
     )
   );
 
+grant select, insert on table public.candidate_skill_evidence to authenticated;
+grant select, insert, update, delete on table public.candidate_skill_evidence to service_role;
+
 -- Intentionally no browser UPDATE or DELETE policy:
 -- evidence is append-only and clients cannot self-award verified status.
 -- A trusted server-side verifier using the service role may set verification fields.
