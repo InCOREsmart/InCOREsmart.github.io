@@ -209,3 +209,32 @@ on public.candidate_skill_evidence
 for each row execute function public.validate_candidate_skill_evidence_role();
 
 revoke all on function public.validate_candidate_skill_evidence_role() from public, anon, authenticated;
+
+-- A contract can only be linked to a candidate owned by the same company.
+create or replace function public.validate_contract_candidate_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.candidate_id is not null and not exists (
+    select 1
+      from public.candidates c
+     where c.id = new.candidate_id
+       and c.company_id = new.company_id
+  ) then
+    raise exception 'Contract candidate must belong to the contract company'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists contracts_candidate_owner_guard on public.contracts;
+create trigger contracts_candidate_owner_guard
+before insert or update of candidate_id, company_id
+on public.contracts
+for each row execute function public.validate_contract_candidate_owner();
+
+revoke all on function public.validate_contract_candidate_owner() from public, anon, authenticated;
