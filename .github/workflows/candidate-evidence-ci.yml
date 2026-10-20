@@ -1,0 +1,35 @@
+name: Candidate Evidence CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "supabase/migrations/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/candidate-evidence-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check translations
+        run: npm run check:i18n
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
