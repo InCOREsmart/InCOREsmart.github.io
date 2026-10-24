@@ -69,7 +69,7 @@ $$('[data-action="make-deal"]').forEach(function(b){b.addEventListener('click',f
 $$('[data-vacancy]').forEach(function(){});
 $$('[data-deal]').forEach(function(b){b.addEventListener('click',function(){var d=s.deals.filter(function(x){return x.id===Number(b.dataset.deal)})[0];toast(d.candidate+' · '+d.hours+' ч · '+money(d.total)+' · '+d.status)})});
 $$('[data-action="switch"]').forEach(function(b){b.addEventListener('click',function(){role(s.role==='employer'?'candidate':'employer')})});
-$$('[data-action="reset"]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Сбросить демо-данные в этом браузере?')){localStorage.removeItem('incore-web-state');s=Object.assign({},defaults,{goal:Object.assign({},defaults.goal),swipes:[],deals:[],events:[]});save();render();toast('Демо-данные сброшены')}})}
+$('[data-action="reset"]').forEach(function(b){b.addEventListener('click',function(){if(confirm('Сбросить демо-данные в этом браузере?')){localStorage.removeItem('incore-web-state');s=Object.assign({},defaults,{goal:Object.assign({},defaults.goal),swipes:[],deals:[],events:[]});save();render();toast('Демо-данные сброшены')}});});
 }
 render();
 })();
