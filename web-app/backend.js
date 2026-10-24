@@ -53,7 +53,7 @@ function addBackendNav(){
 }
 function serverMessage(title,body,action){return '<div class="card empty"><strong>'+esc(title)+'</strong>'+esc(body)+(action?'<div style="margin-top:15px"><button class="btn blue" data-open-auth>'+esc(action)+'</button></div>':'')+'</div>'}
 function renderServerView(view){
- serverView=view;$('#nav button').forEach(function(b){b.classList.toggle('active',b.dataset.backendView===view);if(b.dataset.view)b.classList.remove('active')});
+ serverView=view;all('#nav button').forEach(function(b){b.classList.toggle('active',b.dataset.backendView===view);if(b.dataset.view)b.classList.remove('active')});
  var titleMap={'server-profile':'Профиль','server-vacancies':activeWorkspace()==='employer'?'Мои вакансии':'Вакансии','server-applications':'Отклики','server-deals':'Безопасная сделка'};
  $('#title').textContent=titleMap[view]||'InCORE';
  $('#content').innerHTML='<div class="card empty"><strong>Загружаем данные</strong>Обращаемся к базе InCORE…</div>';
