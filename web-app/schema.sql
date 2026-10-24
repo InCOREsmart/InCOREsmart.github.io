@@ -2,7 +2,7 @@
 -- Apply once to the intended InCORE Supabase project after review.
 create extension if not exists pgcrypto;
 
-create type public.inc_app_role as enum ('candidate','employer','admin');
+create type public.inc_app_role as enum ('candidate','employer');
 create type public.inc_app_deal_status as enum (
   'draft','terms_agreed','funding_pending','funded','in_progress',
   'submitted','accepted','disputed','paid','refunded','cancelled'
