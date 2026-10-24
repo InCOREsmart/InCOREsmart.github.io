@@ -124,8 +124,17 @@ alter table public.inc_app_deal_events enable row level security;
 alter table public.inc_app_reports enable row level security;
 
 -- Profiles: self-access by default; discoverable profiles can be viewed by signed-in users.
-create policy "profile self or discoverable read" on public.inc_app_profiles
-for select to authenticated using (id = (select auth.uid()) or visibility = 'discoverable');
+create policy "profile self, discoverable, or applicant read" on public.inc_app_profiles
+for select to authenticated using (
+  id = (select auth.uid())
+  or visibility = 'discoverable'
+  or exists (
+    select 1 from public.inc_applications a
+    join public.inc_app_vacancies v on v.id = a.vacancy_id
+    where a.candidate_id = inc_app_profiles.id
+      and v.employer_id = (select auth.uid())
+  )
+);
 create policy "profile owner insert" on public.inc_app_profiles
 for insert to authenticated with check (id = (select auth.uid()));
 create policy "profile owner update" on public.inc_app_profiles
@@ -198,8 +207,19 @@ for insert to authenticated with check (
   employer_id = (select auth.uid()) and status = 'draft'
   and exists (select 1 from public.inc_app_profiles p
     where p.id = (select auth.uid()) and p.role = 'employer')
-  and exists (select 1 from public.inc_app_profiles p
-    where p.id = candidate_id and p.role = 'candidate' and p.visibility = 'discoverable')
+  and exists (
+    select 1 from public.inc_app_profiles p
+    where p.id = inc_app_deals.candidate_id and p.role = 'candidate'
+      and (
+        p.visibility = 'discoverable'
+        or exists (
+          select 1 from public.inc_applications a
+          join public.inc_app_vacancies v on v.id = a.vacancy_id
+          where a.candidate_id = inc_app_deals.candidate_id
+            and v.employer_id = (select auth.uid())
+        )
+      )
+  )
 );
 -- Intentionally no client UPDATE policy for deals. State changes/payment actions must be server validated.
 
