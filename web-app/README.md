@@ -16,6 +16,9 @@ Standalone responsive web app for InCORE's result-based hiring workflow.
 - Employer vacancy creation and publication.
 - Candidate vacancy feed and applications.
 - Employer application review, shortlist/decline actions.
+- Vacancy filters for city, work format, salary range, employment type, schedule and experience.
+- Skill-overlap indicator for matching (a transparent deterministic heuristic, not an AI assessment).
+- Interview scheduling with candidate confirmation/decline and employer cancellation.
 - Draft paid-work verification cycle created from a candidate application.
 - Server-controlled deal actions: both parties accept terms, employer starts, candidate submits, employer accepts or opens a dispute, and employer can cancel before work starts. Every transition is serialized in Postgres and recorded in an event log.
 - Transparent draft calculation: 1,500 RUB/hour and 12% InCORE fee.
