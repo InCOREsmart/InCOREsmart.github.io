@@ -217,6 +217,7 @@ for insert to authenticated with check (
           join public.inc_app_vacancies v on v.id = a.vacancy_id
           where a.candidate_id = inc_app_deals.candidate_id
             and v.employer_id = (select auth.uid())
+            and v.id = inc_app_deals.vacancy_id
         )
       )
   )
