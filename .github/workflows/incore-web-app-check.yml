@@ -7,6 +7,7 @@ on:
     paths:
       - "web-app/**"
       - "public/web-app/**"
+      - "supabase/functions/incore-app-deal-action/**"
       - ".github/workflows/incore-web-app-check.yml"
       - "package.json"
       - "package-lock.json"
@@ -15,6 +16,7 @@ on:
     paths:
       - "web-app/**"
       - "public/web-app/**"
+      - "supabase/functions/incore-app-deal-action/**"
       - "package.json"
       - "package-lock.json"
       - "src/**"
@@ -31,11 +33,14 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.x"
       - name: Check source and deploy copies match
         run: |
           cmp web-app/index.html public/web-app/index.html
           cmp web-app/backend.js public/web-app/backend.js
-      - name: Check inline application JavaScript
+      - name: Check application JavaScript
         run: |
           python3 - <<'PY'
           import re
@@ -48,6 +53,8 @@ jobs:
           PY
           node --check /tmp/incore-inline.js
           node --check web-app/backend.js
+      - name: Check Supabase Edge Function
+        run: deno check supabase/functions/incore-app-deal-action/index.ts
       - name: Install dependencies
         run: npm install
       - name: Typecheck existing InCORE website
