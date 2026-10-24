@@ -1,37 +1,45 @@
-# InCORE Web App (prototype)
+# InCORE Web App
 
-Standalone web application prototype for InCORE's result-based hiring flow. This directory is intentionally isolated from the existing website root.
+Standalone responsive web app for InCORE's result-based hiring workflow.
 
-## Open locally
-Open `index.html` in a browser. The interface is responsive and has no build step. Google Fonts are optional; system fonts are used as a fallback.
+## Code layout
+- `index.html` — responsive employer/candidate interface and demo flows.
+- `backend.js` — Supabase Auth, profiles, vacancies, applications, employer application review, and draft verification deals.
+- `schema.sql` — baseline database schema for a new isolated installation.
+- `migrations/` — additive migrations applied to the connected InCORE Supabase project.
+- `../public/web-app/` — deployable copy used by the existing Vite/GitHub Pages build. CI checks that the deploy copy matches these source files.
 
-## Implemented in this prototype
-- Employer/candidate role switch.
-- Business goal editor (business outcome, constraints, hiring direction, timeframe, salary band, skills).
-- Candidate selection flow and candidate-side vacancy feed.
-- Demo applications and activity history.
-- Draft paid-work verification cycle (2–48 hours).
-- Transparent calculation: 1,500 RUB/hour and 12% InCORE fee.
-- Local browser persistence.
-- Responsive desktop and mobile layouts.
+## Current functionality
+- Employer and candidate account registration/login through Supabase Auth.
+- Role-specific profile creation and editing.
+- Business goal editor, saved to the InCORE database for employer accounts.
+- Employer vacancy creation and publication.
+- Candidate vacancy feed and applications.
+- Employer application review, shortlist/decline actions.
+- Draft paid-work verification cycle created from a candidate application.
+- Transparent draft calculation: 1,500 RUB/hour and 12% InCORE fee.
+- Demo dashboard and candidate cards remain available for interface exploration.
+- RLS policies restrict profile, vacancy, application, and deal access by role and relationship.
 
-## Important limitations
-This is an interactive frontend prototype, not a production hiring or payment service:
-- The sample candidate/vacancy profiles are fictional demo records.
-- Data currently stays in the current browser; accounts and cross-user sync are not connected.
-- Similarity percentages are display examples, not computed assessments.
-- No funds are reserved, charged, or paid.
-- The word “escrow” must not be used as a legal/payment claim until the provider and contract model support it.
-- Do not enter real personal, passport, banking, or other sensitive data.
+## What is not production-ready
+- No payment provider is connected. The app does not reserve, charge, release, or pay money.
+- Deal status transitions are deliberately server-only; funding, acceptance, disputes and payouts need validated Edge Functions and payment webhooks.
+- Demo candidate cards and demo vacancies are fictional and are not stored as real users.
+- Similarity percentages on demo cards are illustrative, not actual candidate scoring.
+- Email verification behavior depends on the current Supabase Auth settings.
+- A public launch must wait for approved privacy policy, personal-data consent, operator/legal details, terms for paid verification, and payment-provider/legal review. Do not enter sensitive personal, passport, banking, or other confidential data in the prototype.
 
-## Backend migration
-`schema.sql` proposes isolated `inc_app_*` tables with row-level security. It must be reviewed and applied as a migration only after confirming this is the intended InCORE Supabase project. It does not alter the existing InCORE tables.
+## Supabase
+The `inc_app_*` schema has been added to the existing project `InCOREsmart.github.io` with additive migrations only. Existing InCORE tables were not modified. Row-level security is enabled on all new tables; the Supabase Security Advisor did not report findings for the new `inc_app_*` tables at the time of the latest check. The project still has pre-existing security warnings on unrelated tables/functions.
+
+## Local testing
+Open `index.html` in a browser. Supabase account features require internet access. The static demo UI works without registration, and local demo state is saved in the browser.
 
 ## Production checklist
-1. Connect Supabase Auth and persist user role/profile.
-2. Replace demo profiles with server-backed candidate and vacancy records.
-3. Implement server-validated deal state transitions; clients must not update payment statuses.
-4. Connect a payment provider only after legal and operational review.
-5. Add email/Telegram notifications, moderation, reporting, audit logs, privacy/consent flows and data-retention rules.
-6. Test RLS with employer, candidate, anonymous and admin accounts.
-7. Deploy to a separate preview URL before linking from the main InCORE site.
+1. Approve privacy policy, personal-data consent text, and legal terms.
+2. Test sign-up/email verification with separate employer and candidate accounts.
+3. Test RLS as anonymous, employer, candidate, and admin.
+4. Implement server-validated deal state transitions, audit events and payment webhooks.
+5. Connect a suitable payment provider only after legal and operational review.
+6. Add notifications, moderation, reporting, retention/deletion workflows, monitoring and backup checks.
+7. Deploy publicly only after the above gates are passed.
