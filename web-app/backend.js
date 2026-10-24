@@ -18,7 +18,7 @@ function closeModal(){$('#auth-backdrop').classList.remove('open')}
 function showAuthButton(){var actions=$('.top-actions');if(!actions)return;var b=$('#auth-open');if(!b){b=document.createElement('button');b.id='auth-open';b.className='auth-btn';b.type='button';actions.insertBefore(b,actions.firstChild);b.addEventListener('click',openModal)}b.textContent=session?'Аккаунт':'Войти / регистрация';b.title=session&&session.user?session.user.email:'Войти или создать аккаунт';b.className=session?'auth-btn auth-user':'auth-btn'}
 async function ensureProfile(user){var q=await db.from('inc_app_profiles').select('*').eq('id',user.id).maybeSingle();if(q.error)throw q.error;if(q.data){profile=q.data;return profile}
 var pending={};try{pending=JSON.parse(localStorage.getItem('incore-pending-profile')||'{}')}catch(e){}
-if(!pending.full_name){openModal();setMode('signup');$('#auth-msg').textContent='Аккаунт создан. Заполните имя и роль, чтобы завершить настройку профиля.';throw new Error('PROFILE_SETUP_REQUIRED')}
+if(!pending.full_name){var meta=user.user_metadata||{};pending={full_name:meta.full_name||String(user.email||'candidate').split('@')[0],role:meta.role==='employer'?'employer':'candidate',discoverable:meta.discoverable===true}}
 var payload={id:user.id,role:pending.role==='candidate'?'candidate':'employer',full_name:pending.full_name,visibility:pending.role==='candidate'&&pending.discoverable?'discoverable':'private'};
 var ins=await db.from('inc_app_profiles').insert(payload).select('*').single();if(ins.error){if(ins.error.code==='23505'){var again=await db.from('inc_app_profiles').select('*').eq('id',user.id).maybeSingle();if(!again.error&&again.data){profile=again.data;return profile}}throw ins.error}profile=ins.data;localStorage.removeItem('incore-pending-profile');return profile}
 async function syncGoal(){if(!session||!profile||profile.role!=='employer')return;var q=await db.from('inc_app_business_goals').select('*').eq('employer_id',session.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle();if(q.error){console.warn('Goal sync:',q.error.message);return}if(!q.data)return;
@@ -29,7 +29,7 @@ localStorage.setItem('incore-server-goal-id',g.id);if(changed){setTimeout(functi
 async function activate(user){session=user?{user:user}:null;profile=null;if(session){try{profile=await ensureProfile(session.user);var roleButton=document.querySelector('[data-role="'+profile.role+'"]');if(roleButton)roleButton.click();await syncGoal()}catch(e){if(e.message!=='PROFILE_SETUP_REQUIRED')console.error('InCORE profile:',e.message)}}showAuthButton()}
 async function submitAuth(e){e.preventDefault();if(busy)return;busy=true;var btn=$('#auth-submit');btn.disabled=true;$('#auth-msg').textContent='Обрабатываем запрос…';
 try{var email=$('#auth-email').value.trim(),password=$('#auth-password').value;
-if(mode==='signup'){var pending={full_name:$('#auth-name').value.trim(),role:$('#auth-role').value,discoverable:$('#auth-discover').checked};if(!pending.full_name)throw new Error('Укажите имя и фамилию.');localStorage.setItem('incore-pending-profile',JSON.stringify(pending));var r=await db.auth.signUp({email:email,password:password});if(r.error)throw r.error;if(r.data.session){await activate(r.data.session.user);closeModal();note('Аккаунт создан')}else{$('#auth-msg').textContent='Проверьте почту и подтвердите регистрацию. После подтверждения войдите с этим адресом.';return}}
+if(mode==='signup'){var pending={full_name:$('#auth-name').value.trim(),role:$('#auth-role').value,discoverable:$('#auth-discover').checked};if(!pending.full_name)throw new Error('Укажите имя и фамилию.');localStorage.setItem('incore-pending-profile',JSON.stringify(pending));var r=await db.auth.signUp({email:email,password:password,options:{data:{full_name:pending.full_name,role:pending.role,discoverable:pending.discoverable}}});if(r.error)throw r.error;if(r.data.session){await activate(r.data.session.user);closeModal();note('Аккаунт создан')}else{$('#auth-msg').textContent='Проверьте почту и подтвердите регистрацию. После подтверждения войдите с этим адресом.';return}}
 else{var r2=await db.auth.signInWithPassword({email:email,password:password});if(r2.error)throw r2.error;await activate(r2.data.user);closeModal();note('Вы вошли в InCORE')}
 }catch(err){$('#auth-msg').textContent=err.message==='PROFILE_SETUP_REQUIRED'?'Завершите настройку профиля.':(err.message||'Не удалось выполнить запрос.');}finally{busy=false;btn.disabled=false}}
 async function saveGoal(form){if(!session||!profile||profile.role!=='employer'){note('Для сохранения бизнес-цели в базе войдите как работодатель. Пока цель останется в этом браузере.');return}
@@ -42,6 +42,7 @@ if(result.error){console.error('Goal save:',result.error);note('Цель сох�
 localStorage.setItem('incore-server-goal-id',result.data.id);note('Бизнес-цель сохранена в базе InCORE')}
 
 var serverView=null, navObserver=null;
+function $(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function activeWorkspace(){var b=$('button[data-role].active');return b?b.dataset.role:'employer'}
 function addBackendNav(){
  var navEl=$('#nav');if(!navEl)return;
