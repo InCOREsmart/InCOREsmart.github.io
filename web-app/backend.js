@@ -20,12 +20,12 @@ async function ensureProfile(user){var q=await db.from('inc_app_profiles').selec
 var pending={};try{pending=JSON.parse(localStorage.getItem('incore-pending-profile')||'{}')}catch(e){}
 if(!pending.full_name){openModal();setMode('signup');$('#auth-msg').textContent='Аккаунт создан. Заполните имя и роль, чтобы завершить настройку профиля.';throw new Error('PROFILE_SETUP_REQUIRED')}
 var payload={id:user.id,role:pending.role==='candidate'?'candidate':'employer',full_name:pending.full_name,visibility:pending.role==='candidate'&&pending.discoverable?'discoverable':'private'};
-var ins=await db.from('inc_app_profiles').insert(payload).select('*').single();if(ins.error)throw ins.error;profile=ins.data;localStorage.removeItem('incore-pending-profile');return profile}
+var ins=await db.from('inc_app_profiles').insert(payload).select('*').single();if(ins.error){if(ins.error.code==='23505'){var again=await db.from('inc_app_profiles').select('*').eq('id',user.id).maybeSingle();if(!again.error&&again.data){profile=again.data;return profile}}throw ins.error}profile=ins.data;localStorage.removeItem('incore-pending-profile');return profile}
 async function syncGoal(){if(!session||!profile||profile.role!=='employer')return;var q=await db.from('inc_app_business_goals').select('*').eq('employer_id',session.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle();if(q.error){console.warn('Goal sync:',q.error.message);return}if(!q.data)return;
 var state={};try{state=JSON.parse(localStorage.getItem('incore-web-state')||'{}')}catch(e){}
 var g=q.data,goal={title:g.title,description:g.description||'',direction:'Нанять',period:g.target_period||'30 дней',result:g.expected_outcome,salary:Number(g.salary_budget)||0,skills:(g.required_skills||[]).join(', ')};
-if(JSON.stringify(state.goal||{})!==JSON.stringify(goal)){state.goal=goal;localStorage.setItem('incore-web-state',JSON.stringify(state))}
-localStorage.setItem('incore-server-goal-id',g.id)}
+var changed=JSON.stringify(state.goal||{})!==JSON.stringify(goal);if(changed){state.goal=goal;localStorage.setItem('incore-web-state',JSON.stringify(state))}
+localStorage.setItem('incore-server-goal-id',g.id);if(changed){setTimeout(function(){window.location.reload()},150)}}
 async function activate(user){session=user?{user:user}:null;profile=null;if(session){try{profile=await ensureProfile(session.user);var roleButton=document.querySelector('[data-role="'+profile.role+'"]');if(roleButton)roleButton.click();await syncGoal()}catch(e){if(e.message!=='PROFILE_SETUP_REQUIRED')console.error('InCORE profile:',e.message)}}showAuthButton()}
 async function submitAuth(e){e.preventDefault();if(busy)return;busy=true;var btn=$('#auth-submit');btn.disabled=true;$('#auth-msg').textContent='Обрабатываем запрос…';
 try{var email=$('#auth-email').value.trim(),password=$('#auth-password').value;
