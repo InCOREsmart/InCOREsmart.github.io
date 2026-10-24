@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Activity, Briefcase, Users, TrendingDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
+import { insuranceAgentDecomposition } from '../../data/insuranceAgentDecomposition';
 
 type SkillRow = {
   canonical_skill: string;
@@ -63,6 +64,7 @@ export function HHMarketAnalyticsPanel() {
         supabase
           .from('hh_market_resumes')
           .select('hh_id,salary,created_at')
+          .eq('role_key', 'insurance_agent')
           .eq('country', 'RU')
           .limit(5000),
         supabase
@@ -124,6 +126,28 @@ export function HHMarketAnalyticsPanel() {
   useEffect(() => { void load(); }, []);
 
   const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'az' ? 'az-AZ' : i18n.language === 'en' ? 'en-US' : 'kk-KZ';
+  const roleSkills = insuranceAgentDecomposition.skills;
+  const hasResumeEvidence = Boolean(state && state.resumeCount > 0 && state.skills.some(skill => skill.sample_resumes > 0));
+  const roleSkillMatches = roleSkills.map(roleSkill => {
+    const name = roleSkill.name.toLowerCase();
+    const aliases: Record<string, string[]> = {
+      'продажи корпоративного страхования': ['страхован', 'корпоративн', 'продаж'],
+      'удержание клиентов': ['удержан', 'продлен', 'retention'],
+      'кросс-продажи': ['кросс', 'cross-sell', 'допродаж'],
+      'выполнение плана продаж': ['план продаж', 'выполнени', 'kpi'],
+      'долгосрочная результативность': ['долгосроч', 'годовой результат', 'результатив'],
+    };
+    const terms = aliases[name] ?? [name];
+    const match = state?.skills.find(skill => terms.some(term => skill.canonical_skill.toLowerCase().includes(term)));
+    return { ...roleSkill, match: match ?? null };
+  });
+  const matchedRoleSkills = roleSkillMatches.filter(item => item.match).length;
+  const executiveConclusion = !state || (state.vacancyCount === 0 && state.resumeCount === 0)
+    ? 'Пока нет достаточной рыночной выборки, чтобы делать выводы о спросе и доступности кандидатов. Загрузите данные HH.ru, затем сравнение обновится.'
+    : state.resumeCount === 0
+      ? `В базе ${state.vacancyCount.toLocaleString(locale)} вакансий по роли, но нет резюме в сопоставимой выборке. Спрос можно оценивать, а дефицит кандидатов пока нельзя.`
+      : `Сопоставлено ${state.vacancyCount.toLocaleString(locale)} вакансий и ${state.resumeCount.toLocaleString(locale)} резюме. ${matchedRoleSkills} из ${roleSkills.length} навыков InCORE сопоставлены с рыночными данными. Выводы о дефиците ограничены размером и качеством выборки.`;
+
   const updatedLabel = useMemo(() => {
     if (!state?.updatedAt) return null;
     return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(state.updatedAt));
@@ -165,6 +189,46 @@ export function HHMarketAnalyticsPanel() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-[1.45fr_1fr] gap-4">
+        <div className="rounded-2xl bg-white border border-[#000052]/10 p-5 md:p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div><div className="text-xs font-semibold uppercase tracking-wide text-[#B8860B]">Вывод для руководителя</div><h3 className="mt-1 text-lg font-bold text-[#000052]">Что происходит на рынке</h3></div>
+            <span className="rounded-full bg-[#000052]/5 px-3 py-1.5 text-xs font-semibold text-[#000052]">Страховой агент</span>
+          </div>
+          <p className="text-sm leading-6 text-[#333b56]">{executiveConclusion}</p>
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">Skill Scarcity</div>
+            {hasResumeEvidence ? <div className="mt-2 text-sm font-semibold text-[#000052]">Оценка построена по имеющимся резюме. Это оценка выборки, а не всего рынка.</div> : <div className="mt-2 flex items-start gap-3 rounded-xl bg-amber-50 p-3.5 text-sm text-amber-900"><span className="mt-0.5 font-bold">!</span><span><strong>Недостаточно данных.</strong> Дефицит навыков не рассчитывается до загрузки резюме по этой роли.</span></div>}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-[#000038] p-5 md:p-6 text-white border-b-4 border-[#B8860B]">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#D4A017]">InCORE · карта роли</div>
+          <h3 className="mt-1 text-lg font-bold text-white">Роль против рынка</h3>
+          <p className="mt-2 text-sm leading-6 text-white/75">Результат роли определяется пятью навыками с весами. Рыночные данные показывают, какие из них встречаются в вакансиях и резюме, но не подменяют проверку реального результата.</p>
+          <div className="mt-5 flex items-end gap-2"><span className="text-3xl font-bold">{matchedRoleSkills}/{roleSkills.length}</span><span className="pb-1 text-sm text-white/65">навыков сопоставлено</span></div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#D4A017]" style={{ width: (roleSkills.length ? matchedRoleSkills / roleSkills.length * 100 : 0) + '%' }} /></div>
+          <div className="mt-4 text-xs text-white/60">Вес роли: {Math.round(roleSkills.reduce((sum, skill) => sum + skill.weight, 0) * 100)}% суммарно</div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white border border-[#000052]/10 p-5 md:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4"><div><h3 className="text-lg font-bold text-[#000052]">Сопоставление с моделью InCORE</h3><p className="mt-1 text-sm text-gray-500">Вес навыка задан в карте роли. Рыночный дефицит показывается только при наличии сопоставимых данных.</p></div><span className="text-xs text-gray-400">Источник: HH.ru + карта роли InCORE</span></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[680px]">
+          <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-400"><th className="py-3 pr-4 font-medium">Навык роли</th><th className="py-3 px-3 text-right font-medium">Вес InCORE</th><th className="py-3 px-3 text-right font-medium">Вакансии</th><th className="py-3 px-3 text-right font-medium">Резюме</th><th className="py-3 pl-3 text-right font-medium">Оценка дефицита</th></tr></thead>
+          <tbody>{roleSkillMatches.map(item => {
+            const match = item.match;
+            const scarcityKnown = Boolean(hasResumeEvidence && match && match.sample_resumes > 0);
+            return <tr key={item.name} className="border-b border-gray-50 last:border-0">
+              <td className="py-3 pr-4"><div className="font-semibold text-sm text-[#000052]">{item.name}</div><div className="mt-1 text-xs text-gray-400">{item.is_required ? 'Обязательный навык' : 'Дополнительный навык'}</div></td>
+              <td className="px-3 py-3 text-right font-semibold text-[#000052]">{Math.round(item.weight * 100)}%</td>
+              <td className="px-3 py-3 text-right tabular-nums">{match ? match.sample_vacancies.toLocaleString(locale) : '—'}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{match ? match.sample_resumes.toLocaleString(locale) : '—'}</td>
+              <td className="pl-3 py-3 text-right">{scarcityKnown ? <span className={match!.skill_gap < 0 ? 'font-semibold text-red-700' : 'font-semibold text-emerald-700'}>{match!.skill_gap < 0 ? 'Возможный дефицит' : 'Дефицит не подтверждён'}</span> : <span className="text-xs text-gray-400">Недостаточно данных</span>}</td>
+            </tr>;
+          })}</tbody>
+        </table></div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 shadow-sm">
           <div className="flex items-center justify-between"><span className="text-xs text-[#000052]/55">{t('hhMarket.vacancies')}</span><Briefcase className="w-5 h-5 text-[#B8860B]" /></div>
@@ -188,18 +252,18 @@ export function HHMarketAnalyticsPanel() {
         <div className="bg-white rounded-2xl border border-[#000052]/10 p-5 md:p-6 shadow-sm min-w-0">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-[#000052]/5 flex items-center justify-center"><TrendingDown className="w-5 h-5 text-[#000052]" /></div>
-            <div><h3 className="font-bold text-[#000052]">{t('hhMarket.skillGap')}</h3><p className="text-xs text-[#000052]/50">{t('hhMarket.demandShare')} · {t('hhMarket.supplyShare')}</p></div>
+            <div><h3 className="font-bold text-[#000052]">Спрос и предложение навыков</h3><p className="text-xs text-[#000052]/50">{t('hhMarket.demandShare')} · {t('hhMarket.supplyShare')}</p></div>
           </div>
           <div className="space-y-3">
             {state.skills.slice(0, 8).map(skill => {
-              const shortage = skill.skill_gap < 0;
+              const shortage = skill.skill_gap > 0;
               const gapAbs = Math.abs(skill.skill_gap);
               return (
                 <div key={skill.canonical_skill} className="rounded-xl bg-[#000052]/[0.035] p-3.5">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="font-semibold text-sm text-[#000052] break-words">{skill.canonical_skill}</div>
                     <span className={`self-start sm:self-auto px-2.5 py-1 rounded-full text-xs font-semibold ${shortage ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                      {shortage ? t('hhMarket.deficit') : t('hhMarket.balance')} · {gapAbs.toFixed(2)} {t('hhMarket.ppts')}
+                      {shortage ? 'Дефицит предложения' : skill.skill_gap < 0 ? 'Избыток предложения' : 'Баланс'} · {gapAbs.toFixed(2)} {t('hhMarket.ppts')}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
