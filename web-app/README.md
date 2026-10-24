@@ -27,7 +27,7 @@ Standalone responsive web app for InCORE's result-based hiring workflow.
 - Demo candidate cards and demo vacancies are fictional and are not stored as real users.
 - Similarity percentages on demo cards are illustrative, not actual candidate scoring.
 - Email verification behavior depends on the current Supabase Auth settings.
-- A public launch must wait for approved privacy policy, personal-data consent, operator/legal details, terms for paid verification, and payment-provider/legal review. Do not enter sensitive personal, passport, banking, or other confidential data in the prototype.
+- A public launch must wait for approved privacy policy, personal-data consent, operator/legal details, terms for paid verification, data-residency review, and payment-provider/legal review. The currently connected Supabase project is in `eu-west-1` (Ireland); verify applicable Russian personal-data localization requirements before collecting real data from Russian users. See `LAUNCH-BLOCKERS.md`. Do not enter sensitive personal, passport, banking, or other confidential data in the prototype.
 
 ## Supabase
 The `inc_app_*` schema has been added to the existing project `InCOREsmart.github.io` with additive migrations only. Existing InCORE tables were not modified. Row-level security is enabled on all new tables; the Supabase Security Advisor did not report findings for the new `inc_app_*` tables at the time of the latest check. The project still has pre-existing security warnings on unrelated tables/functions.
