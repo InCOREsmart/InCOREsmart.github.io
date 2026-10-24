@@ -42,7 +42,7 @@ if(result.error){console.error('Goal save:',result.error);note('Цель сох�
 localStorage.setItem('incore-server-goal-id',result.data.id);note('Бизнес-цель сохранена в базе InCORE')}
 
 var serverView=null, navObserver=null;
-function $(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+function all(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
 function activeWorkspace(){var b=$('button[data-role].active');return b?b.dataset.role:'employer'}
 function addBackendNav(){
  var navEl=$('#nav');if(!navEl)return;
