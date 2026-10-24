@@ -86,7 +86,7 @@ function otklikAuthModal(){
     try{
       let res;
       if(mode==="login")res=await otklikDb.auth.signInWithPassword({email,password});
-      else res=await otklikDb.auth.signUp({email,password,options:{data:{full_name:$("#otName").value.trim()}}});
+      else res=await otklikDb.auth.signUp({email,password,options:{data:{full_name:$("#otName").value.trim(),requested_role:$("#otRole").value,discoverable:$("#otVisible").checked}}});
       if(res.error)throw res.error;
       if(!res.data.session){$("#otAuthMsg").textContent="Аккаунт создан. Подтвердите адрес по письму, затем войдите.";return}
       otklikUser=res.data.user;
@@ -110,7 +110,7 @@ async function otklikLoadProfile(){
   const {data,error}=await otklikDb.from("inc_app_profiles").select("*").eq("id",otklikUser.id).maybeSingle();
   if(error)throw error;
   if(!data){
-    const {error:insertError}=await otklikDb.from("inc_app_profiles").insert({id:otklikUser.id,role:"candidate",full_name:otklikUser.email.split("@")[0],visibility:"private"});
+    const meta=otklikUser.user_metadata||{};const initialRole=meta.requested_role==="employer"?"employer":"candidate";const {error:insertError}=await otklikDb.from("inc_app_profiles").insert({id:otklikUser.id,role:initialRole,full_name:meta.full_name||otklikUser.email.split("@")[0],visibility:initialRole==="candidate"&&meta.discoverable?"discoverable":"private"});
     if(insertError)throw insertError;
     return otklikLoadProfile();
   }
