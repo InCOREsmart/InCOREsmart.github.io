@@ -6,22 +6,35 @@ on:
       - prototype/incore-web-app
     paths:
       - "web-app/**"
+      - "public/web-app/**"
       - ".github/workflows/incore-web-app-check.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "src/**"
   pull_request:
     paths:
       - "web-app/**"
+      - "public/web-app/**"
+      - "package.json"
+      - "package-lock.json"
+      - "src/**"
 
 permissions:
   contents: read
 
 jobs:
-  syntax:
+  syntax-and-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
+          cache: "npm"
+      - name: Check source and deploy copies match
+        run: |
+          cmp web-app/index.html public/web-app/index.html
+          cmp web-app/backend.js public/web-app/backend.js
       - name: Check inline application JavaScript
         run: |
           python3 - <<'PY'
@@ -34,5 +47,15 @@ jobs:
           Path("/tmp/incore-inline.js").write_text(match.group(1), encoding="utf-8")
           PY
           node --check /tmp/incore-inline.js
-      - name: Check Supabase integration JavaScript
-        run: node --check web-app/backend.js
+          node --check web-app/backend.js
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck existing InCORE website
+        run: npm run check
+      - name: Build website and isolated app route
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Verify app is included in deployment output
+        run: test -s dist/web-app/index.html && test -s dist/web-app/backend.js
