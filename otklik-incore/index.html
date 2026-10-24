@@ -11,15 +11,16 @@
 </style>
 </head>
 <body><div class="app">
-<header class="top"><div class="brand"><div class="logo">↗</div><div>Отклик<small>× INCORE</small></div></div><div class="top-right"><span class="pill inc">● Сделка защищена InCORE</span><span class="pill" id="rolePill">Соискатель</span><div class="avatar" id="avatar">АК</div></div></header>
+<header class="top"><div class="brand"><div class="logo">↗</div><div>Отклик<small>× INCORE</small></div></div><div class="top-right"><span class="pill inc">● Сделка защищена InCORE</span><span class="pill" id="rolePill">Соискатель</span><button class="avatar" id="authButton" aria-label="Войти или выйти" title="Войти или выйти">Войти</button></div></header>
 <div class="layout"><aside class="side"><div class="side-label">РАБОТА</div><button class="nav active" data-page="feed"><span class="ico">▣</span>Лента вакансий</button><button class="nav" data-page="applications"><span class="ico">↗</span>Мои отклики <span id="navCount" class="pill" style="margin-left:auto;padding:3px 7px">0</span></button><button class="nav" data-page="interviews"><span class="ico">▦</span>Собеседования</button><button class="nav" data-page="profile"><span class="ico">◉</span>Мой профиль</button><div class="side-label" style="margin-top:18px">РАБОТОДАТЕЛЮ</div><button class="nav" data-page="employer"><span class="ico">▤</span>Кандидаты</button><button class="nav" data-page="create"><span class="ico">＋</span>Разместить вакансию</button><button class="nav" data-page="deals"><span class="ico">◇</span>Сделки InCORE</button><div class="side-note"><div class="logo" style="background:#d9f5e8;color:#137a54;box-shadow:none">✓</div><b>Работа с понятным результатом</b><p>Проверьте навыки кандидата на оплачиваемой задаче до решения о найме.</p><button class="btn tiny outline" data-page="deals">Как работает InCORE</button></div></aside>
 <main class="main" id="main"></main></div>
 <nav class="mobile-nav"><button class="active" data-page="feed"><span>▣</span>Вакансии</button><button data-page="applications"><span>↗</span>Отклики</button><button data-page="interviews"><span>▦</span>Встречи</button><button data-page="profile"><span>◉</span>Профиль</button><button data-page="employer"><span>▤</span>Найм</button></nav>
 </div>
 <div class="modal-back" id="modalBack" role="dialog" aria-modal="true"><div class="modal" id="modal"></div></div><div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
-const jobs=[
+let jobs=[
 {id:1,company:"Север Диджитал",mark:"С",title:"Бизнес-ассистент собственника",salary:"120 000–160 000 ₽",city:"Удалённо",type:"Полная занятость",exp:"3–6 лет",schedule:"Гибкий график",desc:"Нужен самостоятельный человек, который держит задачи в движении: координация команды, контроль договорённостей, аналитика и организация работы собственника.",skills:["Операционное управление","Google Workspace","Коммуникация"],match:96,color:"linear-gradient(130deg,#e3e8ff,#f6eaff,#e4f9ef)",deal:true},
 {id:2,company:"Практика роста",mark:"П",title:"Руководитель отдела продаж",salary:"от 180 000 ₽ + бонус",city:"Удалённо",type:"Полная занятость",exp:"3–6 лет",schedule:"Полный день",desc:"Управление командой продаж, воронкой, планированием и качеством коммуникации. Важно уметь связывать действия команды с выручкой.",skills:["Управление продажами","CRM","Планирование"],match:92,color:"linear-gradient(130deg,#fff0df,#ffe8ef,#e8eaff)",deal:true},
 {id:3,company:"Маяк Образование",mark:"М",title:"HR-бизнес-партнёр",salary:"130 000–170 000 ₽",city:"Гибрид / Москва",type:"Полная занятость",exp:"3–6 лет",schedule:"Гибкий график",desc:"Работа с руководителями, командами и кадровыми решениями. Нужны сильная аналитика, опыт развития команд и ориентация на бизнес-результат.",skills:["HR-стратегия","Оценка персонала","People analytics"],match:88,color:"linear-gradient(130deg,#e2f8ef,#e8edff,#fdf0dc)",deal:false},
@@ -62,4 +63,145 @@ $("#modalBack").addEventListener("click",e=>{if(e.target===$("#modalBack"))close
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();if(page==="feed"&&e.key==="ArrowRight")$("#like")?.click();if(page==="feed"&&e.key==="ArrowLeft")$("#skip")?.click()});
 $("#rolePill").style.cursor="pointer";$("#rolePill").title="Переключить режим";$("#rolePill").addEventListener("click",()=>{role=role==="candidate"?"employer":"candidate";setPage(role==="candidate"?"feed":"employer")});
 render();
+</script>
+<script>
+/* Supabase backend for the standalone Otklik app. Public key only; row access is enforced by RLS. */
+const otklikDb = window.supabase.createClient(
+  "https://utsuzqmzawunqpiguuhk.supabase.co",
+  "sb_publishable_NvQQ2l-Gv29RlbO1MKrchg_mLA7nG5d"
+);
+let otklikUser = null;
+let otklikProfile = null;
+let otklikServerBusy = false;
+
+function otklikAuthModal(){
+  $("#modal").innerHTML = '<h2>Войти в Отклик</h2><p class="lead">Общий профиль, вакансии и отклики</p><div class="switcher" style="margin-bottom:16px"><button id="otLoginTab" class="active" type="button">Войти</button><button id="otSignupTab" type="button">Регистрация</button></div><form id="otAuthForm"><div class="field" id="otNameWrap" style="display:none"><label>Имя и фамилия</label><input id="otName" autocomplete="name"></div><div class="field"><label>Электронная почта</label><input id="otEmail" type="email" required autocomplete="email"></div><div class="field"><label>Пароль, не менее 8 символов</label><input id="otPassword" type="password" minlength="8" required autocomplete="current-password"></div><div class="field" id="otRoleWrap" style="display:none"><label>Тип аккаунта</label><select id="otRole"><option value="candidate">Соискатель</option><option value="employer">Работодатель</option></select></div><div class="field" id="otVisibilityWrap" style="display:none"><label><input id="otVisible" type="checkbox" style="width:auto;margin-right:8px">Разрешаю работодателям находить мой профиль</label></div><p id="otAuthMsg" class="sub" role="status"></p><button class="btn primary" id="otAuthSubmit" style="width:100%">Войти</button></form><div class="notice" style="margin-top:14px">Пароли обрабатывает Supabase Auth. Реальное резервирование и движение денег InCORE пока не подключено.</div><div class="modal-actions"><button class="btn secondary" id="otClose">Закрыть</button></div>';
+  $("#modalBack").classList.add("open");
+  let mode="login";
+  function switchMode(next){mode=next;$("#otLoginTab").classList.toggle("active",mode==="login");$("#otSignupTab").classList.toggle("active",mode==="signup");$("#otNameWrap").style.display=mode==="signup"?"flex":"none";$("#otRoleWrap").style.display=mode==="signup"?"flex":"none";$("#otVisibilityWrap").style.display=mode==="signup"?"flex":"none";$("#otAuthSubmit").textContent=mode==="login"?"Войти":"Создать аккаунт";$("#otPassword").autocomplete=mode==="login"?"current-password":"new-password"}
+  $("#otLoginTab").onclick=()=>switchMode("login");$("#otSignupTab").onclick=()=>switchMode("signup");$("#otClose").onclick=closeModal;
+  $("#otAuthForm").onsubmit=async e=>{
+    e.preventDefault();const btn=$("#otAuthSubmit");btn.disabled=true;$("#otAuthMsg").textContent="Подключаюсь…";
+    const email=$("#otEmail").value.trim(),password=$("#otPassword").value;
+    try{
+      let res;
+      if(mode==="login")res=await otklikDb.auth.signInWithPassword({email,password});
+      else res=await otklikDb.auth.signUp({email,password,options:{data:{full_name:$("#otName").value.trim()}}});
+      if(res.error)throw res.error;
+      if(!res.data.session){$("#otAuthMsg").textContent="Аккаунт создан. Подтвердите адрес по письму, затем войдите.";return}
+      otklikUser=res.data.user;
+      if(mode==="signup"){
+        const newRole=$("#otRole").value;
+        const {error}=await otklikDb.from("inc_app_profiles").upsert({id:otklikUser.id,role:newRole,full_name:$("#otName").value.trim()||email.split("@")[0],visibility:newRole==="candidate"&&$("#otVisible").checked?"discoverable":"private"},{onConflict:"id"});
+        if(error)throw error;
+      }
+      await otklikLoadProfile();await otklikLoadData();closeModal();otklikRefreshHeader();render();toast("Вход выполнен. Данные подключены к серверу.");
+    }catch(err){$("#otAuthMsg").textContent=err.message||"Ошибка входа"}finally{btn.disabled=false}
+  };
+  switchMode("login");
+}
+function otklikRefreshHeader(){
+  $("#authButton").textContent=otklikUser?(otklikUser.email||"Вы").slice(0,2).toUpperCase():"Войти";
+  $("#authButton").title=otklikUser?"Выйти · "+otklikUser.email:"Войти или зарегистрироваться";
+  if(otklikProfile){role=otklikProfile.role;$("#rolePill").textContent=role==="candidate"?"Соискатель":"Работодатель"}
+}
+async function otklikLoadProfile(){
+  if(!otklikUser)return;
+  const {data,error}=await otklikDb.from("inc_app_profiles").select("*").eq("id",otklikUser.id).maybeSingle();
+  if(error)throw error;
+  if(!data){
+    const {error:insertError}=await otklikDb.from("inc_app_profiles").insert({id:otklikUser.id,role:"candidate",full_name:otklikUser.email.split("@")[0],visibility:"private"});
+    if(insertError)throw insertError;
+    return otklikLoadProfile();
+  }
+  otklikProfile=data;role=data.role;
+  store.set("profile",{name:data.full_name||"",title:data.headline||"",city:data.city||"",salary:data.salary_expectation||"",experience:"",skills:(data.skills||[]).join(", "),about:data.bio||""});
+}
+async function otklikLoadData(){
+  if(!otklikUser)return;otklikServerBusy=true;
+  try{
+    const {data:vac,error:ve}=await otklikDb.from("inc_app_vacancies").select("*").eq("status","published").order("created_at",{ascending:false});
+    if(ve)throw ve;
+    if(vac&&vac.length){
+      const ids=[...new Set(vac.map(v=>v.employer_id))];let profs={};
+      const {data:people,error:pe}=await otklikDb.from("inc_app_profiles").select("id,full_name,headline").in("id",ids);
+      if(pe)throw pe;(people||[]).forEach(p=>profs[p.id]=p);
+      jobs=vac.map(v=>({id:v.id,company:profs[v.employer_id]?.headline||profs[v.employer_id]?.full_name||"Работодатель",mark:(profs[v.employer_id]?.full_name||"О")[0],title:v.title,salary:v.salary_min||v.salary_max?((v.salary_min?Number(v.salary_min).toLocaleString("ru-RU")+" ₽":"")+(v.salary_min&&v.salary_max?"–":"")+(v.salary_max?Number(v.salary_max).toLocaleString("ru-RU")+" ₽":"")):"По договорённости",city:v.city||v.work_format||"Не указан",type:({full_time:"Полная занятость",part_time:"Частичная занятость",project:"Проектная работа",internship:"Стажировка"})[v.employment_type]||v.employment_type,exp:v.experience_level||"Не указан",schedule:v.schedule||"По договорённости",desc:v.description,skills:v.skills||[],match:0,color:"linear-gradient(130deg,#e3e8ff,#e1f8ef)",deal:true,expectedOutcome:v.expected_outcome,employer_id:v.employer_id}));
+    }
+    if(role==="candidate"){
+      const {data:apps,error:ae}=await otklikDb.from("inc_applications").select("id,vacancy_id,status,created_at").eq("candidate_id",otklikUser.id).order("created_at",{ascending:false});
+      if(ae)throw ae;
+      applications=(apps||[]).map(a=>{const j=jobs.find(x=>x.id===a.vacancy_id)||{};return {id:a.vacancy_id,applicationId:a.id,title:j.title||"Вакансия",company:j.company||"Работодатель",salary:j.salary||"",mark:j.mark||"О",status:({applied:"Отклик отправлен",reviewing:"На рассмотрении",interview:"Собеседование",rejected:"Отказ",withdrawn:"Отозван"})[a.status]||a.status,date:new Date(a.created_at).toLocaleDateString("ru-RU")}});
+    }else{
+      const {data:people,error:ce}=await otklikDb.from("inc_app_profiles").select("id,full_name,headline,skills,salary_expectation,visibility").eq("role","candidate").eq("visibility","discoverable");
+      if(ce)throw ce;
+      if(people){candidates.splice(0,candidates.length,...people.map(p=>({id:p.id,name:p.full_name,title:p.headline||"Соискатель",match:0,skills:(p.skills||[]).join(", "),salary:p.salary_expectation?"от "+Number(p.salary_expectation).toLocaleString("ru-RU")+" ₽":"Ожидания не указаны",initials:(p.full_name||"К").split(/\s+/).map(x=>x[0]).join("").slice(0,2)})))}
+      const {data:ownJobs,error:oe}=await otklikDb.from("inc_app_vacancies").select("*").eq("employer_id",otklikUser.id).order("created_at",{ascending:false});
+      if(oe)throw oe;posted=(ownJobs||[]).map(v=>({id:v.id,title:v.title,company:"Мои вакансии",salary:v.salary_min?Number(v.salary_min).toLocaleString("ru-RU")+" ₽":"По договорённости",city:v.city||v.work_format||"Не указан",mark:"В",status:v.status}));
+      const {data:ownDeals,error:de}=await otklikDb.from("inc_app_deals").select("id,title,duration_hours,hourly_rate,status,candidate_id").eq("employer_id",otklikUser.id).order("created_at",{ascending:false});
+      if(de)throw de;deals=(ownDeals||[]).map(d=>({id:d.id,title:d.title,candidate:candidates.find(c=>c.id===d.candidate_id)?.name||"Кандидат",hours:d.duration_hours,amount:Number(d.hourly_rate)*d.duration_hours,status:d.status}));
+    }
+    store.set("applications",applications);store.set("posted",posted);store.set("deals",deals);$("#navCount").textContent=applications.length;
+  }finally{otklikServerBusy=false}
+}
+async function advance(action,j,fromSaved=false){
+  if(!j)return;
+  if(action==="like"){
+    if(!applications.some(a=>a.id===j.id)){
+      if(otklikUser&&role==="candidate"&&typeof j.id==="string"){
+        const {error}=await otklikDb.from("inc_applications").insert({vacancy_id:j.id,candidate_id:otklikUser.id,status:"applied"});
+        if(error){toast("Отклик не отправлен: "+error.message);return}
+      }
+      applications.push({id:j.id,title:j.title,company:j.company,salary:j.salary,mark:j.mark,status:"Отклик отправлен",date:new Date().toLocaleDateString("ru-RU")});
+      store.set("applications",applications);$("#navCount").textContent=applications.length;
+      toast(otklikUser&&typeof j.id==="string"?"Отклик отправлен работодателю":"Отклик сохранён в этом браузере. Войдите для отправки на сервер.");
+    }else toast("Ты уже откликнулась на эту вакансию");
+  }
+  index++;if(fromSaved)index=0;render();
+}
+function openDeal(){
+  if(!otklikUser||role!=="employer"){toast("Войдите в аккаунт работодателя, чтобы создать сделку");otklikAuthModal();return}
+  if(!candidates.length){toast("Нет доступных профилей кандидатов. Попросите соискателя открыть профиль для поиска.");return}
+  showModal("Новая сделка InCORE",'<div class="field"><label>Рабочая задача *</label><input id="dTitle" placeholder="Например, разобрать воронку продаж" required></div><div class="formgrid"><div class="field"><label>Кандидат</label><select id="dCandidate">'+candidates.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join("")+'</select></div><div class="field"><label>Часы, максимум 48</label><input id="dHours" type="number" min="1" max="48" value="8" required></div><div class="field"><label>Ставка, ₽/час</label><input id="dRate" type="number" min="1" value="1500" required></div><div class="field"><label>Критерий результата</label><input id="dCriteria" placeholder="Как принимаем результат"></div></div><div class="notice">Создаётся черновик в базе. Деньги не резервируются и не переводятся.</div><div class="metric"><small>Расчётный бюджет</small><b id="dTotal">12 000 ₽</b></div>','Создать черновик сделки',async()=>{
+    const title=$("#dTitle").value.trim(),candidateId=$("#dCandidate").value,hours=Math.min(48,Math.max(1,Number($("#dHours").value)||1)),rate=Math.max(1,Number($("#dRate").value)||1500),criteria=$("#dCriteria").value.trim();
+    if(!title){toast("Укажи рабочую задачу");return}
+    const {data,error}=await otklikDb.from("inc_app_deals").insert({employer_id:otklikUser.id,candidate_id:candidateId,title,task_description:title,acceptance_criteria:criteria?[criteria]:[],duration_hours:hours,hourly_rate:rate,platform_fee_rate:0.12,currency:"RUB",status:"draft"}).select("id,title,duration_hours,hourly_rate,status,candidate_id").single();
+    if(error){toast("Не удалось создать сделку: "+error.message);return}
+    deals.unshift({id:data.id,title:data.title,candidate:candidates.find(c=>c.id===candidateId)?.name||"Кандидат",hours:data.duration_hours,amount:Number(data.hourly_rate)*data.duration_hours,status:data.status});
+    store.set("deals",deals);closeModal();toast("Черновик сделки сохранён на сервере. Оплата не производилась.");render();
+  });
+  ["dHours","dRate"].forEach(id=>$("#"+id).addEventListener("input",()=>{$("#dTotal").textContent=(Math.min(48,Math.max(1,Number($("#dHours").value)||1))*Math.max(1,Number($("#dRate").value)||1500)).toLocaleString("ru-RU")+" ₽"}));
+}
+document.addEventListener("click",async e=>{
+  if(e.target.closest("#authButton")){
+    if(!otklikUser){otklikAuthModal();return}
+    if(confirm("Выйти из аккаунта?")){await otklikDb.auth.signOut();otklikUser=null;otklikProfile=null;location.reload()}
+  }
+},true);
+document.addEventListener("submit",async e=>{
+  const form=e.target;
+  if(form.id==="profileForm"&&otklikUser){
+    e.preventDefault();e.stopImmediatePropagation();
+    const o=Object.fromEntries(new FormData(form));const existing=otklikProfile||{};
+    const payload={id:otklikUser.id,role,full_name:o.name,headline:o.title,city:o.city||null,salary_expectation:o.salary?Number(o.salary):null,skills:(o.skills||"").split(",").map(s=>s.trim()).filter(Boolean),bio:o.about||null,visibility:existing.visibility||"private"};
+    const {data,error}=await otklikDb.from("inc_app_profiles").upsert(payload,{onConflict:"id"}).select("*").single();
+    if(error){toast("Профиль не сохранён: "+error.message);return}
+    otklikProfile=data;store.set("profile",o);toast("Профиль сохранён в общей базе");
+  }
+  if(form.id==="jobForm"&&otklikUser&&role==="employer"){
+    e.preventDefault();e.stopImmediatePropagation();
+    const o=Object.fromEntries(new FormData(form));const nums=(o.salary.match(/[0-9][0-9\s]*/g)||[]).map(s=>Number(s.replace(/\s/g,""))).filter(Number.isFinite);
+    const types={"Полная занятость":"full_time","Частичная занятость":"part_time","Проектная работа":"project","Стажировка":"internship"};
+    const {data,error}=await otklikDb.from("inc_app_vacancies").insert({employer_id:otklikUser.id,title:o.title,description:o.desc,expected_outcome:o.desc,skills:(o.skills||"").split(",").map(s=>s.trim()).filter(Boolean),salary_min:nums[0]||null,salary_max:nums[1]||nums[0]||null,city:o.city,work_format:o.city,employment_type:types[o.type]||"full_time",schedule:o.type,experience_level:o.exp||"any",status:"published"}).select("*").single();
+    if(error){toast("Вакансия не опубликована: "+error.message);return}
+    posted.unshift({id:data.id,title:data.title,company:o.company,salary:o.salary,city:o.city,mark:(o.company||"В")[0],status:"published"});store.set("posted",posted);toast("Вакансия опубликована в общей базе");setPage("employer");
+  }
+},true);
+document.addEventListener("DOMContentLoaded",()=>{});
+(async()=>{
+  const {data}=await otklikDb.auth.getSession();otklikUser=data.session?.user||null;
+  if(otklikUser){try{await otklikLoadProfile();await otklikLoadData()}catch(err){console.error(err);toast("Ошибка загрузки данных: "+err.message)}}
+  otklikRefreshHeader();render();
+  otklikDb.auth.onAuthStateChange((_event,session)=>{otklikUser=session?.user||null;if(!otklikUser){otklikProfile=null;otklikRefreshHeader()}});
+})();
 </script></body></html>
