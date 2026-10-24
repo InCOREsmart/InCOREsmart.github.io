@@ -17,6 +17,7 @@ Standalone responsive web app for InCORE's result-based hiring workflow.
 - Candidate vacancy feed and applications.
 - Employer application review, shortlist/decline actions.
 - Draft paid-work verification cycle created from a candidate application.
+- Server-controlled deal actions: both parties accept terms, employer starts, candidate submits, employer accepts or opens a dispute, and employer can cancel before work starts. Every transition is serialized in Postgres and recorded in an event log.
 - Transparent draft calculation: 1,500 RUB/hour and 12% InCORE fee.
 - Demo dashboard and candidate cards remain available for interface exploration.
 - RLS policies restrict profile, vacancy, application, and deal access by role and relationship.
