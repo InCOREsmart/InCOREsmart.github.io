@@ -14,7 +14,8 @@ Standalone responsive web app for InCORE's result-based hiring workflow.
 - Role-specific profile creation and editing.
 - Business goal editor, saved to the InCORE database for employer accounts.
 - Employer vacancy creation and publication.
-- Candidate vacancy feed and applications.
+- Candidate vacancy feed with city/salary/employment/experience filters, skill-overlap matching, touch swipe-to-apply, skip and report actions.
+- Candidate applications.
 - Employer application review, shortlist/decline actions.
 - Vacancy filters for city, work format, salary range, employment type, schedule and experience.
 - Skill-overlap indicator for matching (a transparent deterministic heuristic, not an AI assessment).
