@@ -122,7 +122,7 @@ async function otklikLoadData(){
   try{
     const {data:vac,error:ve}=await otklikDb.from("inc_app_vacancies").select("*").eq("status","published").order("created_at",{ascending:false});
     if(ve)throw ve;
-    if(vac&&vac.length){
+    if(vac){
       const ids=[...new Set(vac.map(v=>v.employer_id))];let profs={};
       const {data:people,error:pe}=await otklikDb.from("inc_app_profiles").select("id,full_name,headline").in("id",ids);
       if(pe)throw pe;(people||[]).forEach(p=>profs[p.id]=p);
@@ -173,6 +173,7 @@ function openDeal(){
   ["dHours","dRate"].forEach(id=>$("#"+id).addEventListener("input",()=>{$("#dTotal").textContent=(Math.min(48,Math.max(1,Number($("#dHours").value)||1))*Math.max(1,Number($("#dRate").value)||1500)).toLocaleString("ru-RU")+" ₽"}));
 }
 document.addEventListener("click",async e=>{
+  if(e.target.closest("#rolePill")){e.preventDefault();e.stopImmediatePropagation();if(!otklikUser){otklikAuthModal();return}const nextRole=role==="candidate"?"employer":"candidate";const {data,error}=await otklikDb.from("inc_app_profiles").update({role:nextRole}).eq("id",otklikUser.id).select("*").single();if(error){toast("Не удалось изменить роль: "+error.message);return}otklikProfile=data;role=nextRole;await otklikLoadData();otklikRefreshHeader();setPage(role==="candidate"?"feed":"employer");return}
   if(e.target.closest("#authButton")){
     if(!otklikUser){otklikAuthModal();return}
     if(confirm("Выйти из аккаунта?")){await otklikDb.auth.signOut();otklikUser=null;otklikProfile=null;location.reload()}
