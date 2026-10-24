@@ -1,0 +1,38 @@
+name: InCORE web app checks
+
+on:
+  push:
+    branches:
+      - prototype/incore-web-app
+    paths:
+      - "web-app/**"
+      - ".github/workflows/incore-web-app-check.yml"
+  pull_request:
+    paths:
+      - "web-app/**"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check inline application JavaScript
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("web-app/index.html").read_text(encoding="utf-8")
+          match = re.search(r"<script>\s*(.*?)</script>", html, re.S)
+          if not match:
+              raise SystemExit("Inline application script not found")
+          Path("/tmp/incore-inline.js").write_text(match.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/incore-inline.js
+      - name: Check Supabase integration JavaScript
+        run: node --check web-app/backend.js
