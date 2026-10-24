@@ -32,7 +32,7 @@ const candidates=[
 {id:12,name:"Илья Морозов",title:"Руководитель продаж · 7 лет опыта",match:93,skills:"Планирование, обучение, воронки продаж",salary:"от 170 000 ₽",initials:"ИМ"},
 {id:13,name:"Мария Волкова",title:"HRBP · 6 лет опыта",match:91,skills:"HR-стратегия, найм руководителей, KPI",salary:"от 140 000 ₽",initials:"МВ"}
 ];
-const store={get(k,d){try{return JSON.parse(localStorage.getItem("otklik-incore-"+k))??d}catch{return d}},set(k,v){localStorage.setItem("otklik-incore-"+k,JSON.stringify(v))}};
+const store={get(k,d){try{return JSON.parse(localStorage.getItem("otklik-incore-"+k))??d}catch{return d}},set(k,v){try{localStorage.setItem("otklik-incore-"+k,JSON.stringify(v))}catch(e){console.warn("Локальное сохранение недоступно",e)}}};
 let page="feed",role=store.get("role","candidate"),index=0,filters={city:"Все",employment:"Любой формат",salary:0},jobFilter="Все",candidateIndex=0;
 let applications=store.get("applications",[]),saved=store.get("saved",[]),interviews=store.get("interviews",[]),posted=store.get("posted",[]),deals=store.get("deals",[]),employerApplications=[];
 function persist(){store.set("applications",applications);store.set("saved",saved);store.set("interviews",interviews);store.set("posted",posted);store.set("deals",deals);store.set("role",role);$("#navCount").textContent=applications.length}
