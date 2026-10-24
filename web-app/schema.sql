@@ -132,16 +132,34 @@ create policy "profile owner update" on public.inc_app_profiles
 for update to authenticated using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
 create policy "employer manages own goals" on public.inc_app_business_goals
-for all to authenticated using (employer_id = (select auth.uid()))
-with check (employer_id = (select auth.uid()));
+for all to authenticated using (
+  employer_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'employer'
+  )
+) with check (
+  employer_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'employer'
+  )
+);
 
 create policy "published vacancies visible; owner sees all own" on public.inc_app_vacancies
 for select to authenticated using (status = 'published' or employer_id = (select auth.uid()));
 create policy "employer creates own vacancies" on public.inc_app_vacancies
-for insert to authenticated with check (employer_id = (select auth.uid()));
+for insert to authenticated with check (
+  employer_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'employer'
+  )
+);
 create policy "employer updates own vacancies" on public.inc_app_vacancies
-for update to authenticated using (employer_id = (select auth.uid()))
-with check (employer_id = (select auth.uid()));
+for update to authenticated using (
+  employer_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'employer'
+  )
+) with check (
+  employer_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'employer'
+  )
+);
 
 create policy "application visible to candidate or vacancy owner" on public.inc_applications
 for select to authenticated using (
@@ -151,18 +169,24 @@ for select to authenticated using (
   )
 );
 create policy "candidate creates own application" on public.inc_applications
-for insert to authenticated with check (candidate_id = (select auth.uid()));
-create policy "parties update application" on public.inc_applications
+for insert to authenticated with check (
+  candidate_id = (select auth.uid()) and exists (
+    select 1 from public.inc_app_profiles p where p.id = (select auth.uid()) and p.role = 'candidate'
+  )
+);
+create policy "employer updates own vacancy applications" on public.inc_applications
 for update to authenticated using (
-  candidate_id = (select auth.uid()) or exists (
-    select 1 from public.inc_app_vacancies v
-    where v.id = vacancy_id and v.employer_id = (select auth.uid())
-  )
+  exists (select 1 from public.inc_app_vacancies v
+    where v.id = vacancy_id and v.employer_id = (select auth.uid()))
 ) with check (
-  candidate_id = (select auth.uid()) or exists (
-    select 1 from public.inc_app_vacancies v
-    where v.id = vacancy_id and v.employer_id = (select auth.uid())
-  )
+  exists (select 1 from public.inc_app_vacancies v
+    where v.id = vacancy_id and v.employer_id = (select auth.uid()))
+);
+create policy "candidate withdraws own application" on public.inc_applications
+for update to authenticated using (
+  candidate_id = (select auth.uid()) and status = 'applied'
+) with check (
+  candidate_id = (select auth.uid()) and status = 'withdrawn'
 );
 
 create policy "deal parties read" on public.inc_app_deals
@@ -172,6 +196,10 @@ for select to authenticated using (
 create policy "employer creates own draft deal" on public.inc_app_deals
 for insert to authenticated with check (
   employer_id = (select auth.uid()) and status = 'draft'
+  and exists (select 1 from public.inc_app_profiles p
+    where p.id = (select auth.uid()) and p.role = 'employer')
+  and exists (select 1 from public.inc_app_profiles p
+    where p.id = candidate_id and p.role = 'candidate' and p.visibility = 'discoverable')
 );
 -- Intentionally no client UPDATE policy for deals. State changes/payment actions must be server validated.
 
